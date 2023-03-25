@@ -85,6 +85,20 @@ def extract_trees(newick_tree, target_taxa: Set[str], excluded_taxa: Set[str] = 
     # Return a dictionary of subtrees, indexed by ott or name
     return {subtree['ott'] or subtree['name']: subtree['tree_string'] for subtree in subtrees}
 
+'''
+Extract a single subtree from a Newick file, given a taxon name or ott id
+'''
+def get_taxon_subtree_from_newick_file(newick_tree_file, taxon):
+    with open(newick_tree_file) as f:
+        tree = f.read()
+
+    subtrees = extract_trees(tree, {taxon})
+
+    if len(subtrees) == 0:
+        raise Exception(f"No subtree found for taxon {taxon}")
+    
+    return next(iter(subtrees.values())) + ";"
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('treefile', type=argparse.FileType('r'), nargs='?', default=sys.stdin, help='The tree file in newick form')

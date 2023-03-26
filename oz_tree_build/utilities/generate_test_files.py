@@ -3,21 +3,26 @@ Generate test files that are a filtered subset of the full files, targeted at a 
 '''
 
 import argparse
+import bz2
 import csv
 import gzip
+import json
 import logging
 import os
 import sys
 
-from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
+from oz_tree_build.newick.extract_trees import \
+    get_taxon_subtree_from_newick_file
 from oz_tree_build.newick.newick_parser import parse_tree
+from oz_tree_build.utilities.temp_helpers import *
 from oz_tree_build.utilities.trim_wikipedia import enumerate_lines_from_file
+
 
 def generate_and_cache_filtered_file(original_file, context, processing_function, *args):
     '''
     Helper to perform caching of filtered files.
     '''
-
+    
     dir = os.path.dirname(original_file)
     file_name = os.path.basename(original_file)
 
@@ -85,7 +90,7 @@ def read_filtered_taxonomy_file(filtered_taxonomy_file, context):
             for srcs in sourceinfo.split(","):
                 src, id = srcs.split(':',1)
                 if src in sources:
-                    context.source_ids[src].add(id)
+                    context.source_ids[src].add(int(id))
 
 def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
     eol_sources = {'676': 'ncbi', '459': 'worms', '767': 'gbif'}
@@ -117,6 +122,64 @@ def read_filtered_eol_id_file(filtered_eol_id_file, context):
         for row in reader:
             context.eol_ids.add(row['page_id'])
 
+def generate_filtered_wikipedia_dump(wikipedia_dump_file, filtered_wikipedia_dump_file, context):
+    found_vernacular = False
+    included_qids = set()
+
+    with bz2.open(filtered_wikipedia_dump_file, 'wt', encoding="utf-8") as filtered_wiki_f:
+        filtered_wiki_f.write('[\n')
+
+        for line_num, line in enumerate_lines_from_file(wikipedia_dump_file):
+            if (line_num > 0 and line_num % 100000 == 0):
+                logging.info(f"Processed {line_num} lines")
+
+            if not line.startswith('{"type":'):
+                continue
+
+            json_item = json.loads(line.rstrip().rstrip(","))
+
+            try:
+                wikipedia_name = json_item['sitelinks']['enwiki']['title']
+            except KeyError:
+                wikipedia_name = None
+
+            wikipedia_label = label(json_item)
+
+            try:
+                is_taxon, vernaculars = find_taxon_and_vernaculars(json_item)
+            except KeyError:
+                continue
+
+            # If it's neither, ignore it
+            if not is_taxon and not len(vernaculars) > 0:
+                continue
+
+            if not is_taxon:
+                found_vernacular = True
+
+            # We expect all the vernacular entries to be at the end of the file
+            assert not (is_taxon and found_vernacular)
+
+            include_line = False
+
+            if len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0:
+                include_line = True
+            elif len(vernaculars) > 0:
+                for qid in vernaculars:
+                    if qid in included_qids:
+                        include_line = True
+                        logging.info(f"Including vernacular entry {wikipedia_label} ({wikipedia_name})")
+                        break
+            
+            if include_line:
+                included_qids.add(Qid(json_item))
+                logging.info(f"Including {wikipedia_label} ({wikipedia_name})")
+                filtered_wiki_f.write(line)
+
+        filtered_wiki_f.write(']\n')
+
+
+
 def generate_all_filtered_files(
         context, newick_file, taxonomy_file, eol_id_file, wikidata_dump_file,
         wikipedia_sql_dump_file, wikipedia_totals_bz2_pageviews):
@@ -129,6 +192,8 @@ def generate_all_filtered_files(
 
     filtered_eol_id_file = generate_and_cache_filtered_file(eol_id_file, context, generate_filtered_eol_id_file)
     read_filtered_eol_id_file(filtered_eol_id_file, context)
+
+    filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump)
 
 
 def main():

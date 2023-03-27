@@ -32,7 +32,7 @@ def wikidata_value(wd_json, err=False):
         return {}
 
 
-def label(json_item, lang='en'):
+def get_label(json_item, lang='en'):
     try:
         return json_item['labels'][lang]['value']
     except LookupError:
@@ -53,7 +53,7 @@ def JSON_contains_known_dbID(json_item, known_items):
             claim = json_item['claims'][taxon_id_prop]
             if source in ret:
                 logging.warning(
-                    f"Multiple {source} IDs for Q{Qid(json_item)} ({label(json_item)}); "
+                    f"Multiple {source} IDs for Q{Qid(json_item)} ({get_label(json_item)}); "
                     "taking the last one"
                 )
             try:
@@ -61,7 +61,7 @@ def JSON_contains_known_dbID(json_item, known_items):
             except (KeyError, ValueError, TypeError):
                 logging.warning(  # Lots of wikidata items may not be in 
                     f"Can't find a value for {source} for Q{Qid(json_item)} "
-                    f"({label(json_item)}) in wikidata")
+                    f"({get_label(json_item)}) in wikidata")
                 continue
             if src_id:
                 try:
@@ -87,3 +87,9 @@ def find_taxon_and_vernaculars(json_item):
                 vernaculars.add(wikidata_value(alt).get("numeric-id"))
 
     return is_taxon, vernaculars
+
+def get_wikipedia_name(json_item):
+    try:
+        return json_item['sitelinks']['enwiki']['title'].replace(" ", "_")
+    except KeyError:
+        return None

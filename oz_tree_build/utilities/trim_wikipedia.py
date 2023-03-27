@@ -5,6 +5,7 @@ pages that are relevant to OneZoom.
 
 import argparse
 import bz2
+import gzip
 import json
 import logging
 import sys
@@ -14,12 +15,17 @@ from oz_tree_build.utilities.temp_helpers import *
 
 known_claims = { "P31", "P685", "P846", "P850", "P1391", "P5055", "P830", "P141", "P627", "P961" }
 
-def enumerate_lines_from_file(filename):
+def open_file_based_on_extension(filename, mode):
+    # Open a file, whether it's compressed or not
     if filename.endswith('.bz2'):
-        f = bz2.open(filename, 'rt')
+        return bz2.open(filename, mode, encoding='utf-8')
+    elif filename.endswith('.gz'):
+        return gzip.open(filename, mode, encoding='utf-8')
     else:
-        f = open(filename, 'rt')
-    with f:
+        return open(filename, mode, encoding='utf-8')
+
+def enumerate_lines_from_file(filename):
+    with open_file_based_on_extension(filename, 'rt') as f:
         for line_num, line in enumerate(f):
             yield line_num, line
 

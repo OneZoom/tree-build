@@ -65,21 +65,20 @@ def read_filtered_newick(filtered_newick_file, context):
     context.otts = {node['ott'] for node in parse_tree(filtered_tree_string)}
 
 def generate_filtered_taxonomy_file(taxonomy_file, filtered_taxonomy_file, context):
-    with open_file_based_on_extension(taxonomy_file, 'rt') as input_taxonomy:
-        with open_file_based_on_extension(filtered_taxonomy_file, 'wt') as filtered_taxonomy:
-            for i, line in enumerate(input_taxonomy):
-                # Always copy the header
-                if i == 0:
-                    filtered_taxonomy.write(line)
-                    continue
+    with open_file_based_on_extension(filtered_taxonomy_file, 'wt') as filtered_taxonomy:
+        for i, line in enumerate_lines_from_file(taxonomy_file):
+            # Always copy the header
+            if i == 0:
+                filtered_taxonomy.write(line)
+                continue
 
-                # The ott id is the first column (known as the "uid" in the tsv file)
-                fields = line.split("\t")
-                ott = fields[0]
+            # The ott id is the first column (known as the "uid" in the tsv file)
+            fields = line.split("\t")
+            ott = fields[0]
 
-                # Only include lines that have an ott id in the filtered tree
-                if ott in context.otts:
-                    filtered_taxonomy.write(line)
+            # Only include lines that have an ott id in the filtered tree
+            if ott in context.otts:
+                filtered_taxonomy.write(line)
 
 def read_filtered_taxonomy_file(filtered_taxonomy_file, context):
     sources = {'ncbi', 'if', 'worms', 'irmng', 'gbif'}
@@ -194,7 +193,6 @@ def generate_filtered_wikipedia_sql_dump(wikipedia_sql_dump_file, filtered_wikip
     page_table_pagelen_column = 10
 
     with open_file_based_on_extension(filtered_wikipedia_sql_dump_file, 'wt') as filtered_sql_f:
-        entries = []
         current_output_line_entry_count = 0
         max_entries_per_line = 10
         with open_file_based_on_extension(wikipedia_sql_dump_file, 'rt') as sql_f:
@@ -235,10 +233,24 @@ def generate_filtered_wikipedia_sql_dump(wikipedia_sql_dump_file, filtered_wikip
                                 filtered_sql_f.write(";\n")
                                 current_output_line_entry_count = 0
 
+def generate_filtered_pageviews_file(pageviews_file, filtered_pageviews_file, context):
+    match_project = context.wikilang + '.z '
+
+    with open_file_based_on_extension(filtered_pageviews_file, 'wt') as filtered_bz2_f:
+        for i, line in enumerate_lines_from_file(pageviews_file):
+            if (i % 10000000 == 0):
+                logging.info(f"Processed {i} lines")
+            if not line.startswith(match_project):
+                continue
+
+            info = line[len(match_project):].rstrip('\n').rsplit(' ', 1)
+            title = info[0].replace(" ", "_") #even though most titles should not have spaces, some can sneak in via uri escaping
+            if title in context.wikipedia_ids:
+                filtered_bz2_f.write(line)
 
 def generate_all_filtered_files(
         context, newick_file, taxonomy_file, eol_id_file, wikidata_dump_file,
-        wikipedia_sql_dump_file, wikipedia_totals_bz2_pageviews):
+        wikipedia_sql_dump_file, wikipedia_pageviews_files):
 
     filtered_newick_file = generate_and_cache_filtered_file(newick_file, context, generate_filtered_newick)
     read_filtered_newick(filtered_newick_file, context)
@@ -252,7 +264,10 @@ def generate_all_filtered_files(
     filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump, bz2=True)
     read_filtered_wikipedia_dump(filtered_wikipedia_dump_file, context)
 
-    filtered_wikipedia_sql_dump_file = generate_and_cache_filtered_file(wikipedia_sql_dump_file, context, generate_filtered_wikipedia_sql_dump)
+    generate_and_cache_filtered_file(wikipedia_sql_dump_file, context, generate_filtered_wikipedia_sql_dump)
+
+    for wikipedia_pageviews_file in wikipedia_pageviews_files:
+        generate_and_cache_filtered_file(wikipedia_pageviews_file, context, generate_filtered_pageviews_file)
 
 
 def main():
@@ -278,7 +293,10 @@ def main():
     args = parser.parse_args()
 
     # Create a context object to hold various things we need to pass around
-    context = type('', (object,), {"taxon": args.Taxon, "force": args.force})()
+    context = type('', (object,), {
+        'taxon': args.Taxon,
+        'wikilang': 'en',
+        'force': args.force})()
 
     generate_all_filtered_files(context, args.Tree, args.OpenTreeTaxonomy, args.EOLidentifiers,
                                 args.wikidataDumpFile, args.wikipediaSQLDumpFile, args.wikipedia_totals_bz2_pageviews)

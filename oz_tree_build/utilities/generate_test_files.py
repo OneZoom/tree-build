@@ -1,5 +1,5 @@
 '''
-Generate test files that are a filtered subset of the full files, targeted at a specific taxon.
+Generate test files that are a filtered subset of the full files, targeted at a specific clade/taxon.
 '''
 
 import argparse
@@ -26,33 +26,42 @@ def generate_and_cache_filtered_file(original_file, context, processing_function
     dir = os.path.dirname(original_file)
     file_name = os.path.basename(original_file)
 
-    # Include the taxon in the new file name
-    # e.g. '/foo/bar.csv.gz' --> '/foo/Mammalia_bar.csv.gz'
-    taxon_filtered_file = os.path.join(dir, f"{context.taxon}_{file_name}")
+    one_zoom_file_prefix = 'OneZoom'
+    filtered_file_prefix = (context.clade or one_zoom_file_prefix) + '_'
+    if file_name.startswith(filtered_file_prefix):
+        raise Exception(f"Input and outpit files are the same, with prefix {filtered_file_prefix}")
+    
+    # If the original file is a OneZoom file, remove the prefix to avoid double prefixes
+    if file_name.startswith(one_zoom_file_prefix):
+        file_name = file_name[len(one_zoom_file_prefix)+1:]
 
-    if bz2 and not taxon_filtered_file.endswith('.bz2'):
-        taxon_filtered_file += '.bz2'
+    # Include the clade in the new file name, e.g. '/foo/bar.csv.gz' --> '/foo/Mammalia_bar.csv.gz'
+    # If no clade is specified, use 'OneZoom' instead as the prefix
+    clade_filtered_file = os.path.join(dir, f"{filtered_file_prefix}{file_name}")
+
+    if bz2 and not clade_filtered_file.endswith('.bz2'):
+        clade_filtered_file += '.bz2'
 
     # Unless force is set, check if we already have a filtered file with the matching timestamp
     if not context.force:
-        if os.path.exists(taxon_filtered_file) and os.path.getmtime(taxon_filtered_file) == os.path.getmtime(original_file):
-            logging.info(f"Using cached file {taxon_filtered_file}")
-            return taxon_filtered_file
+        if os.path.exists(clade_filtered_file) and os.path.getmtime(clade_filtered_file) == os.path.getmtime(original_file):
+            logging.info(f"Using cached file {clade_filtered_file}")
+            return clade_filtered_file
 
-    logging.info(f"Generating file {taxon_filtered_file}")
+    logging.info(f"Generating file {clade_filtered_file}")
 
     # Call the processing function to generate the filtered file
-    processing_function(original_file, taxon_filtered_file, context)
+    processing_function(original_file, clade_filtered_file, context)
 
     # Set the timestamp of the filtered file to match the original file
-    os.utime(taxon_filtered_file, (os.path.getatime(original_file), os.path.getmtime(original_file)))
+    os.utime(clade_filtered_file, (os.path.getatime(original_file), os.path.getmtime(original_file)))
 
-    logging.info(f"Finished generating file {taxon_filtered_file}")
+    logging.info(f"Finished generating file {clade_filtered_file}")
 
-    return taxon_filtered_file
+    return clade_filtered_file
 
 def generate_filtered_newick(newick_file, filtered_newick_file, context):
-    tree_string = get_taxon_subtree_from_newick_file(newick_file, context.taxon)
+    tree_string = get_taxon_subtree_from_newick_file(newick_file, context.clade)
 
     with open_file_based_on_extension(filtered_newick_file, 'wt') as f:
         f.write(tree_string)
@@ -111,7 +120,11 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
                     continue
 
                 # Only include it if we saw that id in the taxonomy file
-                if fields[1] in context.source_ids[eol_sources[fields[2]]]:
+                try:
+                    id = int(fields[1])
+                except ValueError:
+                    continue
+                if id in context.source_ids[eol_sources[fields[2]]]:
                     filtered_eol_f.write(line)
 
     logging.info(f"Found {len(context.source_ids['ncbi'])} NCBI ids, {len(context.source_ids['if'])} IF ids, {len(context.source_ids['worms'])} WoRMS ids, {len(context.source_ids['irmng'])} IRMNG ids, {len(context.source_ids['gbif'])} GBIF ids")
@@ -125,54 +138,83 @@ def read_filtered_eol_id_file(filtered_eol_id_file, context):
             context.eol_ids.add(row['page_id'])
 
 def generate_filtered_wikipedia_dump(wikipedia_dump_file, filtered_wikipedia_dump_file, context):
-    found_vernacular = False
+    known_claims = { "P31", "P685", "P846", "P850", "P1391", "P5055", "P830", "P141", "P627", "P961" }
     included_qids = set()
 
-    with bz2.open(filtered_wikipedia_dump_file, 'wt', encoding="utf-8") as filtered_wiki_f:
+    # We want all the vernacular lines to end up at the end of the file, so we
+    # store them in a list. There are only a few hundred, so memory isn't
+    # an issue.
+    vernacular_json_items = []
+
+    sitelinks_key = f'{context.wikilang}wiki'
+
+    with open_file_based_on_extension(filtered_wikipedia_dump_file, 'wt') as filtered_wiki_f:
         filtered_wiki_f.write('[\n')
+        preserved_lines = 0
 
         for line_num, line in enumerate_lines_from_file(wikipedia_dump_file):
             if (line_num > 0 and line_num % 100000 == 0):
-                logging.info(f"Processed {line_num} lines")
+                logging.info(f"Kept {preserved_lines} out of {line_num-1} processed lines ({preserved_lines / line_num * 100:.2f}%))")
 
-            if not line.startswith('{"type":'):
+            if not(line.startswith('{"type":') and quick_byte_match.search(line)):
                 continue
 
             json_item = json.loads(line.rstrip().rstrip(","))
 
-            wikipedia_name = get_wikipedia_name(json_item)
-            wikipedia_label = get_label(json_item)
-
             try:
-                is_taxon, vernaculars = find_taxon_and_vernaculars(json_item)
+                is_taxon, vernaculars_matches = find_taxon_and_vernaculars(json_item)
             except KeyError:
                 continue
 
             # If it's neither, ignore it
-            if not is_taxon and not len(vernaculars) > 0:
+            if not is_taxon and not len(vernaculars_matches) > 0:
                 continue
 
-            if not is_taxon:
-                found_vernacular = True
+            # If it's a taxon but it doesn't map to any of our source ids, ignore it
+            if is_taxon and not len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0:
+                continue
 
-            # We expect all the vernacular entries to be at the end of the file
-            assert not (is_taxon and found_vernacular)
+            # Remove things we don't need at all
+            if 'descriptions' in json_item:
+                del json_item['descriptions']
+            if 'aliases' in json_item:
+                del json_item['aliases']
 
-            include_line = False
+            # Only keep the English labels
+            if context.wikilang in json_item['labels']:
+                json_item['labels'] = {'language': json_item['labels'][context.wikilang]}
+            else:
+                json_item['labels'] = {}
 
-            if len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0:
-                include_line = True
-            elif len(vernaculars) > 0:
-                for qid in vernaculars:
-                    if qid in included_qids:
-                        include_line = True
-                        logging.info(f"Including vernacular entry {wikipedia_label} ({wikipedia_name})")
-                        break
-            
-            if include_line:
+            # Only keep the claims we care about
+            json_item['claims'] = {k: v for k, v in json_item['claims'].items() if k in known_claims}
+
+            # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.
+            # And among those, only keep the original value for the language we want, since the
+            # rest is just needed to collect the language names into the bit field
+            json_item['sitelinks'] = {k: v if k==sitelinks_key else {} for k, v in json_item['sitelinks'].items() if k.endswith('wiki')}
+
+            if is_taxon:
+                # Write out the line. We set the separators to avoid spaces
+                filtered_wiki_f.write(json.dumps(json_item, separators=(',', ':')))
+                filtered_wiki_f.write(',\n')
+                
                 included_qids.add(Qid(json_item))
-                logging.info(f"Including {wikipedia_label} ({wikipedia_name})")
-                filtered_wiki_f.write(line)
+
+                preserved_lines += 1
+            else:
+                # If it's vernacular, we'll write it out at the end, so save it
+                vernacular_json_items.append((vernaculars_matches, json_item))
+
+        # Write out the relevant vernacular lines
+        logging.info(f"Writing vernacular lines at the end of the file")
+        for vernaculars_matches, json_item in vernacular_json_items:
+            for qid in vernaculars_matches:
+                if qid in included_qids:
+                    filtered_wiki_f.write(json.dumps(json_item, separators=(',', ':')))
+                    filtered_wiki_f.write(',\n')
+                    logging.info(f"Including vernacular entry '{get_label(json_item)}' ({get_wikipedia_name(json_item)})")
+                    break
 
         filtered_wiki_f.write(']\n')
 
@@ -252,7 +294,12 @@ def generate_all_filtered_files(
         context, newick_file, taxonomy_file, eol_id_file, wikidata_dump_file,
         wikipedia_sql_dump_file, wikipedia_pageviews_files):
 
-    filtered_newick_file = generate_and_cache_filtered_file(newick_file, context, generate_filtered_newick)
+    if context.clade:
+        # If we're filtering by clade, we need to generate a filtered newick
+        filtered_newick_file = generate_and_cache_filtered_file(newick_file, context, generate_filtered_newick)
+    else:
+        # Otherwise, we just use the original newick file directly
+        filtered_newick_file = newick_file
     read_filtered_newick(filtered_newick_file, context)
 
     filtered_taxonomy_file = generate_and_cache_filtered_file(taxonomy_file, context, generate_filtered_taxonomy_file)
@@ -262,6 +309,7 @@ def generate_all_filtered_files(
     read_filtered_eol_id_file(filtered_eol_id_file, context)
 
     filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump, bz2=True)
+    # filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump)
     read_filtered_wikipedia_dump(filtered_wikipedia_dump_file, context)
 
     generate_and_cache_filtered_file(wikipedia_sql_dump_file, context, generate_filtered_wikipedia_sql_dump)
@@ -274,8 +322,6 @@ def main():
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('Taxon', 
-        help='The taxon for which to generate test files')
     parser.add_argument('Tree', 
         help='The newick format tree to use')
     parser.add_argument('OpenTreeTaxonomy', 
@@ -288,14 +334,16 @@ def main():
         help='The gzipped >1GB wikipedia -latest-page.sql.gz dump, from https://dumps.wikimedia.org/enwiki/latest/ (enwiki-latest-page.sql.gz) ')
     parser.add_argument('wikipedia_totals_bz2_pageviews', nargs='*',
         help='One or more b2zipped "totals" pageview count files, from https://dumps.wikimedia.org/other/pagecounts-ez/merged/ (e.g. pagecounts-2016-01-views-ge-5-totals.bz2, or pagecounts*totals.bz2)')
+    parser.add_argument('--clade', '-c',
+        help='The clade for which to generate the files')
     parser.add_argument('--force', '-f', action=argparse.BooleanOptionalAction, default=False,
         help='If true, forces the regeneration of all files, ignoring caching.')
     args = parser.parse_args()
 
     # Create a context object to hold various things we need to pass around
     context = type('', (object,), {
-        'taxon': args.Taxon,
         'wikilang': 'en',
+        'clade': args.clade,
         'force': args.force})()
 
     generate_all_filtered_files(context, args.Tree, args.OpenTreeTaxonomy, args.EOLidentifiers,

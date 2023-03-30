@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import sys
+import time
 
 from oz_tree_build.newick.extract_trees import \
     get_taxon_subtree_from_newick_file
@@ -154,7 +155,7 @@ def generate_filtered_wikipedia_dump(wikipedia_dump_file, filtered_wikipedia_dum
 
         for line_num, line in enumerate_lines_from_file(wikipedia_dump_file):
             if (line_num > 0 and line_num % 100000 == 0):
-                logging.info(f"Kept {preserved_lines} out of {line_num-1} processed lines ({preserved_lines / line_num * 100:.2f}%))")
+                logging.info(f"Kept {preserved_lines} out of {line_num} processed lines ({preserved_lines / line_num * 100:.2f}%))")
 
             if not(line.startswith('{"type":') and quick_byte_match.search(line)):
                 continue
@@ -213,7 +214,7 @@ def generate_filtered_wikipedia_dump(wikipedia_dump_file, filtered_wikipedia_dum
                 if qid in included_qids:
                     filtered_wiki_f.write(json.dumps(json_item, separators=(',', ':')))
                     filtered_wiki_f.write(',\n')
-                    logging.info(f"Including vernacular entry '{get_label(json_item)}' ({get_wikipedia_name(json_item)})")
+                    logging.info(f"Including vernacular entry '{get_label(json_item)}' ({get_wikipedia_name(json_item)}), mapped to Q={qid}")
                     break
 
         filtered_wiki_f.write(']\n')
@@ -280,7 +281,7 @@ def generate_filtered_pageviews_file(pageviews_file, filtered_pageviews_file, co
 
     with open_file_based_on_extension(filtered_pageviews_file, 'wt') as filtered_bz2_f:
         for i, line in enumerate_lines_from_file(pageviews_file):
-            if (i % 10000000 == 0):
+            if (i > 0 and i % 10000000 == 0):
                 logging.info(f"Processed {i} lines")
             if not line.startswith(match_project):
                 continue
@@ -346,8 +347,13 @@ def main():
         'clade': args.clade,
         'force': args.force})()
 
+    start = time.time()
+
     generate_all_filtered_files(context, args.Tree, args.OpenTreeTaxonomy, args.EOLidentifiers,
                                 args.wikidataDumpFile, args.wikipediaSQLDumpFile, args.wikipedia_totals_bz2_pageviews)
+
+    end = time.time()
+    logging.debug("Time taken: {} seconds".format(end - start))
 
 if __name__ == '__main__':
     main()

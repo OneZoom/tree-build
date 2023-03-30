@@ -7,6 +7,7 @@ import logging
 import re
 
 
+# See https://en.wikipedia.org/wiki/Module:Taxonbar#L-195 for the full list
 match_taxa = {
     16521: 'taxon',
     310890: 'monotypic taxon',

@@ -3,7 +3,6 @@ Generate test files that are a filtered subset of the full files, targeted at a 
 '''
 
 import argparse
-import bz2
 import csv
 import gzip
 import json
@@ -30,9 +29,9 @@ def generate_and_cache_filtered_file(original_file, context, processing_function
     one_zoom_file_prefix = 'OneZoom'
     filtered_file_prefix = (context.clade or one_zoom_file_prefix) + '_'
     if file_name.startswith(filtered_file_prefix):
-        raise Exception(f"Input and outpit files are the same, with prefix {filtered_file_prefix}")
+        raise Exception(f"Input and output files are the same, with prefix {filtered_file_prefix}")
     
-    # If the original file is a OneZoom file, remove the prefix to avoid double prefixes
+    # If the original file is a OneZoom file, remove the OneZoom prefix to avoid double prefixes
     if file_name.startswith(one_zoom_file_prefix):
         file_name = file_name[len(one_zoom_file_prefix)+1:]
 
@@ -67,8 +66,8 @@ def generate_filtered_newick(newick_file, filtered_newick_file, context):
     with open_file_based_on_extension(filtered_newick_file, 'wt') as f:
         f.write(tree_string)
 
-def read_filtered_newick(filtered_newick_file, context):
-    with open_file_based_on_extension(filtered_newick_file, 'rt') as f:
+def read_newick_file(newick_file, context):
+    with open_file_based_on_extension(newick_file, 'rt') as f:
         filtered_tree_string = f.read()
 
     # Get the set of OTT ids from the filtered tree
@@ -90,12 +89,12 @@ def generate_filtered_taxonomy_file(taxonomy_file, filtered_taxonomy_file, conte
             if ott in context.otts:
                 filtered_taxonomy.write(line)
 
-def read_filtered_taxonomy_file(filtered_taxonomy_file, context):
+def read_taxonomy_file(taxonomy_file, context):
     sources = {'ncbi', 'if', 'worms', 'irmng', 'gbif'}
     context.source_ids = { source: set() for source in sources }
 
     # Get the sets of source ids we're actually using from the taxonomy file
-    with open_file_based_on_extension(filtered_taxonomy_file, 'rt') as f:
+    with open_file_based_on_extension(taxonomy_file, 'rt') as f:
         reader = csv.DictReader(f, delimiter='\t')
         for OTTrow in reader:
             sourceinfo = OTTrow['sourceinfo']
@@ -120,25 +119,25 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
                 if not fields[2] in eol_sources:
                     continue
 
-                # Only include it if we saw that id in the taxonomy file
                 try:
                     id = int(fields[1])
                 except ValueError:
                     continue
+                # Only include it if we saw that id in the taxonomy file
                 if id in context.source_ids[eol_sources[fields[2]]]:
                     filtered_eol_f.write(line)
 
     logging.info(f"Found {len(context.source_ids['ncbi'])} NCBI ids, {len(context.source_ids['if'])} IF ids, {len(context.source_ids['worms'])} WoRMS ids, {len(context.source_ids['irmng'])} IRMNG ids, {len(context.source_ids['gbif'])} GBIF ids")
 
-def read_filtered_eol_id_file(filtered_eol_id_file, context):
+def read_eol_id_file(eol_id_file, context):
     context.eol_ids = set()
 
-    with gzip.open(filtered_eol_id_file, "rt") as f:
+    with gzip.open(eol_id_file, "rt") as f:
         reader = csv.DictReader(f)
         for row in reader:
             context.eol_ids.add(row['page_id'])
 
-def generate_filtered_wikipedia_dump(wikipedia_dump_file, filtered_wikipedia_dump_file, context):
+def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump_file, context):
     known_claims = { "P31", "P685", "P846", "P850", "P1391", "P5055", "P830", "P141", "P627", "P961" }
     included_qids = set()
 
@@ -172,7 +171,9 @@ def generate_filtered_wikipedia_dump(wikipedia_dump_file, filtered_wikipedia_dum
                 continue
 
             # If it's a taxon but it doesn't map to any of our source ids, ignore it
-            if is_taxon and not len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0:
+            # We only do this if we're filtering by clade. When processing the full
+            # tree, we want to keep all the taxa, even if they don't map to anything
+            if context.clade and is_taxon and not len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0:
                 continue
 
             # Remove things we don't need at all
@@ -207,7 +208,7 @@ def generate_filtered_wikipedia_dump(wikipedia_dump_file, filtered_wikipedia_dum
                 # If it's vernacular, we'll write it out at the end, so save it
                 vernacular_json_items.append((vernaculars_matches, json_item))
 
-        # Write out the relevant vernacular lines
+        # Write out the relevant vernacular lines at the end
         logging.info(f"Writing vernacular lines at the end of the file")
         for vernaculars_matches, json_item in vernacular_json_items:
             for qid in vernaculars_matches:
@@ -219,15 +220,15 @@ def generate_filtered_wikipedia_dump(wikipedia_dump_file, filtered_wikipedia_dum
 
         filtered_wiki_f.write(']\n')
 
-def read_filtered_wikipedia_dump(filtered_wikipedia_dump_file, context):
-    context.wikipedia_ids = set()
+def read_wikidata_dump(wikidata_dump_file, context):
+    context.wikidata_ids = set()
 
-    for line_num, line in enumerate_lines_from_file(filtered_wikipedia_dump_file):
+    for line_num, line in enumerate_lines_from_file(wikidata_dump_file):
         if not line.startswith('{"type":'):
             continue
 
         json_item = json.loads(line.rstrip().rstrip(","))
-        context.wikipedia_ids.add(get_wikipedia_name(json_item))
+        context.wikidata_ids.add(get_wikipedia_name(json_item))
 
 def generate_filtered_wikipedia_sql_dump(wikipedia_sql_dump_file, filtered_wikipedia_sql_dump_file, context):
     #the column numbers for each datum are specified in the SQL file, and hardcoded here.
@@ -258,7 +259,8 @@ def generate_filtered_wikipedia_sql_dump(wikipedia_sql_dump_file, filtered_wikip
                     if field_num == page_table_title_column:
                         title = field
                     elif field_num == page_table_pagelen_column and namespace == '0':
-                        if title in context.wikipedia_ids:
+                        # Only include it if it's one of our wikidata ids
+                        if title in context.wikidata_ids:
                             if current_output_line_entry_count == 0:
                                 filtered_sql_f.write(match_line)
                             else:
@@ -288,7 +290,8 @@ def generate_filtered_pageviews_file(pageviews_file, filtered_pageviews_file, co
 
             info = line[len(match_project):].rstrip('\n').rsplit(' ', 1)
             title = info[0].replace(" ", "_") #even though most titles should not have spaces, some can sneak in via uri escaping
-            if title in context.wikipedia_ids:
+            # Only include it if it's one of our wikidata ids
+            if title in context.wikidata_ids:
                 filtered_bz2_f.write(line)
 
 def generate_all_filtered_files(
@@ -301,17 +304,22 @@ def generate_all_filtered_files(
     else:
         # Otherwise, we just use the original newick file directly
         filtered_newick_file = newick_file
-    read_filtered_newick(filtered_newick_file, context)
+    read_newick_file(filtered_newick_file, context)
 
-    filtered_taxonomy_file = generate_and_cache_filtered_file(taxonomy_file, context, generate_filtered_taxonomy_file)
-    read_filtered_taxonomy_file(filtered_taxonomy_file, context)
+    if context.clade:
+        filtered_taxonomy_file = generate_and_cache_filtered_file(taxonomy_file, context, generate_filtered_taxonomy_file)
+    else:
+        # If we're not filtering by clade, there is really nothing to filter,
+        # so we just use the original taxonomy file directly
+        filtered_taxonomy_file = taxonomy_file
+    read_taxonomy_file(filtered_taxonomy_file, context)
 
     filtered_eol_id_file = generate_and_cache_filtered_file(eol_id_file, context, generate_filtered_eol_id_file)
-    read_filtered_eol_id_file(filtered_eol_id_file, context)
+    read_eol_id_file(filtered_eol_id_file, context)
 
-    filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump, bz2=True)
+    filtered_wikidata_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikidata_dump, bz2=True)
     # filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump)
-    read_filtered_wikipedia_dump(filtered_wikipedia_dump_file, context)
+    read_wikidata_dump(filtered_wikidata_dump_file, context)
 
     generate_and_cache_filtered_file(wikipedia_sql_dump_file, context, generate_filtered_wikipedia_sql_dump)
 

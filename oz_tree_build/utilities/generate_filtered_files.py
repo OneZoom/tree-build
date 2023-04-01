@@ -129,14 +129,6 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
 
     logging.info(f"Found {len(context.source_ids['ncbi'])} NCBI ids, {len(context.source_ids['if'])} IF ids, {len(context.source_ids['worms'])} WoRMS ids, {len(context.source_ids['irmng'])} IRMNG ids, {len(context.source_ids['gbif'])} GBIF ids")
 
-def read_eol_id_file(eol_id_file, context):
-    context.eol_ids = set()
-
-    with gzip.open(eol_id_file, "rt") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            context.eol_ids.add(row['page_id'])
-
 def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump_file, context):
     known_claims = { "P31", "P685", "P846", "P850", "P1391", "P5055", "P830", "P141", "P627", "P961" }
     included_qids = set()
@@ -314,8 +306,7 @@ def generate_all_filtered_files(
         filtered_taxonomy_file = taxonomy_file
     read_taxonomy_file(filtered_taxonomy_file, context)
 
-    filtered_eol_id_file = generate_and_cache_filtered_file(eol_id_file, context, generate_filtered_eol_id_file)
-    read_eol_id_file(filtered_eol_id_file, context)
+    generate_and_cache_filtered_file(eol_id_file, context, generate_filtered_eol_id_file)
 
     filtered_wikidata_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikidata_dump, bz2=True)
     # filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump)

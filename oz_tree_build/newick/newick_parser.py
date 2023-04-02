@@ -1,5 +1,5 @@
 """
-Lightweight Newick parser that takes a string and enumerate all the nodes in the tree.
+Lightweight Newick parser that takes a string and enumerates all the nodes in the tree.
 
 It's a very simple one-pass parser that doesn't build any parse tree, and instead processes
 the nodes as they're read. It's designed to be fast.

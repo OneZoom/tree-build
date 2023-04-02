@@ -4,7 +4,6 @@ Generate test files that are a filtered subset of the full files, targeted at a 
 
 import argparse
 import csv
-import gzip
 import json
 import logging
 import os
@@ -14,10 +13,7 @@ import time
 from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
 from oz_tree_build.newick.newick_parser import parse_tree
 from oz_tree_build.utilities.temp_helpers import *
-from oz_tree_build.utilities.trim_wikipedia import (
-    enumerate_lines_from_file,
-    open_file_based_on_extension,
-)
+from oz_tree_build.utilities.file_utils import *
 
 
 def generate_and_cache_filtered_file(

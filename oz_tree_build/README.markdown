@@ -90,7 +90,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	If you do not have comprehensive tree of a clade, it probably doesn't make sense to calculate popularity measures, and you can run this script with the `-p` flag (or omit the references to the `wp_` wikipedia files. Most of the time for this command is spent going throught the wikidata JSON dump, so if you want to save time and don't care about mapping to wikipedia items at all, you can omit the `wd_JSON` parameter too.
 	
 	```
-	OZprivate/ServerScripts/TaxonMappingAndPopularity/CSV_base_table_creator.py \
+	CSV_base_table_creator \
 	data/OZTreeBuild/${OZ_TREE}/${OZ_TREE}_full_tree.phy \
 	data/OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv \
 	data/EOL/provider_ids.csv.gz \

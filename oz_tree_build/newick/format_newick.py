@@ -16,6 +16,8 @@ The output is:
     ):1.0
   ):0.5
 ):4.5;
+
+This is not used directly by OneZoom, but is a useful general purpose utility.
 """
 
 import argparse
@@ -36,6 +38,7 @@ def format(newick_tree, output_stream, indent_spaces=2):
 
     while index < len(newick_tree):
 
+        # If we've reached a new branch, write the opening brace and increase the depth
         if newick_tree[index] == "(":
             index += 1
             output_stream.write(indent_string * depth)
@@ -43,6 +46,7 @@ def format(newick_tree, output_stream, indent_spaces=2):
             depth += 1
             continue
 
+        # If we've reached the end of a branch, write the closing brace and decrease the depth
         closed_brace = newick_tree[index] == ")"
         if closed_brace:
             index += 1
@@ -51,16 +55,19 @@ def format(newick_tree, output_stream, indent_spaces=2):
             output_stream.write(indent_string * depth)
             output_stream.write(")")
 
+        # If we've reached a token, write it out
         if match_full_name := whole_token_regex.match(newick_tree, index):
             index = match_full_name.end()
             if not closed_brace:
                 output_stream.write(indent_string * depth)
             output_stream.write(match_full_name.group())
 
+        # If we've reached a comma, write it out and start a new line
         if newick_tree[index] == ",":
-            output_stream.write(newick_tree[index] + "\n")
+            output_stream.write(",\n")
             index += 1
 
+        # If we've reached the end of the tree, write the semicolon and break
         if newick_tree[index] == ";":
             output_stream.write(newick_tree[index] + "\n")
             break

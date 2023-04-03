@@ -3,14 +3,17 @@ __author__ = "David Ebbo"
 import logging
 import re
 
-"""
-Enumerates all the OneZoom tokens in a tree string (e.g. foobar_ott123~-789-111)
-"""
+__author__ = "David Ebbo"
+
 full_ott_token = re.compile(r"'?([\w\-~]+)@'?(?::([\d\.]+))?")
 ott_details = re.compile(r"(\w+)_ott(\d*)~?([-\d]*)$")
 
 
 def enumerate_one_zoom_tokens(tree):
+    """
+    Enumerates all the OneZoom tokens in a tree string (e.g. foobar_ott123~-789-111)
+    """
+
     # Skip the comment block at the start of the file
     start_index = tree.index("]") if "[" in tree else 0
 
@@ -25,9 +28,8 @@ def enumerate_one_zoom_tokens(tree):
         # Check if it matches our tilde (aka 'equal') exclusion syntax
         match = ott_details.match(result["full_name"])
         if match:
-            result["excluded_otts"] = (match.group(3) or "").split(
-                "-"
-            )  # split by minus signs
+            # split by minus signs
+            result["excluded_otts"] = (match.group(3) or "").split("-")
 
             # If present, the first number after '=' is the tree to extract.
             first_number_after_equal = result["excluded_otts"].pop(0)

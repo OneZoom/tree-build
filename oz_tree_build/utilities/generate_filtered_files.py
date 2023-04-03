@@ -1,5 +1,7 @@
 """
-Generate test files that are a filtered subset of the full files, targeted at a specific clade/taxon.
+This code can be used in two different ways:
+1. Filter the input files to remove many irrelevant things in order to make them smaller.
+2. Generate test files that are a filtered subset of the full files, targeted at a specific clade/taxon.
 """
 
 import argparse
@@ -12,8 +14,10 @@ import time
 
 from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
 from oz_tree_build.newick.newick_parser import parse_tree
-from oz_tree_build.utilities.temp_helpers import *
-from oz_tree_build.utilities.file_utils import *
+from .temp_helpers import *
+from .file_utils import *
+
+__author__ = "David Ebbo"
 
 
 def generate_and_cache_filtered_file(

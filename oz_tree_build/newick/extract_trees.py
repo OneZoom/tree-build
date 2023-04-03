@@ -7,7 +7,7 @@ Everything is processed in a single pass over the tree string, using the newick_
 As we walk through the nodes, we process both the target taxa and the excluded taxa.
 
 From the command line, run for example:
-python3 extract_trees.py tree.tre -t Tupaia Camelidae
+.venv/bin/extract_trees tree.tre -t Tupaia Camelidae
 """
 
 
@@ -16,7 +16,7 @@ import logging
 import sys
 from typing import Set
 
-from oz_tree_build.newick.newick_parser import parse_tree
+from .newick_parser import parse_tree
 
 __author__ = "David Ebbo"
 

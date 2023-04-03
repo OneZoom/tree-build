@@ -1,5 +1,21 @@
 """
-Extract a minimal tree that includes a set of taxa
+Extract a minimal tree that includes a set of taxa, and their closest common ancestors.
+"""
+
+"""
+e.g. if called on Panthera_tigris, Panthera_leo, Canis_lupus, Crocodylus niloticus, it returns (without the formatting):
+(
+  Crocodylus_niloticus_ott35864:6.819304991155585,
+  (
+    Canis_lupus_ott247341:1.123457,
+    (
+      Panthera_leo_ott563151:4.654321,
+      Panthera_tigris_ott42314:4.814815
+    )Panthera_ott563154:0.080247
+  )CARNIVORA_ott44565:13.561728
+)Amniota_ott229560:20.0;
+
+This is not used directly by OneZoom, but is a useful general purpose utility.
 """
 
 import argparse
@@ -7,7 +23,7 @@ import logging
 import sys
 from typing import Set
 
-from oz_tree_build.newick.newick_parser import parse_tree
+from .newick_parser import parse_tree
 
 __author__ = "David Ebbo"
 

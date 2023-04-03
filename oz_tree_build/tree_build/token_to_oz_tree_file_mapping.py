@@ -1,3 +1,7 @@
+"""
+Mapping from tokens to files for the tree build.
+"""
+
 token_to_file_map = {
     # Base tree for chordates, assuming initial divergence at 550Mya.
     # Note: BASE is not included here as it's passed explicitly as the starting tree

@@ -5,7 +5,9 @@ Miscellaneous file utilities
 import bz2
 import gzip
 
-from oz_tree_build.utilities.temp_helpers import *
+from .temp_helpers import *
+
+__author__ = "David Ebbo"
 
 
 def open_file_based_on_extension(filename, mode):

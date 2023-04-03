@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Create subtrees from the Open Tree of Life, on the basis of ott numbers in a set of newick files.
 """
@@ -28,19 +27,19 @@ import os
 import sys
 import time
 
-from oz_tree_build.oz_tokens import enumerate_one_zoom_tokens
+from .oz_tokens import enumerate_one_zoom_tokens
 from oz_tree_build.newick.extract_trees import extract_trees
 
 __author__ = "David Ebbo"
-
-"""
-Find all the included and excluded ott numbers in a OneZoom files, and add them to the sets
-"""
 
 
 def get_inclusions_and_exclusions_from_one_zoom_file(
     file, all_included_otts, all_excluded_otts
 ):
+    """
+    Find all the included and excluded ott numbers in a OneZoom files, and add them to the sets
+    """
+
     with open(file, "r", encoding="utf8") as stream:
         tree = stream.read()
 
@@ -51,14 +50,13 @@ def get_inclusions_and_exclusions_from_one_zoom_file(
             all_excluded_otts.update(result["excluded_otts"])
 
 
-"""
-Extract the subtrees from the Open Tree file, based on the list of included/excluded otts
-"""
-
-
 def extract_trees_from_open_tree_file(
     open_tree_file, output_dir, all_included_otts, all_excluded_otts
 ):
+    """
+    Extract the subtrees from the Open Tree file, based on the list of included/excluded otts
+    """
+
     # Read the contents of the open tree file into a string
     with open(open_tree_file, "r", encoding="utf8") as f:
         fulltree = f.read()

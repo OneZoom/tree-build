@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Build the entire OneZoom tree from the saved parts.
 
@@ -11,8 +10,8 @@ import logging
 import os
 import sys
 
-from oz_tree_build.oz_tokens import enumerate_one_zoom_tokens
-from oz_tree_build.token_to_oz_tree_file_mapping import token_to_file_map
+from .oz_tokens import enumerate_one_zoom_tokens
+from .token_to_oz_tree_file_mapping import token_to_file_map
 
 __author__ = "David Ebbo"
 
@@ -32,12 +31,11 @@ def trim_tree(tree):
     return tree
 
 
-"""
-Copy the input file to the output file, recursively expanding any OneZoom tokens
-"""
-
-
 def build_oz_tree(base_file, ot_parts_folder, output_stream):
+    """
+    Do all the token replacement, starting with the base file
+    """
+
     def process_newick(
         file,
         node_name_in_parent=None,
@@ -45,6 +43,10 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream):
         mapping_entry=None,
         expand_nodes=False,
     ):
+        """
+        Copy the input file to the output file, recursively expanding any OneZoom tokens
+        """
+
         logging.debug(f"Processing {file}")
 
         if not os.path.exists(file):

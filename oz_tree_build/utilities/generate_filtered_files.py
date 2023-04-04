@@ -118,7 +118,11 @@ def read_taxonomy_file(taxonomy_file, context):
             for srcs in sourceinfo.split(","):
                 src, id = srcs.split(":", 1)
                 if src in sources:
-                    context.source_ids[src].add(int(id))
+                    try:
+                        context.source_ids[src].add(int(id))
+                    except ValueError:
+                        # Ignore it if it's not an integer
+                        pass
 
 
 def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
@@ -368,18 +372,16 @@ def generate_all_filtered_files(
         filtered_newick_file = generate_and_cache_filtered_file(
             newick_file, context, generate_filtered_newick
         )
-    else:
-        # Otherwise, we just use the original newick file directly
-        filtered_newick_file = newick_file
-    read_newick_file(filtered_newick_file, context)
+        read_newick_file(filtered_newick_file, context)
 
-    if context.clade:
+        # We also need to generate a filtered taxonomy file
         filtered_taxonomy_file = generate_and_cache_filtered_file(
             taxonomy_file, context, generate_filtered_taxonomy_file
         )
     else:
         # If we're not filtering by clade, there is really nothing to filter,
-        # so we just use the original taxonomy file directly
+        # so we just use the original taxonomy file directly.
+        # Note that we completely ignore the newick file in this case.
         filtered_taxonomy_file = taxonomy_file
     read_taxonomy_file(filtered_taxonomy_file, context)
 

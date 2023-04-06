@@ -14,6 +14,10 @@ import time
 
 from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
 from oz_tree_build.newick.newick_parser import parse_tree
+from .apply_mask_to_object_graph import (
+    KEEP,
+    apply_mask_to_object_graph,
+)
 from .temp_helpers import *
 from .file_utils import *
 
@@ -157,18 +161,37 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
 def generate_filtered_wikidata_dump(
     wikipedia_dump_file, filtered_wikipedia_dump_file, context
 ):
-    known_claims = {
-        "P31",
-        "P685",
-        "P846",
-        "P850",
-        "P1391",
-        "P5055",
-        "P830",
-        "P141",
-        "P627",
-        "P961",
+
+    # This mask defines which fields we want to keep from the wikidata dump
+    # The goal is to keep it structurally the same as the original, but only
+    # include the fields we actually consume
+    mask = {
+        "type": KEEP,  # Only needed for the quick 'startswith()' line check
+        "id": KEEP,
+        "labels": {"en": {"value": KEEP}},
+        "claims": {
+            "P31": [
+                {
+                    "mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}},
+                    "qualifiers": {
+                        "P642": [{"datavalue": {"value": {"numeric-id": KEEP}}}]
+                    },
+                }
+            ],
+            "P685": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # ncbi id
+            "P846": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # gbif id
+            "P850": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # worms id
+            "P1391": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # if id
+            "P5055": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # irmng id
+            "P830": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # EOL id
+            "P961": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # IPNI id
+            "P141": [
+                {"references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}]}
+            ],  # IUCN id
+        },
+        "sitelinks": KEEP,
     }
+
     included_qids = set()
 
     # We want all the vernacular lines to end up at the end of the file, so we
@@ -214,24 +237,7 @@ def generate_filtered_wikidata_dump(
             ):
                 continue
 
-            # Remove things we don't need at all
-            if "descriptions" in json_item:
-                del json_item["descriptions"]
-            if "aliases" in json_item:
-                del json_item["aliases"]
-
-            # Only keep the English labels
-            if context.wikilang in json_item["labels"]:
-                json_item["labels"] = {
-                    "language": json_item["labels"][context.wikilang]
-                }
-            else:
-                json_item["labels"] = {}
-
-            # Only keep the claims we care about
-            json_item["claims"] = {
-                k: v for k, v in json_item["claims"].items() if k in known_claims
-            }
+            apply_mask_to_object_graph(json_item, mask)
 
             # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.
             # And among those, only keep the original value for the language we want, since the

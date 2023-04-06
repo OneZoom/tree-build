@@ -999,6 +999,7 @@ def main():
     parser.add_argument(
         "--version",
         default=int(time.time() / 60.0),
+        type=int,
         help="A unique version number for the tree, to be saved in the DB tables & output files. Defaults to minutes since epoch (time()/60)",
     )
     parser.add_argument(

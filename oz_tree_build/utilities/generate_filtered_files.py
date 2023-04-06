@@ -14,6 +14,7 @@ import time
 
 from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
 from oz_tree_build.newick.newick_parser import parse_tree
+from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import JSON_contains_known_dbID, Qid, label
 from .apply_mask_to_object_graph import (
     KEEP,
     apply_mask_to_object_graph,
@@ -268,7 +269,7 @@ def generate_filtered_wikidata_dump(
                     filtered_wiki_f.write(json.dumps(json_item, separators=(",", ":")))
                     filtered_wiki_f.write(",\n")
                     logging.info(
-                        f"Including vernacular entry '{get_label(json_item)}' ({get_wikipedia_name(json_item)}), mapped to Q={qid}"
+                        f"Including vernacular entry '{label(json_item)}' ({get_wikipedia_name(json_item)}), mapped to Q={qid}"
                     )
                     break
 

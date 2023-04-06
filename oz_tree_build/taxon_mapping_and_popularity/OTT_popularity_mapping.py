@@ -534,6 +534,20 @@ def wikidata_info_single_arg(params):
     return wikidata_info(*params)
 
 
+# numbers to search for
+# See https://en.wikipedia.org/wiki/Module:Taxonbar#L-195 for the full list
+match_taxa = {
+    16521: "taxon",
+    310890: "monotypic taxon",
+    23038290: "fossil taxon",
+    713623: "clade",
+}
+match_vernacular = {
+    502895: "common name",
+    55983715: "group of organisms known by one particular common name",
+}
+
+
 def wikidata_info(
     wikidata_json_dump_file,
     source_ptrs_filename,
@@ -607,17 +621,6 @@ def wikidata_info(
     info = {"bytes_read": 0}
     with open(source_ptrs_filename, "rb") as sp:
         source_ptrs = pickle.load(sp)
-    # numbers to search for
-    match_taxa = {
-        16521: "taxon",
-        310890: "monotypic taxon",
-        23038290: "fossil taxon",
-        713623: "clade",
-    }
-    match_vernacular = {
-        502895: "common name",
-        55983715: "group of organisms known by one particular common name",
-    }
 
     regexp_match = "|".join([str(v) for v in list(match_taxa) + list(match_vernacular)])
     quick_byte_match = re.compile('numeric-id":(?:{})\D'.format(regexp_match).encode())

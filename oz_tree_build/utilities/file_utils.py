@@ -5,8 +5,6 @@ Miscellaneous file utilities
 import bz2
 import gzip
 
-from .temp_helpers import *
-
 __author__ = "David Ebbo"
 
 

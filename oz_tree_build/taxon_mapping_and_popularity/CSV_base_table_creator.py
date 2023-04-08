@@ -52,22 +52,18 @@ Populating IUCN IDs using EOL csv file (or if absent, wikidata)
 
 import argparse
 import csv
-import gzip
-import itertools
 import logging
-import multiprocessing
 import os.path
-import pickle
 import random
 import re
 import sys
-import tempfile
 import time
 from collections import OrderedDict, defaultdict
-from math import inf, log
+from math import log
 
-import multiprocessing_logging
 from dendropy import Node, Tree
+
+from oz_tree_build.utilities.file_utils import open_file_based_on_extension
 
 # local packages
 from .dendropy_extras import write_pop_newick
@@ -199,7 +195,7 @@ def get_tree_and_OTT_list(tree_filename, sources):
 def add_eol_IDs_from_EOL_table_dump(source_ptrs, identifiers_filename, source_mapping):
     used = 0
     EOL2OTT = {v: k for k, v in source_mapping.items()}
-    with gzip.open(identifiers_filename, "rt") as identifiers_file:
+    with open_file_based_on_extension(identifiers_filename, "rt") as identifiers_file:
         reader = csv.DictReader(identifiers_file)
         for EOLrow in reader:
             if reader.line_num % 1000000 == 0:
@@ -277,66 +273,33 @@ def identify_best_EoLdata(OTT_ptrs, sources):
     )
 
 
-def set_wikidata_in_parallel(bz2_filename, source_ptrs, lang, num_threads):
+def set_wikidata(bz2_filename, source_ptrs, lang):
     """
     Will alter the source_ptrs.
     Returns WDitems (Q->WD), WPnames (name-WD), common_name_Qs (Q->Q)
     """
-    if num_threads <= 1:
-        offsets_filename = None
-        byte_chunks = []
-        uncompressed_size = None
-    else:
-        n_chunks = num_threads
-        logging.debug(f"  > Calculating hash to get offset file for {bz2_filename}")
-        info = OTT_popularity_mapping.PartialBzip2.block_info(bz2_filename)
-        offsets_filename = info[1]
-        uncompressed_size = info[2]
-        chunksize = uncompressed_size / n_chunks
-        byte_chunks = [int(a * chunksize) for a in range(1, n_chunks)]
-    with tempfile.NamedTemporaryFile("wb") as source_ptrs_file:
-        # Pass in the pickled source_ptrs as a temp file, to be loaded by each thread
-        logging.debug(f"  > Dumping input info to temporary file")
-        pickle.dump(source_ptrs, source_ptrs_file)
-        source_ptrs_file.flush()
-        byte_chunks = [None] + byte_chunks + [math.inf]
-        params = zip(
-            itertools.repeat(bz2_filename),
-            itertools.repeat(source_ptrs_file.name),
-            itertools.repeat(lang),
-            byte_chunks[:-1],  # start_after_byte
-            byte_chunks[1:],  # stop_including_byte
-            itertools.repeat(offsets_filename),
-            itertools.count(),
-        )
-        WDitems = {}
-        WPnames = {}
-        common_name_Qs = {}
-        sum_info = defaultdict(int)
-        # Most time is taken within the process => we set maxtasksperchild=1 to free mem
-        with multiprocessing.Pool(processes=num_threads, maxtasksperchild=1) as pool:
-            logging.debug(f"  > Creating a pool of {num_threads} parallel processes")
-            for (
-                Q_to_WD,
-                WPname_to_WD,
-                src_to_WD,
-                replace_Q,
-                info,
-            ) in pool.imap_unordered(
-                OTT_popularity_mapping.wikidata_info_single_arg, params
-            ):
-                WDitems.update(Q_to_WD)
-                WPnames.update(WPname_to_WD)
-                common_name_Qs.update(replace_Q)
-                # Add 'wd' item to source_ptrs
-                for src, ids in src_to_WD.items():
-                    for src_id, WD in ids.items():
-                        source_ptrs[src][src_id]["wd"] = WD
-                for k, v in info.items():
-                    sum_info[k] += v
+    WDitems = {}
+    WPnames = {}
+    common_name_Qs = {}
+    sum_info = defaultdict(int)
 
-    if uncompressed_size is not None:
-        assert uncompressed_size == sum_info["bytes_read"]
+    (
+        Q_to_WD,
+        WPname_to_WD,
+        src_to_WD,
+        replace_Q,
+        info,
+    ) = OTT_popularity_mapping.wikidata_info(bz2_filename, source_ptrs, lang)
+
+    WDitems.update(Q_to_WD)
+    WPnames.update(WPname_to_WD)
+    common_name_Qs.update(replace_Q)
+    # Add 'wd' item to source_ptrs
+    for src, ids in src_to_WD.items():
+        for src_id, WD in ids.items():
+            source_ptrs[src][src_id]["wd"] = WD
+    for k, v in info.items():
+        sum_info[k] += v
 
     logging.info(
         f"✔ {len(WDitems)} wikidata matches, of which "
@@ -348,67 +311,17 @@ def set_wikidata_in_parallel(bz2_filename, source_ptrs, lang, num_threads):
     return WDitems, WPnames, common_name_Qs
 
 
-def set_wikipedia_pageviews_in_parallel(filenames, WPnames, lang, num_threads):
-    """
-    Allocate a pool for looking through the files.
-    """
-    filenames.sort(key=os.path.getsize, reverse=True)
-    spare_threads = num_threads - len(filenames)
-    # If there are more threads than files, we start splitting files in order of
-    # compressed size. E.g. if 24 files and 25 threads, we split the largest file in 2
-    file_splits = [1 for _ in filenames]
-    i = 0
-    while spare_threads > 0:
-        file_splits[i % len(filenames)] += 1
-        spare_threads -= 1
-        i += 1
-    # make mappings from filename -> stuff
-    file_splits = {fn: file_splits[i] for i, fn in enumerate(filenames)}
-    offset_filenames = {fn: None for fn in filenames}
-    byte_chunks = {}
-
-    split_files = [fn for fn, splits in file_splits.items() if splits > 1]
-    # Any files that are split will need their unzipped size / byte offsets calculating
-    with multiprocessing.Pool(processes=num_threads, maxtasksperchild=1) as pool:
-        for fn, offsets_filename, uncompressed_size in pool.imap_unordered(
-            OTT_popularity_mapping.PartialBzip2.block_info, split_files
-        ):
-            n_chunks = file_splits[fn]
-            offset_filenames[fn] = offsets_filename
-            chunksize = uncompressed_size / n_chunks
-            byte_chunks[fn] = [int(a * chunksize) for a in range(1, n_chunks)]
-    for fn in filenames:
-        byte_chunks[fn] = [None] + byte_chunks.get(fn, []) + [math.inf]
-
+def set_wikipedia_pageviews(filenames, WPnames, lang):
     names_found = 0
-    with tempfile.NamedTemporaryFile("wb") as WPnames_file:
-        # Pass in the pickled WPnames as a temp file, to be loaded by each thread
-        pickle.dump(set(WPnames.keys()), WPnames_file)
-        WPnames_file.flush()
-        params = []
-        for i, fn in enumerate(filenames):
-            for j in range(file_splits[fn]):
-                params.append(
-                    (
-                        fn,
-                        WPnames_file.name,
-                        lang,
-                        byte_chunks[fn][j],
-                        byte_chunks[fn][j + 1],
-                        offset_filenames[fn],
-                        len(params),
-                        (i + 1, len(filenames), j + 1, file_splits[fn]),
-                    )
-                )
-        with multiprocessing.Pool(processes=num_threads, maxtasksperchild=1) as pool:
-            for WPnames_views in pool.imap_unordered(
-                OTT_popularity_mapping.pageviews_for_titles_single_arg, params
-            ):
-                for name, n_views in WPnames_views.items():
-                    if not hasattr(WPnames[name], "pageviews"):
-                        names_found += 1
-                        WPnames[name].pageviews = []
-                    WPnames[name].pageviews.append(n_views)
+    for i, fn in enumerate(filenames):
+        WPnames_views = OTT_popularity_mapping.pageviews_for_titles(
+            fn, set(WPnames.keys()), lang
+        )
+        for name, n_views in WPnames_views.items():
+            if not hasattr(WPnames[name], "pageviews"):
+                names_found += 1
+                WPnames[name].pageviews = []
+            WPnames[name].pageviews.append(n_views)
     logging.info(
         f" ✔ Of {len(WPnames)} WikiData taxon entries, {names_found} "
         f"({(names_found/len(WPnames) * 100):.2f}%) have pageview data for '{lang}' in "
@@ -472,7 +385,7 @@ def populate_iucn(OTT_ptrs, identifiers_filename, verbosity=0):
             else:
                 eol_mapping[data["eol"]] = [OTTid]
 
-    with gzip.open(identifiers_filename, "rt") as identifiers_file:
+    with open_file_based_on_extension(identifiers_filename, "rt") as identifiers_file:
         reader = csv.DictReader(identifiers_file)
         for EOLrow in reader:
             if reader.line_num % 1000000 == 0:
@@ -800,7 +713,6 @@ def map_wiki_info(
     lang,
     WP_SQL_filename,
     WP_pageviews_filenames,
-    num_threads,
 ):
     """
     1) use the wikidata JSON dump to map identifiers from the source_ptrs structure to
@@ -811,9 +723,7 @@ def map_wiki_info(
     """
     logging.debug(f"Processing wikidata json dump in parallel for {lang}")
     popularity_steps = 0
-    WDitems, WPnames, swap_Qs = set_wikidata_in_parallel(
-        WD_filename, source_ptrs, lang, num_threads
-    )
+    WDitems, WPnames, swap_Qs = set_wikidata(WD_filename, source_ptrs, lang)
 
     if WP_SQL_filename is not None:
         logging.info(f" > Adding wikipedia page sizes from {WP_SQL_filename}")
@@ -825,9 +735,7 @@ def map_wiki_info(
         logging.info(
             f" > Adding wikipedia visit counts from {len(WP_pageviews_filenames)} files"
         )
-        set_wikipedia_pageviews_in_parallel(
-            WP_pageviews_filenames, WPnames, lang, num_threads
-        )
+        set_wikipedia_pageviews(WP_pageviews_filenames, WPnames, lang)
         popularity_steps += 1
 
     if popularity_steps == 2:
@@ -990,13 +898,6 @@ def main():
         help='The language wikipedia to check for popularity, e.g. "en". Where there are multiple Wikidata items for a taxon (e.g. one under the common name, one under the scientific name), then we also default to using the WD item with the sitelink in this language.',
     )
     parser.add_argument(
-        "--num_threads",
-        "-T",
-        default=1,
-        type=int,
-        help="The number of threads to use for reading bzip files etc. If >1, use multithreading",
-    )
-    parser.add_argument(
         "--version",
         default=int(time.time() / 60.0),
         type=int,
@@ -1034,11 +935,7 @@ def main():
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     logging.info(
         f"OneZoom data generation started on {time.asctime(time.localtime(time.time()))}"
-        f" using {args.num_threads} threads. For large input files this may take hours!"
     )
-    if args.num_threads > 1:
-        # Allow logging even when multiprocessing
-        multiprocessing_logging.install_mp_handler()
     skip_popularity = (
         args.popularity_file is None
     )  # Default is "": None is when popularity_file explictly specified with no name
@@ -1078,7 +975,6 @@ def main():
             args.wikilang,
             None if skip_popularity else args.wikipediaSQLDumpFile,
             None if skip_popularity else args.wikipedia_totals_bz2_pageviews,
-            args.num_threads,
         )
         if has_popularity:
             logging.info("> Percolating popularity through the tree")

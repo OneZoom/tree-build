@@ -11,10 +11,15 @@ import logging
 import os
 import sys
 import time
+from urllib.parse import unquote_to_bytes
 
 from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
 from oz_tree_build.newick.newick_parser import parse_tree
-from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import JSON_contains_known_dbID, Qid, label
+from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
+    JSON_contains_known_dbID,
+    Qid,
+    label,
+)
 from .apply_mask_to_object_graph import (
     KEEP,
     apply_mask_to_object_graph,
@@ -25,9 +30,7 @@ from .file_utils import *
 __author__ = "David Ebbo"
 
 
-def generate_and_cache_filtered_file(
-    original_file, context, processing_function, bz2=False
-):
+def generate_and_cache_filtered_file(original_file, context, processing_function):
     """
     Helper to perform caching of filtered files.
     """
@@ -50,8 +53,9 @@ def generate_and_cache_filtered_file(
     # If no clade is specified, use 'OneZoom' instead as the prefix
     clade_filtered_file = os.path.join(dir, f"{filtered_file_prefix}{file_name}")
 
-    if bz2 and not clade_filtered_file.endswith(".bz2"):
-        clade_filtered_file += ".bz2"
+    # If it has a .gz or .bz2 extension, remove it
+    if clade_filtered_file.endswith(".gz") or clade_filtered_file.endswith(".bz2"):
+        clade_filtered_file = os.path.splitext(clade_filtered_file)[0]
 
     # Unless force is set, check if we already have a filtered file with the matching timestamp
     if not context.force:
@@ -356,8 +360,8 @@ def generate_filtered_pageviews_file(pageviews_file, filtered_pageviews_file, co
                 continue
 
             info = line[len(match_project) :].rstrip("\n").rsplit(" ", 1)
-            title = info[0].replace(
-                " ", "_"
+            title = (
+                unquote_to_bytes(info[0]).decode("UTF-8").replace(" ", "_")
             )  # even though most titles should not have spaces, some can sneak in via uri escaping
             # Only include it if it's one of our wikidata ids
             if title in context.wikidata_ids:
@@ -397,7 +401,7 @@ def generate_all_filtered_files(
     )
 
     filtered_wikidata_dump_file = generate_and_cache_filtered_file(
-        wikidata_dump_file, context, generate_filtered_wikidata_dump, bz2=True
+        wikidata_dump_file, context, generate_filtered_wikidata_dump
     )
     # filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump)
     read_wikidata_dump(filtered_wikidata_dump_file, context)

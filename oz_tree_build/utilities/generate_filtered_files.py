@@ -53,9 +53,10 @@ def generate_and_cache_filtered_file(original_file, context, processing_function
     # If no clade is specified, use 'OneZoom' instead as the prefix
     clade_filtered_file = os.path.join(dir, f"{filtered_file_prefix}{file_name}")
 
-    # If it has a .gz or .bz2 extension, remove it
-    if clade_filtered_file.endswith(".gz") or clade_filtered_file.endswith(".bz2"):
-        clade_filtered_file = os.path.splitext(clade_filtered_file)[0]
+    # If we're not compressing and it has a .gz or .bz2 extension, remove it
+    if not context.compress:
+        if clade_filtered_file.endswith(".gz") or clade_filtered_file.endswith(".bz2"):
+            clade_filtered_file = os.path.splitext(clade_filtered_file)[0]
 
     # Unless force is set, check if we already have a filtered file with the matching timestamp
     if not context.force:
@@ -448,6 +449,12 @@ def main():
         "--clade", "-c", help="The clade for which to generate the files"
     )
     parser.add_argument(
+        "--compress",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="If true, generate compressed file if the source is compressed",
+    )
+    parser.add_argument(
         "--force",
         "-f",
         action=argparse.BooleanOptionalAction,
@@ -458,7 +465,14 @@ def main():
 
     # Create a context object to hold various things we need to pass around
     context = type(
-        "", (object,), {"wikilang": "en", "clade": args.clade, "force": args.force}
+        "",
+        (object,),
+        {
+            "wikilang": "en",
+            "clade": args.clade,
+            "compress": args.compress,
+            "force": args.force,
+        },
     )()
 
     start = time.time()

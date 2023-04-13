@@ -251,6 +251,7 @@ def generate_filtered_wikidata_dump(
             ):
                 continue
 
+            # Remove everything we don't need from the json
             apply_mask_to_object_graph(json_item, mask)
 
             # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.

@@ -137,7 +137,10 @@ def read_taxonomy_file(taxonomy_file, context):
 
 
 def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
-    eol_sources = {"676": "ncbi", "459": "worms", "767": "gbif", iucn_num: "iucn"}
+    eol_sources = {"676": "ncbi", "459": "worms", "767": "gbif", str(iucn_num): "iucn"}
+    iucn_lines = []
+    known_names = set()
+
     with open_file_based_on_extension(eol_id_file, "rt") as eol_f:
         with open_file_based_on_extension(filtered_eol_id_file, "wt") as filtered_eol_f:
             for i, line in enumerate(eol_f):
@@ -160,12 +163,23 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
                     # We ignore these
                     continue
 
-                if (
-                    # Keep all the IUCN ids
-                    fields[2] == iucn_num
-                    # For the rest, only include it if we saw it in the taxonomy file
-                    or id in context.source_ids[eol_sources[fields[2]]]
-                ):
+                if not context.clade:
+                    # If we're not filtering by clade, keep all the lines
+                    filtered_eol_f.write(line)
+                    continue
+
+                # If it's an IUCN line, just save it for now
+                if fields[2] == str(iucn_num):
+                    iucn_lines.append(line)
+                # For other providers, only include it if we saw it in the taxonomy file
+                elif id in context.source_ids[eol_sources[fields[2]]]:
+                    filtered_eol_f.write(line)
+                    known_names.add(fields[4])
+
+            # Include any IUCN lines that have a name that we encountered
+            for line in iucn_lines:
+                fields = line.split(",")
+                if fields[4] in known_names:
                     filtered_eol_f.write(line)
 
     logging.info(

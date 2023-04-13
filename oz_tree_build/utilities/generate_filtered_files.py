@@ -15,6 +15,7 @@ from urllib.parse import unquote_to_bytes
 
 from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
 from oz_tree_build.newick.newick_parser import parse_tree
+from oz_tree_build.taxon_mapping_and_popularity.CSV_base_table_creator import iucn_num
 from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
     JSON_contains_known_dbID,
     Qid,
@@ -136,7 +137,7 @@ def read_taxonomy_file(taxonomy_file, context):
 
 
 def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
-    eol_sources = {"676": "ncbi", "459": "worms", "767": "gbif"}
+    eol_sources = {"676": "ncbi", "459": "worms", "767": "gbif", iucn_num: "iucn"}
     with open_file_based_on_extension(eol_id_file, "rt") as eol_f:
         with open_file_based_on_extension(filtered_eol_id_file, "wt") as filtered_eol_f:
             for i, line in enumerate(eol_f):
@@ -154,9 +155,17 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
                 try:
                     id = int(fields[1])
                 except ValueError:
+                    # Some lines have the id set to a weird value, e.g.
+                    # "Animalia/Arthropoda/Malacostraca/Cumacea/Pseudocumatidae/Strauchia"
+                    # We ignore these
                     continue
-                # Only include it if we saw that id in the taxonomy file
-                if id in context.source_ids[eol_sources[fields[2]]]:
+
+                if (
+                    # Keep all the IUCN ids
+                    fields[2] == iucn_num
+                    # For the rest, only include it if we saw it in the taxonomy file
+                    or id in context.source_ids[eol_sources[fields[2]]]
+                ):
                     filtered_eol_f.write(line)
 
     logging.info(
@@ -167,7 +176,6 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
 def generate_filtered_wikidata_dump(
     wikipedia_dump_file, filtered_wikipedia_dump_file, context
 ):
-
     # This mask defines which fields we want to keep from the wikidata dump
     # The goal is to keep it structurally the same as the original, but only
     # include the fields we actually consume
@@ -267,7 +275,9 @@ def generate_filtered_wikidata_dump(
                 vernacular_json_items.append((vernaculars_matches, json_item))
 
         # Write out the relevant vernacular lines at the end
-        logging.info(f"Writing vernacular lines at the end of the file")
+        logging.info(
+            f"Writing vernacular lines at the end of the file (Subset of {len(vernacular_json_items)} lines)"
+        )
         for vernaculars_matches, json_item in vernacular_json_items:
             for qid in vernaculars_matches:
                 if qid in included_qids:
@@ -378,7 +388,6 @@ def generate_all_filtered_files(
     wikipedia_sql_dump_file,
     wikipedia_pageviews_files,
 ):
-
     if context.clade:
         # If we're filtering by clade, we need to generate a filtered newick
         filtered_newick_file = generate_and_cache_filtered_file(

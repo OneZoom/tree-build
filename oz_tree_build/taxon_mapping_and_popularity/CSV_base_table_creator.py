@@ -93,7 +93,6 @@ def is_unnamed_OTT(OTTid):
     TO DO: I'm not sure when we use unnamed nodes with an OTT, so unsure if this is needed
     """
     try:
-
         return OTTid < 0
     except TypeError:
         return False
@@ -370,13 +369,15 @@ def supplement_from_wikidata(OTT_ptrs):
     )
 
 
+iucn_num = 5
+
+
 def populate_iucn(OTT_ptrs, identifiers_filename, verbosity=0):
     """
     Port the IUCN number from both EoL and Wikidata, and keep both if there is a conflict
     """
     used = 0
 
-    iucn_num = 5
     eol_mapping = {}  # to store eol=>iucn
     for OTTid, data in OTT_ptrs.items():
         if "eol" in data:

@@ -456,6 +456,11 @@ def popularity_function(
         or (number_of_descendants is None)
     ):
         return None
+    elif number_of_ancestors + number_of_descendants == 1:
+        # Avoid a divide by zero error if this adds up to 1
+        # Though the need for this makes me think that the log calculation
+        # may not be mathematically sound
+        return sum_of_all_ancestor_popularities + sum_of_all_descendant_popularities
     else:
         return (
             sum_of_all_ancestor_popularities + sum_of_all_descendant_popularities

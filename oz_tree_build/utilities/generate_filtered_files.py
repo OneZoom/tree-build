@@ -11,18 +11,27 @@ import logging
 import os
 import sys
 import time
+from urllib.parse import unquote_to_bytes
 
 from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
 from oz_tree_build.newick.newick_parser import parse_tree
+from oz_tree_build.taxon_mapping_and_popularity.CSV_base_table_creator import iucn_num
+from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
+    JSON_contains_known_dbID,
+    Qid,
+    label,
+)
+from .apply_mask_to_object_graph import (
+    KEEP,
+    apply_mask_to_object_graph,
+)
 from .temp_helpers import *
 from .file_utils import *
 
 __author__ = "David Ebbo"
 
 
-def generate_and_cache_filtered_file(
-    original_file, context, processing_function, bz2=False
-):
+def generate_and_cache_filtered_file(original_file, context, processing_function):
     """
     Helper to perform caching of filtered files.
     """
@@ -45,8 +54,10 @@ def generate_and_cache_filtered_file(
     # If no clade is specified, use 'OneZoom' instead as the prefix
     clade_filtered_file = os.path.join(dir, f"{filtered_file_prefix}{file_name}")
 
-    if bz2 and not clade_filtered_file.endswith(".bz2"):
-        clade_filtered_file += ".bz2"
+    # If we're not compressing and it has a .gz or .bz2 extension, remove it
+    if not context.compress:
+        if clade_filtered_file.endswith(".gz") or clade_filtered_file.endswith(".bz2"):
+            clade_filtered_file = os.path.splitext(clade_filtered_file)[0]
 
     # Unless force is set, check if we already have a filtered file with the matching timestamp
     if not context.force:
@@ -118,11 +129,18 @@ def read_taxonomy_file(taxonomy_file, context):
             for srcs in sourceinfo.split(","):
                 src, id = srcs.split(":", 1)
                 if src in sources:
-                    context.source_ids[src].add(int(id))
+                    try:
+                        context.source_ids[src].add(int(id))
+                    except ValueError:
+                        # Ignore it if it's not an integer
+                        pass
 
 
 def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
-    eol_sources = {"676": "ncbi", "459": "worms", "767": "gbif"}
+    eol_sources = {"676": "ncbi", "459": "worms", "767": "gbif", str(iucn_num): "iucn"}
+    iucn_lines = []
+    known_names = set()
+
     with open_file_based_on_extension(eol_id_file, "rt") as eol_f:
         with open_file_based_on_extension(filtered_eol_id_file, "wt") as filtered_eol_f:
             for i, line in enumerate(eol_f):
@@ -140,9 +158,28 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
                 try:
                     id = int(fields[1])
                 except ValueError:
+                    # Some lines have the id set to a weird value, e.g.
+                    # "Animalia/Arthropoda/Malacostraca/Cumacea/Pseudocumatidae/Strauchia"
+                    # We ignore these
                     continue
-                # Only include it if we saw that id in the taxonomy file
-                if id in context.source_ids[eol_sources[fields[2]]]:
+
+                if not context.clade:
+                    # If we're not filtering by clade, keep all the lines
+                    filtered_eol_f.write(line)
+                    continue
+
+                # If it's an IUCN line, just save it for now
+                if fields[2] == str(iucn_num):
+                    iucn_lines.append(line)
+                # For other providers, only include it if we saw it in the taxonomy file
+                elif id in context.source_ids[eol_sources[fields[2]]]:
+                    filtered_eol_f.write(line)
+                    known_names.add(fields[4])
+
+            # Include any IUCN lines that have a name that we encountered
+            for line in iucn_lines:
+                fields = line.split(",")
+                if fields[4] in known_names:
                     filtered_eol_f.write(line)
 
     logging.info(
@@ -153,18 +190,36 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
 def generate_filtered_wikidata_dump(
     wikipedia_dump_file, filtered_wikipedia_dump_file, context
 ):
-    known_claims = {
-        "P31",
-        "P685",
-        "P846",
-        "P850",
-        "P1391",
-        "P5055",
-        "P830",
-        "P141",
-        "P627",
-        "P961",
+    # This mask defines which fields we want to keep from the wikidata dump
+    # The goal is to keep it structurally the same as the original, but only
+    # include the fields we actually consume
+    mask = {
+        "type": KEEP,  # Only needed for the quick 'startswith()' line check
+        "id": KEEP,
+        "labels": {"en": {"value": KEEP}},
+        "claims": {
+            "P31": [
+                {
+                    "mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}},
+                    "qualifiers": {
+                        "P642": [{"datavalue": {"value": {"numeric-id": KEEP}}}]
+                    },
+                }
+            ],
+            "P685": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # ncbi id
+            "P846": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # gbif id
+            "P850": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # worms id
+            "P1391": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # if id
+            "P5055": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # irmng id
+            "P830": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # EOL id
+            "P961": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # IPNI id
+            "P141": [
+                {"references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}]}
+            ],  # IUCN id
+        },
+        "sitelinks": KEEP,
     }
+
     included_qids = set()
 
     # We want all the vernacular lines to end up at the end of the file, so we
@@ -210,24 +265,8 @@ def generate_filtered_wikidata_dump(
             ):
                 continue
 
-            # Remove things we don't need at all
-            if "descriptions" in json_item:
-                del json_item["descriptions"]
-            if "aliases" in json_item:
-                del json_item["aliases"]
-
-            # Only keep the English labels
-            if context.wikilang in json_item["labels"]:
-                json_item["labels"] = {
-                    "language": json_item["labels"][context.wikilang]
-                }
-            else:
-                json_item["labels"] = {}
-
-            # Only keep the claims we care about
-            json_item["claims"] = {
-                k: v for k, v in json_item["claims"].items() if k in known_claims
-            }
+            # Remove everything we don't need from the json
+            apply_mask_to_object_graph(json_item, mask)
 
             # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.
             # And among those, only keep the original value for the language we want, since the
@@ -251,14 +290,16 @@ def generate_filtered_wikidata_dump(
                 vernacular_json_items.append((vernaculars_matches, json_item))
 
         # Write out the relevant vernacular lines at the end
-        logging.info(f"Writing vernacular lines at the end of the file")
+        logging.info(
+            f"Writing vernacular lines at the end of the file (Subset of {len(vernacular_json_items)} lines)"
+        )
         for vernaculars_matches, json_item in vernacular_json_items:
             for qid in vernaculars_matches:
                 if qid in included_qids:
                     filtered_wiki_f.write(json.dumps(json_item, separators=(",", ":")))
                     filtered_wiki_f.write(",\n")
                     logging.info(
-                        f"Including vernacular entry '{get_label(json_item)}' ({get_wikipedia_name(json_item)}), mapped to Q={qid}"
+                        f"Including vernacular entry '{label(json_item)}' ({get_wikipedia_name(json_item)}), mapped to Q={qid}"
                     )
                     break
 
@@ -345,8 +386,8 @@ def generate_filtered_pageviews_file(pageviews_file, filtered_pageviews_file, co
                 continue
 
             info = line[len(match_project) :].rstrip("\n").rsplit(" ", 1)
-            title = info[0].replace(
-                " ", "_"
+            title = (
+                unquote_to_bytes(info[0]).decode("UTF-8").replace(" ", "_")
             )  # even though most titles should not have spaces, some can sneak in via uri escaping
             # Only include it if it's one of our wikidata ids
             if title in context.wikidata_ids:
@@ -362,24 +403,21 @@ def generate_all_filtered_files(
     wikipedia_sql_dump_file,
     wikipedia_pageviews_files,
 ):
-
     if context.clade:
         # If we're filtering by clade, we need to generate a filtered newick
         filtered_newick_file = generate_and_cache_filtered_file(
             newick_file, context, generate_filtered_newick
         )
-    else:
-        # Otherwise, we just use the original newick file directly
-        filtered_newick_file = newick_file
-    read_newick_file(filtered_newick_file, context)
+        read_newick_file(filtered_newick_file, context)
 
-    if context.clade:
+        # We also need to generate a filtered taxonomy file
         filtered_taxonomy_file = generate_and_cache_filtered_file(
             taxonomy_file, context, generate_filtered_taxonomy_file
         )
     else:
         # If we're not filtering by clade, there is really nothing to filter,
-        # so we just use the original taxonomy file directly
+        # so we just use the original taxonomy file directly.
+        # Note that we completely ignore the newick file in this case.
         filtered_taxonomy_file = taxonomy_file
     read_taxonomy_file(filtered_taxonomy_file, context)
 
@@ -388,7 +426,7 @@ def generate_all_filtered_files(
     )
 
     filtered_wikidata_dump_file = generate_and_cache_filtered_file(
-        wikidata_dump_file, context, generate_filtered_wikidata_dump, bz2=True
+        wikidata_dump_file, context, generate_filtered_wikidata_dump
     )
     # filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump)
     read_wikidata_dump(filtered_wikidata_dump_file, context)
@@ -435,6 +473,12 @@ def main():
         "--clade", "-c", help="The clade for which to generate the files"
     )
     parser.add_argument(
+        "--compress",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="If true, generate compressed file if the source is compressed",
+    )
+    parser.add_argument(
         "--force",
         "-f",
         action=argparse.BooleanOptionalAction,
@@ -445,7 +489,14 @@ def main():
 
     # Create a context object to hold various things we need to pass around
     context = type(
-        "", (object,), {"wikilang": "en", "clade": args.clade, "force": args.force}
+        "",
+        (object,),
+        {
+            "wikilang": "en",
+            "clade": args.clade,
+            "compress": args.compress,
+            "force": args.force,
+        },
     )()
 
     start = time.time()

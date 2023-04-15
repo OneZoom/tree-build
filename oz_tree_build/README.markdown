@@ -1,5 +1,5 @@
 # Introduction
-Creating a bespoke OneZoom tree involves a number of steps, as documented below. These take an initial tree, map taxa onto Open Tree identifiers, add subtrees from the OpenTree of Life, resolve polytomies and delete subspecies, and calculate mappings to other databases together with creating wikipedia popularity metrics for all taxa. Finally, the resulting tree and database files are converted to a format usable by the OneZoom viewer. Mapping and popularity calculations require various large files to be downloaded e.g. from wikipedia, as [documented here](../../data/README.markdown).
+Creating a bespoke OneZoom tree involves a number of steps, as documented below. These take an initial tree, map taxa onto Open Tree identifiers, add subtrees from the OpenTree of Life, resolve polytomies and delete subspecies, and calculate mappings to other databases together with creating wikipedia popularity metrics for all taxa. Finally, the resulting tree and database files are converted to a format usable by the OneZoom viewer. Mapping and popularity calculations require various large files to be downloaded e.g. from wikipedia, as [documented here](../data/README.markdown).
 
 The instructions below are primarily intended for creating a full tree of all life on the main OneZoom site. If you are making a bespoke tree, you may need to tweak them slightly.
 
@@ -23,11 +23,11 @@ If you are have installed perl modules to a different location (e.g. as a local 
 # Preliminaries
 
 
-First check that you have the required OpenTree, Wikimedia, and Encyclopedia of Life files, in particular `data/OpenTree/draftversion${OT_VERSION}.tre`, `data/OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv`, `data/Wiki/wd_JSON`, `data/EOL/provider_ids.csv.gz` and for popularity calculations, `data/Wiki/wp_SQL` and `data/Wiki/wp_pagecounts`  (see [data/README.markdown](../../data/README.markdown) - in particular, to create the `.tre` file you may need to run 
+First check that you have the required OpenTree, Wikimedia, and Encyclopedia of Life files, in particular `data/OpenTree/draftversion${OT_VERSION}.tre`, `data/OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv`, `data/Wiki/wd_JSON`, `data/EOL/provider_ids.csv.gz` and for popularity calculations, `data/Wiki/wp_SQL` and `data/Wiki/wp_pagecounts`  (see [data/README.markdown](../data/README.markdown) - in particular, to create the `.tre` file you may need to run 
 ```
 perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' labelled_supertree_simplified_ottnames.tre > draftversion${OT_VERSION}.tre
 ```
-as detailed [here](../../data/OpenTree/README.markdown))
+as detailed [here](../data/OpenTree/README.markdown))
 
 # Building a tree
 

@@ -132,22 +132,18 @@ we can find these (very few) examples by the wikidata query at https://w.wiki/en
 """
 
 import csv
-import gzip
-import io
 import json
 import logging
-import math
 import os.path
-import pickle
 import re
 import sys
 from collections import OrderedDict, defaultdict
 from statistics import StatisticsError, mean
 from urllib.parse import unquote_to_bytes
 
-import indexed_bzip2
 from oz_tree_build._OZglobals import wikiflags
-from filehash import FileHash
+
+from oz_tree_build.utilities.file_utils import open_file_based_on_extension
 
 __author__ = "Yan Wong"
 __license__ = """This is free and unencumbered software released into the public domain by the author, Yan Wong, for OneZoom CIO.
@@ -159,109 +155,6 @@ In jurisdictions that recognize copyright laws, the author or authors of this so
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org/>"""
-
-
-class PartialBzip2(indexed_bzip2.IndexedBzip2File):
-    """
-    Open a bzip2 file, with the ability to only return certain lines if an index is given
-    """
-
-    def __init__(
-        self,
-        filename,
-        start_after_byte=None,
-        stop_including_byte=None,
-        block_offsets_filename=None,
-    ):
-        """
-        This returns an object with readline() functionality that returns any whole
-        lines that start after byte position `start_after_byte` and include the line
-        that contains `stop_including_byte`. To include the first line, set
-        `start_after_byte` to -1 or None (if it is set to 0, the first line will be
-        skipped).
-
-        If block_offsets_filename is provided, it is used instead of the default
-        from `self.offsets_filename`, as this can take a few minutes to calculate
-
-        """
-        self.start = -1 if start_after_byte is None else start_after_byte
-        self.stop = math.inf if stop_including_byte is None else stop_including_byte
-        super().__init__(filename)
-        if self.start >= 0:
-            # We need the offsets
-            if block_offsets_filename is not None:
-                with open(block_offsets_filename, "rb") as block_offsets_file:
-                    self.set_block_offsets(pickle.load(block_offsets_file))
-            else:
-                self.save_block_offset_file()
-            self.reset()
-
-    @classmethod
-    def block_info(cls, bz2_filename):
-        """
-        Return original bz2_filename, equivalent block offsets filename, and, if the
-        offsets file exists, the uncompressed file size in bytes. The offsets_filename
-        can be used to reload block offsets for the file using
-        block_offsets = pickle.load(offsets_filename).
-
-        This method can be used to get block offsets in parallel for multiple files using
-        multiprocessing.Pool
-        """
-        filesize = None
-        with cls(bz2_filename) as file:
-            if os.path.isfile(file.offsets_filename):
-                with open(file.offsets_filename, "rb") as block_offsets_file:
-                    file.set_block_offsets(pickle.load(block_offsets_file))
-            else:
-                file.save_block_offset_file()  # This creates and associates the offsets
-            filesize = file.size()
-        return bz2_filename, file.offsets_filename, filesize
-
-    @property
-    def hash(self):
-        try:
-            return self._hash
-        except AttributeError:
-            self._hash = FileHash("md5").hash_file(self.name)
-            return self._hash
-
-    @property
-    def offsets_filename(self):
-        return os.path.join(os.path.dirname(self.name), self.hash + ".bz2offsets")
-
-    def save_block_offset_file(self):
-        if not os.path.isfile(self.offsets_filename):
-            logging.warning(
-                f"Index file with offsets {self.offsets_filename} for bz2 file "
-                f"{self.name} does not exist. Creating it (this can take hours!)"
-            )
-        with open(self.offsets_filename, "wb") as offsets:
-            pickle.dump(self.block_offsets(), offsets)
-
-    def block_offset_filecache(self):
-        if not os.path.isfile(self.offsets_filename):
-            self.save_block_offset_file()
-        return self.offsets_filename
-
-    def size(self):
-        saved_pos = self.tell()
-        tot_bytes = self.seek(0, io.SEEK_END)
-        self.seek(saved_pos)
-        return tot_bytes
-
-    def reset(self):
-        if self.start >= 0:
-            self.seek(self.start)
-            self.readline()  # advance to first whole line
-        else:
-            if self.tell() > 0:
-                self.seek(0)
-
-    def readline(self):
-        if self.tell() <= self.stop:
-            return super().readline()
-        else:
-            return b""
 
 
 def wikidata_value(wd_json, err=False):
@@ -534,14 +427,24 @@ def wikidata_info_single_arg(params):
     return wikidata_info(*params)
 
 
+# numbers to search for
+# See https://en.wikipedia.org/wiki/Module:Taxonbar#L-195 for the full list
+match_taxa = {
+    16521: "taxon",
+    310890: "monotypic taxon",
+    23038290: "fossil taxon",
+    713623: "clade",
+}
+match_vernacular = {
+    502895: "common name",
+    55983715: "group of organisms known by one particular common name",
+}
+
+
 def wikidata_info(
     wikidata_json_dump_file,
-    source_ptrs_filename,
+    source_ptrs,
     wikilang,
-    start_byte=None,
-    stop_byte=None,
-    block_offsets_filename=None,
-    thread_id=None,
     EOLid_property_id="P830",
     IUCNid_property_id=["P141", "P627"],
     IPNIid_property_id="P961",
@@ -605,64 +508,31 @@ def wikidata_info(
     replace_Q = {}
     src_to_WD = defaultdict(dict)
     info = {"bytes_read": 0}
-    with open(source_ptrs_filename, "rb") as sp:
-        source_ptrs = pickle.load(sp)
-    # numbers to search for
-    match_taxa = {
-        16521: "taxon",
-        310890: "monotypic taxon",
-        23038290: "fossil taxon",
-        713623: "clade",
-    }
-    match_vernacular = {
-        502895: "common name",
-        55983715: "group of organisms known by one particular common name",
-    }
 
     regexp_match = "|".join([str(v) for v in list(match_taxa) + list(match_vernacular)])
-    quick_byte_match = re.compile('numeric-id":(?:{})\D'.format(regexp_match).encode())
-    with PartialBzip2(
-        wikidata_json_dump_file,
-        start_byte,
-        stop_byte,
-        block_offsets_filename,
-    ) as WDF:  # open filehandle, to allow read as bytes (converted to UTF8 later)
-        if start_byte is None or start_byte < 0:
-            start_byte = 0  # Just for outputting
-        if stop_byte is None or stop_byte == math.inf:
-            stop_byte = None if block_offsets_filename is None else WDF.size()
-        logging.debug(
-            f"  > Reading full lines from {wikidata_json_dump_file} following byte "
-            f"{start_byte} up to the line including byte {stop_byte}."
-        )
-
+    quick_byte_match = re.compile('numeric-id":(?:{})\D'.format(regexp_match))
+    with open_file_based_on_extension(wikidata_json_dump_file, "rt") as WDF:
         for line_num, line in enumerate(WDF):
-            info["bytes_read"] += len(line)
             if line_num % 100000 == 0:
-                more_info = pc = ""
+                more_info = ""
                 if EOLid_property_id:
                     more_info += f", {info.get('n_eol', 0)} with EoL ids"
                 if IUCNid_property_id:
                     more_info += f", {info.get('n_iucn', 0)} with IUCN ids"
                 if IPNIid_property_id:
                     more_info += f", {info.get('n_ipni', 0)} with IPNI ids"
-                if stop_byte is not None:
-                    pc = (
-                        f"({((WDF.tell()-WDF.start)/(WDF.stop-WDF.start)*100.0):.1f}%) "
-                    )
                 logging.info(
-                    f" - thread {thread_id}: {((WDF.tell()-start_byte)/1024/1024):.1f} "
-                    f"MiB {pc}of wikidata JSON dump read. {len(Q_to_WD)}/{line_num} "
+                    f"{line_num} of wikidata JSON dump read. "
                     f"relevant items{more_info}. Mem usage {mem():.1f} Mb"
                 )
             # this file is in byte form, so must match byte strings
             if not (
-                line.startswith(b'{"type":"item"') and quick_byte_match.search(line)
+                line.startswith('{"type":"item"') and quick_byte_match.search(line)
             ):
                 continue
 
             # done fast match, now check by parsing JSON (slower)
-            json_item = json.loads(line.decode("UTF-8").rstrip().rstrip(","))
+            json_item = json.loads(line.rstrip().rstrip(","))
             try:
                 is_taxon = False
                 vernaculars = set()
@@ -888,7 +758,7 @@ def add_pagesize_for_titles(wiki_title_ptrs, wikipedia_SQL_filename):
     page_table_title_column = 3
     page_table_pagelen_column = 10
     # use csv reader as it copes well e.g. with escaped SQL quotes in fields etc.
-    with gzip.open(wikipedia_SQL_filename, "rt", encoding="utf-8") as file:
+    with open_file_based_on_extension(wikipedia_SQL_filename, "rt") as file:
         pagelen_file = csv.reader(file, quotechar="'", doublequote=True)
         match_line = "INSERT INTO `page` VALUES"
         for fields in filter(
@@ -933,14 +803,9 @@ def pageviews_for_titles_single_arg(params):
 
 
 def pageviews_for_titles(
-    bz2_filename,
-    wiki_titles_filename,
+    filename,
+    wiki_titles,
     wikilang,
-    start_byte=None,
-    stop_byte=None,
-    offset_filename=None,
-    thread_id=None,
-    filetot=None,
     wiki_suffix="z",
 ):
     """
@@ -962,63 +827,32 @@ def pageviews_for_titles(
     or properly encoded in utf-8.
     """
     wikicode = wikilang + "." + wiki_suffix
-    with open(wiki_titles_filename, "rb") as sp:
-        wiki_titles = pickle.load(sp)
     pageviews = defaultdict(int)
-    match_project = (wikicode + " ").encode()
-    start_char = len(match_project)
+    match_project = wikicode + " "
 
-    with PartialBzip2(
-        bz2_filename,
-        start_byte,
-        stop_byte,
-        offset_filename,
-    ) as PAGECOUNTfile:
-        file_info = ""
-        if filetot:
-            file_info = (
-                f"file {filetot[0]}/{filetot[1]} part {filetot[2]}/{filetot[3]} "
-            )
-        try:
-            problem_lines = []  # there are apparently some errors in the unicode dumps
-            for n, line in enumerate(PAGECOUNTfile):
-                if n % 10000000 == 0:
-                    logging.info(
-                        f" - thread {thread_id}: read {n} lines of pageviews file "
-                        f"{file_info}({os.path.basename(bz2_filename)}). Mem usage {mem():.1f} Mb"
-                    )
-                if line.startswith(match_project):
-                    try:
-                        info = line[start_char:].rstrip(b"\r\n\\rn").rsplit(b" ", 1)
-                        title = (
-                            unquote_to_bytes(info[0]).decode("UTF-8").replace(" ", "_")
-                        )  # even though most titles should not have spaces, some can sneak in via uri escaping
-                        if title in wiki_titles:
-                            pageviews[title] += int(
-                                info[1]
-                            )  # sometimes there are multiple encodings of the same title, with different visit numbers
-                    except UnicodeDecodeError:
-                        problem_lines.append(str(n))
-                    except KeyError:
-                        pass  # title not in wiki_title_ptrs - this is expected for most entries
-                    except ValueError as e:
-                        logging.warning(
-                            f"Problem converting page view to integer for {line}: {e}"
-                        )
-        except EOFError as e:
-            # this happens sometimes, dunno why
-            logging.warning(f" Problem with end of file: {e}%. Aborting")
-        if len(problem_lines):
-            logging.info(
-                " Problem decoding {} lines, but these will be ones with strange accents etc, so should mostly not be taxa.".format(
-                    len(problem_lines)
+    with open_file_based_on_extension(filename, "rt") as PAGECOUNTfile:
+        for n, line in enumerate(PAGECOUNTfile):
+            if n % 10000000 == 0:
+                logging.info(
+                    f"read {n} lines of pageviews file "
+                    f"{os.path.basename(filename)}. Mem usage {mem():.1f} Mb"
                 )
-            )
-            logging.debug(
-                "  -> the following lines have been ignored:\n{}".format(
-                    "  \n".join(problem_lines)
+            if not line.startswith(match_project):
+                continue
+
+            try:
+                info = line[len(match_project) :].rstrip("\n").rsplit(" ", 1)
+                title = (
+                    unquote_to_bytes(info[0]).decode("UTF-8").replace(" ", "_")
+                )  # even though most titles should not have spaces, some can sneak in via uri escaping
+                if title in wiki_titles:
+                    pageviews[title] += int(
+                        info[1]
+                    )  # sometimes there are multiple encodings of the same title, with different visit numbers
+            except ValueError as e:
+                logging.warning(
+                    f"Problem converting page view to integer for {line}: {e}"
                 )
-            )
     return pageviews
 
 

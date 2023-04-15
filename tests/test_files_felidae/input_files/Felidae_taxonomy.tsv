@@ -1,0 +1,49 @@
+uid	|	parent_uid	|	name	|	rank	|	sourceinfo	|	uniqname	|	flags	|	
+563159	|	827259	|	Felidae	|	family	|	ncbi:9681,gbif:9703,irmng:104889	|		|		|	
+570215	|	626916	|	Prionailurus	|	genus	|	ncbi:37028,gbif:2434894,irmng:1040948	|		|		|	
+280108	|	570215	|	Prionailurus bengalensis	|	species	|	ncbi:37029,gbif:2434903,irmng:10210660	|		|		|	
+507541	|	570215	|	Prionailurus rubiginosus	|	species	|	ncbi:61387,gbif:2434895,irmng:11039646	|		|		|	
+862641	|	570215	|	Prionailurus viverrinus	|	species	|	ncbi:61388,gbif:2434899,irmng:10594861	|		|		|	
+418475	|	570215	|	Prionailurus iriomotensis	|	species	|	ncbi:37030,gbif:2434901	|		|		|	
+86166	|	570215	|	Prionailurus planiceps	|	species	|	ncbi:61403,gbif:2434917,irmng:11429819	|		|		|	
+660447	|	660451	|	Profelis aurata	|	species	|	ncbi:61412,gbif:9546725,gbif:5219401,irmng:11097445	|		|		|	
+763015	|	626916	|	Catopuma	|	genus	|	ncbi:61453,gbif:2435092,irmng:1294543	|		|		|	
+763025	|	763015	|	Catopuma temminckii	|	species	|	ncbi:61455,gbif:2435094,irmng:10999935	|		|		|	
+763032	|	763015	|	Catopuma badia	|	species	|	ncbi:61454,gbif:5787235,gbif:2435093,irmng:10224214	|		|		|	
+886828	|	626916	|	Lynx	|	genus	|	ncbi:13124,gbif:2435239,irmng:1026710	|		|		|	
+442049	|	886828	|	Lynx pardinus	|	species	|	ncbi:191816,gbif:2435261,irmng:10229763	|		|		|	
+507545	|	886828	|	Lynx rufus	|	species	|	ncbi:61384,gbif:2435246,irmng:10199263	|		|		|	
+507549	|	886828	|	Lynx canadensis	|	species	|	ncbi:61383,gbif:2435263,irmng:10201330	|		|		|	
+886829	|	886828	|	Lynx lynx	|	species	|	ncbi:13125,gbif:2435240,irmng:10199264	|		|		|	
+1033549	|	1033548	|	Caracal caracal	|	species	|	ncbi:61394,gbif:2435010,irmng:11060971	|		|		|	
+86170	|	86169	|	Leptailurus serval	|	species	|	ncbi:61405,gbif:2435172,irmng:11216434	|		|		|	
+86183	|	86182	|	Otocolobus manul	|	species	|	ncbi:61408,gbif:2435023,irmng:10859216	|		|		|	
+86161	|	626916	|	Puma	|	genus	|	ncbi:146712,gbif:2435098,irmng:1405111	|		|		|	
+86162	|	86161	|	Puma yagouaroundi	|	species	|	ncbi:1608482,gbif:2435146,irmng:10910448	|		|		|	
+42307	|	86161	|	Puma concolor	|	species	|	ncbi:9696,gbif:2435099,irmng:10212875	|		|		|	
+563165	|	626916	|	Felis	|	genus	|	ncbi:9682,gbif:2435022,irmng:1179423,irmng:1012185	|		|		|	
+983177	|	563165	|	Felis margarita	|	species	|	ncbi:61378,gbif:2435028,irmng:11270420	|		|		|	
+983179	|	563165	|	Felis nigripes	|	species	|	ncbi:61379,gbif:2435037,irmng:10785265	|		|		|	
+563163	|	563165	|	Felis silvestris	|	species	|	ncbi:9683,gbif:7964291,irmng:10201332	|		|		|	
+54743	|	563163	|	Felis silvestris bieti	|	subspecies	|	ncbi:458418,gbif:2435040,irmng:11269571	|		|	infraspecific	|	
+563166	|	563165	|	Felis catus	|	species	|	ncbi:9685,gbif:8625722,gbif:2435035	|		|		|	
+983181	|	563165	|	Felis chaus	|	species	|	ncbi:61376,gbif:2435066,irmng:10591049	|		|		|	
+774314	|	626916	|	Leopardus	|	genus	|	ncbi:46841,gbif:2434918,irmng:1384113	|		|		|	
+507542	|	774314	|	Leopardus guigna	|	species	|	ncbi:61386,gbif:2434923,irmng:11170429	|		|		|	
+507553	|	774314	|	Leopardus wiedii	|	species	|	ncbi:61382,gbif:2434950,irmng:10592818	|		|		|	
+752746	|	774314	|	Leopardus pardalis	|	species	|	ncbi:32538,gbif:2434982,irmng:10212871	|		|		|	
+86175	|	774314	|	Leopardus colocolo	|	species	|	ncbi:61406,gbif:2434919,irmng:10534600	|		|		|	
+774303	|	774314	|	Leopardus geoffroyi	|	species	|	ncbi:46844,gbif:2434942,irmng:10765089	|		|		|	
+774309	|	774314	|	Leopardus tigrinus	|	species	|	ncbi:46842,gbif:2434930,irmng:11116645	|		|		|	
+904397	|	774314	|	Leopardus jacobita	|	species	|	ncbi:713925,gbif:2434979,irmng:10909680	|		|		|	
+3613208	|	774314	|	Leopardus braccatus	|	species	|	gbif:2434927	|		|		|	
+3613206	|	774314	|	Leopardus pajeros	|	species	|	gbif:2434935	|		|		|	
+763016	|	763018	|	Neofelis nebulosa	|	species	|	ncbi:61452,gbif:2435079,irmng:10200770	|		|		|	
+660452	|	86186	|	Pardofelis marmorata	|	species	|	ncbi:61410,gbif:2435089,irmng:10733346	|		|		|	
+563154	|	626917	|	Panthera	|	genus	|	ncbi:9688,gbif:2435194,irmng:1330102	|		|		|	
+532117	|	563154	|	Panthera uncia	|	species	|	ncbi:29064,gbif:2435238,irmng:11222977	|		|		|	
+42314	|	563154	|	Panthera tigris	|	species	|	ncbi:9694,gbif:5219416,irmng:10762914	|		|		|	
+42322	|	563154	|	Panthera onca	|	species	|	ncbi:9690,gbif:5219426,irmng:10201333	|		|		|	
+42324	|	563154	|	Panthera pardus	|	species	|	ncbi:9691,gbif:5219436,irmng:10200769	|		|		|	
+563151	|	563154	|	Panthera leo	|	species	|	ncbi:9689,gbif:5219404,irmng:10196306	|		|		|	
+752759	|	752758	|	Acinonyx jubatus	|	species	|	ncbi:32536,gbif:2435270,irmng:10856341	|		|		|	

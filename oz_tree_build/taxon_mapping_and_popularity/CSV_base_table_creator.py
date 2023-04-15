@@ -848,6 +848,90 @@ def percolate_popularity(
             logging.warning(f"Problem reporting on focal taxon '{focal_taxon}': {e}")
 
 
+def process_all(args):
+    random_seed_addition = 1234
+    start = time.time()
+    if args.verbosity == 0:
+        logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
+    elif args.verbosity == 1:
+        logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
+    elif args.verbosity >= 2:
+        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+    logging.info(
+        f"OneZoom data generation started on {time.asctime(time.localtime(time.time()))}"
+    )
+    skip_popularity = (
+        args.popularity_file is None
+    )  # Default is "": None is when popularity_file explictly specified with no name
+
+    # from http://eol.org/api/docs/provider_hierarchies
+    # these need to be an ordered dict with the first being the preferred id used when getting a corresponding wikidata ID
+    # all the ids for these are integers >= 0
+    sources = ["ncbi", "if", "worms", "irmng", "gbif"]
+    eol_sources = {
+        "ncbi": 676,
+        "worms": 459,
+        "gbif": 767,
+    }  # update when EoL has harvested index fungorum & IRMNG
+    # the ids for these sources may not be numbers (e.g. Silva has things like D11377/#1
+    nonint_sources = OrderedDict()
+
+    logging.info("> Creating tree structure")
+    tree, OTT_ptrs = get_tree_and_OTT_list(args.Tree, sources)
+
+    logging.info("> Adding source IDs")
+    source_ptrs = OTT_popularity_mapping.create_from_taxonomy(
+        args.OpenTreeTaxonomy, sources, OTT_ptrs, args.extra_source_file
+    )
+
+    logging.info("> Adding EOL IDs from EOL csv file")
+    add_eol_IDs_from_EOL_table_dump(source_ptrs, args.EOLidentifiers, eol_sources)
+    logging.info("> Finding best EoL matches")
+    identify_best_EoLdata(OTT_ptrs, eol_sources)
+
+    if args.wikidataDumpFile:
+        logging.info("> Adding wikidata info")
+        has_popularity = map_wiki_info(
+            source_ptrs,
+            sources,
+            OTT_ptrs,
+            args.wikidataDumpFile,
+            args.wikilang,
+            None if skip_popularity else args.wikipediaSQLDumpFile,
+            None if skip_popularity else args.wikipedia_totals_bz2_pageviews,
+        )
+        if has_popularity:
+            logging.info("> Percolating popularity through the tree")
+            percolate_popularity(
+                tree,
+                args.exclude,
+                args.output_location,
+                args.popularity_file,
+                args.version,
+                args.info_on_focal_labels,
+            )
+    else:
+        logging.info(
+            "No wikidataDumpFile given, so skipping wiki mapping and popularity calc"
+        )
+
+    logging.info("> Populating IUCN IDs using EOL csv file (or if absent, wikidata)")
+    populate_iucn(OTT_ptrs, args.EOLidentifiers)
+
+    logging.info("> Writing out results to {}/xxx".format(args.output_location))
+    output_simplified_tree(
+        tree,
+        args.OpenTreeTaxonomy,
+        args.output_location,
+        args.version,
+        random_seed_addition,
+    )
+    t_fmt = "%H hrs %M min %S sec"
+    logging.info(
+        f"✔ ALL DONE IN {time.strftime(t_fmt, time.gmtime(time.time()-start))}"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Convert a newick file with OpenTree labels into refined trees and CSV tables, while mapping Open Tree of Life Taxonomy IDs to other ids (including EoL & Wikidata)"
@@ -930,88 +1014,7 @@ def main():
     )
 
     args = parser.parse_args()
-
-    random_seed_addition = 1234
-    start = time.time()
-    if args.verbosity == 0:
-        logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
-    elif args.verbosity == 1:
-        logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
-    elif args.verbosity >= 2:
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-    logging.info(
-        f"OneZoom data generation started on {time.asctime(time.localtime(time.time()))}"
-    )
-    skip_popularity = (
-        args.popularity_file is None
-    )  # Default is "": None is when popularity_file explictly specified with no name
-
-    # from http://eol.org/api/docs/provider_hierarchies
-    # these need to be an ordered dict with the first being the preferred id used when getting a corresponding wikidata ID
-    # all the ids for these are integers >= 0
-    sources = ["ncbi", "if", "worms", "irmng", "gbif"]
-    eol_sources = {
-        "ncbi": 676,
-        "worms": 459,
-        "gbif": 767,
-    }  # update when EoL has harvested index fungorum & IRMNG
-    # the ids for these sources may not be numbers (e.g. Silva has things like D11377/#1
-    nonint_sources = OrderedDict()
-
-    logging.info("> Creating tree structure")
-    tree, OTT_ptrs = get_tree_and_OTT_list(args.Tree, sources)
-
-    logging.info("> Adding source IDs")
-    source_ptrs = OTT_popularity_mapping.create_from_taxonomy(
-        args.OpenTreeTaxonomy, sources, OTT_ptrs, args.extra_source_file
-    )
-
-    logging.info("> Adding EOL IDs from EOL csv file")
-    add_eol_IDs_from_EOL_table_dump(source_ptrs, args.EOLidentifiers, eol_sources)
-    logging.info("> Finding best EoL matches")
-    identify_best_EoLdata(OTT_ptrs, eol_sources)
-
-    if args.wikidataDumpFile:
-        logging.info("> Adding wikidata info")
-        has_popularity = map_wiki_info(
-            source_ptrs,
-            sources,
-            OTT_ptrs,
-            args.wikidataDumpFile,
-            args.wikilang,
-            None if skip_popularity else args.wikipediaSQLDumpFile,
-            None if skip_popularity else args.wikipedia_totals_bz2_pageviews,
-        )
-        if has_popularity:
-            logging.info("> Percolating popularity through the tree")
-            percolate_popularity(
-                tree,
-                args.exclude,
-                args.output_location,
-                args.popularity_file,
-                args.version,
-                args.info_on_focal_labels,
-            )
-    else:
-        logging.info(
-            "No wikidataDumpFile given, so skipping wiki mapping and popularity calc"
-        )
-
-    logging.info("> Populating IUCN IDs using EOL csv file (or if absent, wikidata)")
-    populate_iucn(OTT_ptrs, args.EOLidentifiers)
-
-    logging.info("> Writing out results to {}/xxx".format(args.output_location))
-    output_simplified_tree(
-        tree,
-        args.OpenTreeTaxonomy,
-        args.output_location,
-        args.version,
-        random_seed_addition,
-    )
-    t_fmt = "%H hrs %M min %S sec"
-    logging.info(
-        f"✔ ALL DONE IN {time.strftime(t_fmt, time.gmtime(time.time()-start))}"
-    )
+    process_all(args)
 
 
 if __name__ == "__main__":

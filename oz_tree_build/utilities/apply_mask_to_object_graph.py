@@ -9,6 +9,7 @@ def apply_mask_to_object_graph(
     """
     Takes an object and a mask and remove all the properties from the object that are not in the mask.
     """
+
     if mask is KEEP:
         return
 

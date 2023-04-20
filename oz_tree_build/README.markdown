@@ -3,6 +3,10 @@ Creating a bespoke OneZoom tree involves a number of steps, as documented below.
 
 The instructions below are primarily intended for creating a full tree of all life on the main OneZoom site. If you are making a bespoke tree, you may need to tweak them slightly.
 
+The output files created by the tree building process (database files and files to feed to the js,
+and which can be loaded into the database and for the tree viewer) are saved in `output_files`.
+
+
 ## Settings
 
 We assume you are running in a bash shell, so that you can define the following settings before you create a tree, and use them in the scripts below as `${OT_VERSION}` and `${OZ_TREE}`
@@ -12,7 +16,6 @@ OT_VERSION=13_4 #or whatever your OpenTree version is
 OT_TAXONOMY_VERSION=3.3
 OT_TAXONOMY_EXTRA=draft1 #optional - the draft for this version, e.g. for 3.3draft1
 OZ_TREE=AllLife #a tree directory in data/OZTreeBuild
-THREADS=-T40 #or however many cpus you want to throw at the process (or omit on personal machines)
 ```
 
 In the instructions which follow, we assume that your tree version corresponds to that in the online OpenTree API. You can check this by running `curl -X POST https://api.opentreeoflife.org/v3/tree_of_life/about`, and also check that the taxonomy version in the API corresponds to that used in your tree, by running `curl -X POST https://api.opentreeoflife.org/v3/taxonomy/about`. If these do not match, the tree and taxonomy versions above, you may not fully map all the names in your tree in step 1 below.
@@ -22,12 +25,7 @@ If you are have installed perl modules to a different location (e.g. as a local 
 
 # Preliminaries
 
-
-First check that you have the required OpenTree, Wikimedia, and Encyclopedia of Life files, in particular `data/OpenTree/draftversion${OT_VERSION}.tre`, `data/OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv`, `data/Wiki/wd_JSON`, `data/EOL/provider_ids.csv.gz` and for popularity calculations, `data/Wiki/wp_SQL` and `data/Wiki/wp_pagecounts`  (see [data/README.markdown](../data/README.markdown) - in particular, to create the `.tre` file you may need to run 
-```
-perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' labelled_supertree_simplified_ottnames.tre > draftversion${OT_VERSION}.tre
-```
-as detailed [here](../data/OpenTree/README.markdown))
+Follow [these instructions](../data/README.markdown) to download all required files.
 
 # Building a tree
 
@@ -140,7 +138,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	```
 	OZprivate/ServerScripts/Utilities/IUCNquery.py -v
 	```
-	(note that this both updates the ICUN data in the DB and percolates up interior node info)
+	(note that this both updates the IUCN data in the DB and percolates up interior node info)
 12. (10 mins) If this is a site with sponsorship (only the main OZ site), set the pricing structure using SET_PRICES.html (accessible from the management pages).
 13. (5 mins - this does seem to be necessary for ordered nodes & ordered leaves). Make sure indexes are reset. Look at `OZprivate/ServerScripts/SQL/create_db_indexes.sql`  for the SQL to do this - this may involve logging in to the SQL server (e.g. via Sequel Pro on Mac) and pasting all the drop index and create index commands.
     

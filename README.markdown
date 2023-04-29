@@ -13,6 +13,8 @@ The first step to using this repo is to create a Python virtual environment and 
     # Install it
     pip install -e .
 
+After the first time, you just need to run the `source .venv/bin/activate` each time you want to activate it in a new shell.
+
 ## Downloading all required files
 
 You then need to download various files from the internet, as [documented here](data/README.markdown).

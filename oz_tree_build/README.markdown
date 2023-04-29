@@ -113,11 +113,13 @@ If you already have your own newick tree with open tree ids on it already, and d
 
     Since round braces, curly braces, and commas are banned from the `simplified_ottnames` file, we can create minimal topology files by simply removing everything except these characters from the `.nwk` and `.poly` files. If the tree has been ladderised, with polytomies and unifurcations removed, the commas are also redundant, and can be removed. This is done in the next step, which saves these highly shortened strings into .js data files. 
 
-1. (5 mins) turn the most recently saved tree files (saved in step (5) as `data/output_files/ordered_tree_XXXXXX.poly` and `ordered_dates_XXXXXX.json`) into bracketed newick strings in `static/FinalOutputs/data/basetree_XXXXXX.js`, `static/FinalOutputs/data/polytree_XXXXXX.js`, a cutpoints file in `static/FinalOutputs/data/cut_position_map_XXXXXX.js`, and a dates file in `static/FinalOutputs/data/dates_XXXXXX.json` as well as their gzipped equivalents, using 
+1. (5 mins) turn the most recently saved tree files (saved in the previous step as `data/output_files/ordered_tree_XXXXXX.poly` and `ordered_dates_XXXXXX.json`) into bracketed newick strings in `static/FinalOutputs/data/basetree_XXXXXX.js`, `static/FinalOutputs/data/polytree_XXXXXX.js`, a cutpoints file in `static/FinalOutputs/data/cut_position_map_XXXXXX.js`, and a dates file in `static/FinalOutputs/data/dates_XXXXXX.json` as well as their gzipped equivalents, using 
 	
 	```
-	OZprivate/ServerScripts/Utilities/make_js_treefiles.py
+	make_js_treefiles
 	```
+
+	This command assumes that you have the `tree-build` repo as a sibling to the `OZtree` repo. You can override this by specifying the `--outdir` flag, pointing it to wherever your `static/FinalOutputs/data` is.
     
     ## Upload data to the server and check it
     

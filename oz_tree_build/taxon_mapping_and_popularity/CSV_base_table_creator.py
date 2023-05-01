@@ -119,9 +119,6 @@ def get_tree_and_OTT_list(tree_filename, sources):
     of a taxon list and simply use labels.
     Returns the Dendropy tree and the OTT dict.
     """
-    # these variables are all pointers into the same data
-    ordered_leaves = []
-    ordered_nodes = []
     indexed_by_ott = {}
 
     try:
@@ -131,8 +128,8 @@ def get_tree_and_OTT_list(tree_filename, sources):
             preserve_underscores=True,
             suppress_leaf_node_taxa=True,
         )
-    except:
-        sys.exit("Problem reading tree from " + tree_filename)
+    except Exception as e:
+        sys.exit("Problem reading tree from " + tree_filename + ": " + str(e))
     logging.info(" > read tree from " + tree_filename)
 
     ott_node = re.compile(r"(.*) ott(\d+)(@\d*)?$")  # matches the OTT number

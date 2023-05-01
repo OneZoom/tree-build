@@ -171,7 +171,10 @@ def main():
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
     build_oz_tree(args.treefile, args.ot_parts_folder, args.outfile)
+
+    # Write out the ending semi-colon and flush the stream
     args.outfile.write(";")
+    args.outfile.flush()
 
 
 if __name__ == "__main__":

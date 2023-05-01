@@ -3,6 +3,10 @@ Creating a bespoke OneZoom tree involves a number of steps, as documented below.
 
 The instructions below are primarily intended for creating a full tree of all life on the main OneZoom site. If you are making a bespoke tree, you may need to tweak them slightly.
 
+The output files created by the tree building process (database files and files to feed to the js,
+and which can be loaded into the database and for the tree viewer) are saved in `output_files`.
+
+
 ## Settings
 
 We assume you are running in a bash shell, so that you can define the following settings before you create a tree, and use them in the scripts below as `${OT_VERSION}` and `${OZ_TREE}`
@@ -12,7 +16,6 @@ OT_VERSION=13_4 #or whatever your OpenTree version is
 OT_TAXONOMY_VERSION=3.3
 OT_TAXONOMY_EXTRA=draft1 #optional - the draft for this version, e.g. for 3.3draft1
 OZ_TREE=AllLife #a tree directory in data/OZTreeBuild
-THREADS=-T40 #or however many cpus you want to throw at the process (or omit on personal machines)
 ```
 
 In the instructions which follow, we assume that your tree version corresponds to that in the online OpenTree API. You can check this by running `curl -X POST https://api.opentreeoflife.org/v3/tree_of_life/about`, and also check that the taxonomy version in the API corresponds to that used in your tree, by running `curl -X POST https://api.opentreeoflife.org/v3/taxonomy/about`. If these do not match, the tree and taxonomy versions above, you may not fully map all the names in your tree in step 1 below.
@@ -22,12 +25,7 @@ If you are have installed perl modules to a different location (e.g. as a local 
 
 # Preliminaries
 
-
-First check that you have the required OpenTree, Wikimedia, and Encyclopedia of Life files, in particular `data/OpenTree/draftversion${OT_VERSION}.tre`, `data/OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv`, `data/Wiki/wd_JSON`, `data/EOL/provider_ids.csv.gz` and for popularity calculations, `data/Wiki/wp_SQL` and `data/Wiki/wp_pagecounts`  (see [data/README.markdown](../data/README.markdown) - in particular, to create the `.tre` file you may need to run 
-```
-perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' labelled_supertree_simplified_ottnames.tre > draftversion${OT_VERSION}.tre
-```
-as detailed [here](../data/OpenTree/README.markdown))
+Follow [these instructions](../data/README.markdown) to download all required files.
 
 # Building a tree
 
@@ -38,7 +36,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 ## Create the tree
 
 
-1. (5 mins) Use the [OpenTree API](https://github.com/OpenTreeOfLife/germinator/wiki/Synthetic-tree-API-v3) to add OTT ids to any non-opentree taxa in our own bespoke phylogenies (those in `*.phy` or `*.PHY` files). The new `.phy` and `.PHY` files will be created in a new directory within `data/OZTreeBuild/${OZ_TREE}/BespokeTree`, and a symlink to that directory will be created called `include_files` 
+1. (20 secs) Use the [OpenTree API](https://github.com/OpenTreeOfLife/germinator/wiki/Synthetic-tree-API-v3) to add OTT ids to any non-opentree taxa in our own bespoke phylogenies (those in `*.phy` or `*.PHY` files). The new `.phy` and `.PHY` files will be created in a new directory within `data/OZTreeBuild/${OZ_TREE}/BespokeTree`, and a symlink to that directory will be created called `include_files` 
 		
 	```
 	add_ott_numbers_to_trees \
@@ -46,7 +44,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	data/OZTreeBuild/${OZ_TREE}/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
 	```
 
-2. Copy supplementary OpenTree-like newick files (if any) to the `OpenTree_all` directory. These are clades referenced in the OneZoom phylogeny that are missing from the OpenTree, and whose subtrees thus need to be supplied by hand. If any are required, they should be placed in the `OT_required` directory within `data/OZTreeBuild/${OZ_TREE}`. For tree building, they should be copied into the directory containing OpenTree subtrees using
+1. Copy supplementary OpenTree-like newick files (if any) to the `OpenTree_all` directory. These are clades referenced in the OneZoom phylogeny that are missing from the OpenTree, and whose subtrees thus need to be supplied by hand. If any are required, they should be placed in the `OT_required` directory within `data/OZTreeBuild/${OZ_TREE}`. For tree building, they should be copied into the directory containing OpenTree subtrees using
 
 	```
 	(cd data/OZTreeBuild/${OZ_TREE}/OpenTreeParts && \
@@ -54,7 +52,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	```
 	If you do not have any supplementary `.nwk` subtrees in the  `OT_required` directory, this step will output a warning, which can be ignored.
 
-3. (10 mins) Construct OpenTree subtrees for inclusion from the `draftversion${OT_VERSION}.tre` file. The subtrees to be extracted are specified by inclusion strings in the `.PHY` files created in step 1. The command for this is `getOpenTreesFromOneZoom.py`, and it needs to be run from within the `data/OZTreeBuild/${OZ_TREE}` directory, as follows:
+1. (a few secs) Construct OpenTree subtrees for inclusion from the `draftversion${OT_VERSION}.tre` file. The subtrees to be extracted are specified by inclusion strings in the `.PHY` files created in step 1. The command for this is `getOpenTreesFromOneZoom.py`, and it needs to be run from within the `data/OZTreeBuild/${OZ_TREE}` directory, as follows:
 
 	```
 	(cd data/OZTreeBuild/${OZ_TREE} && get_open_trees_from_one_zoom \
@@ -63,7 +61,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	```
 	If you are not including any OpenTree subtrees in your final tree, you should have no `.PHY` files, and this step will output a warning, which can be ignored.
 	
-4. (5 mins) substitute these subtrees into the main tree, and save the resulting full newick file using the hacky perl script: 
+1. (1 sec) substitute these subtrees into the main tree, and save the resulting full newick file using the hacky perl script: 
 
 	```
 	(cd data/OZTreeBuild/${OZ_TREE} && \
@@ -81,47 +79,58 @@ If you already have your own newick tree with open tree ids on it already, and d
 	gzip < data/OZTreeBuild/${OZ_TREE}/${OZ_TREE}_full_tree.phy > static/FinalOutputs/${OZ_TREE}_full_tree.phy.gz
 	```
 
-	## create the base tree and table data
+	## Create the base tree and table data
    
-5. (many hours) This is the long step, although it can benefit from parallel decoding of the wikimedia database dump files, so it can be worth running this on a multiprocessor machine (e.g. with 64 or even 128 cores, setting `${THREADS}` as appropriate). On the basis of the `${OZ_TREE}_full_tree.phy` file, look for ID mappings between different datasets, calculate popularity measures via wikidata/pedia, refine the tree (remove subspecies, randomly break polytomies, remove unifurcations etc), and then create corresponding database tables together with `ordered_tree_XXXXX.nwk`, `ordered_tree_XXXXX.poly` (same file but with polytomies marked with curly braces), and `ordered_dates_XXXXX.js` files (where XXXXX is the version number, usually a timestamp).
+1. (5 to 7 hours) This is the long step. It generates filtered versions of the raw input files, which then makes them faster to work with. For example, for the massive wikimedia dump file (`latest-all.json.bz2`), it remove all entries that aren't taxons or vernaculars, and for each remaining entry, in only keeps the small subset of fields that we care about.
+
+	The output files have the same names as the input files, but with a `OneZoom_` prefix, and without using compression (e.g. `OneZoom_latest-all.json` for `latest-all.json`.bz2). They are stored next to their matching input files.
+
+	From the data folder:
+
+	```
+	(cd data && generate_filtered_files OZTreeBuild/AllLife/AllLife_full_tree.phy OpenTree/ott3.3/taxonomy.tsv EOL/provider_ids.csv.gz Wiki/wd_JSON/latest-all.json.bz2 Wiki/wp_SQL/enwiki-latest-page.sql.gz Wiki/wp_pagecounts/pagecounts*.bz2)
+	```
+
+1. (11 mins) On the basis of the `${OZ_TREE}_full_tree.phy` file, look for ID mappings between different datasets, calculate popularity measures via wikidata/pedia, refine the tree (remove subspecies, randomly break polytomies, remove unifurcations etc), and then create corresponding database tables together with `ordered_tree_XXXXX.nwk`, `ordered_tree_XXXXX.poly` (same file but with polytomies marked with curly braces), and `ordered_dates_XXXXX.js` files (where XXXXX is the version number, usually a timestamp).
 
     Additional flags can be given to override the OpenTree taxonomy in specific cases (using `--extra_source_file`), and to exclude certain taxa (e.g. dinosaurs) from the popularity calculations.
 
-	If you do not have comprehensive tree of a clade, it probably doesn't make sense to calculate popularity measures, and you can run this script with the `-p` flag (or omit the references to the `wp_` wikipedia files. Most of the time for this command is spent going throught the wikidata JSON dump, so if you want to save time and don't care about mapping to wikipedia items at all, you can omit the `wd_JSON` parameter too.
+	If you do not have comprehensive tree of a clade, it probably doesn't make sense to calculate popularity measures, and you can run this script with the `-p` flag (or omit the references to the `wp_` wikipedia files).
 	
 	```
 	CSV_base_table_creator \
 	data/OZTreeBuild/${OZ_TREE}/${OZ_TREE}_full_tree.phy \
 	data/OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv \
-	data/EOL/provider_ids.csv.gz \
-	data/Wiki/wd_JSON/latest-all.json.bz2 \
-	data/Wiki/wp_SQL/enwiki-latest-page.sql.gz \
-	data/Wiki/wp_pagecounts/pagecount*.bz2 \
+	data/EOL/OneZoom_provider_ids.csv \
+	data/Wiki/wd_JSON/OneZoom_latest-all.json \
+	data/Wiki/wp_SQL/OneZoom_enwiki-latest-page.sql \
+	data/Wiki/wp_pagecounts/OneZoom_pagecounts* \
 	-o data/output_files -v \
 	--exclude Archosauria_ott335588 Dinosauria_ott90215 \
 	--extra_source_file data/OZTreeBuild/${OZ_TREE}/BespokeTree/SupplementaryTaxonomy.tsv \
-	${THREADS} 2> data/output_files/ordered_output.log
+	2> data/output_files/ordered_output.log
 	```
 
     Since round braces, curly braces, and commas are banned from the `simplified_ottnames` file, we can create minimal topology files by simply removing everything except these characters from the `.nwk` and `.poly` files. If the tree has been ladderised, with polytomies and unifurcations removed, the commas are also redundant, and can be removed. This is done in the next step, which saves these highly shortened strings into .js data files. 
 
-6. (5 mins) turn the most recently saved tree files (saved in step (5) as `data/output_files/ordered_tree_XXXXXX.poly` and `ordered_dates_XXXXXX.json`) into bracketed newick strings in `static/FinalOutputs/data/basetree_XXXXXX.js`, `static/FinalOutputs/data/polytree_XXXXXX.js`, a cutpoints file in `static/FinalOutputs/data/cut_position_map_XXXXXX.js`, and a dates file in `static/FinalOutputs/data/dates_XXXXXX.json` as well as their gzipped equivalents, using 
+1. (1 min) turn the most recently saved tree files (saved in the previous step as `data/output_files/ordered_tree_XXXXXX.poly` and `ordered_dates_XXXXXX.json`) into bracketed newick strings in `static/FinalOutputs/data/basetree_XXXXXX.js`, `static/FinalOutputs/data/polytree_XXXXXX.js`, a cutpoints file in `static/FinalOutputs/data/cut_position_map_XXXXXX.js`, and a dates file in `static/FinalOutputs/data/dates_XXXXXX.json` as well as their gzipped equivalents, using 
 	
 	```
-	OZprivate/ServerScripts/Utilities/make_js_treefiles.py
+	make_js_treefiles
 	```
-	(see https://github.com/jrosindell/OneZoomComplete/issues/292)
+
+	This command assumes that you have the `tree-build` repo as a sibling to the `OZtree` repo. You can override this by specifying the `--outdir` flag, pointing it to wherever your `static/FinalOutputs/data` is.
     
     ## Upload data to the server and check it
     
-7. If you are running the tree building scripts on a different computer to the one running the web server, you will need to push the `completetree_XXXXXX.js`, `completetree_XXXXXX.js.gz`, `cut_position_map_XXXXXX.js`, `cut_position_map_XXXXXX.js.gz`, `dates_XXXXXX.js`
+1. If you are running the tree building scripts on a different computer to the one running the web server, you will need to push the `completetree_XXXXXX.js`, `completetree_XXXXXX.js.gz`, `cut_position_map_XXXXXX.js`, `cut_position_map_XXXXXX.js.gz`, `dates_XXXXXX.js`
 , `dates_XXXXXX.js.gz` files onto your server, e.g. by pushing to your local Github repo then pulling the latest github changes to the server.
-8. (15 mins) load the CSV tables into the DB, using the SQL commands printed in step 5 (the ones that start something like `TRUNCATE TABLE ordered_leaves; LOAD DATA LOCAL INFILE ...;` `TRUNCATE TABLE ordered_nodes; LOAD DATA LOCAL INFILE ...;`). Either do so via a GUI utility, or copy the `.csv.mySQL` files to a local directory on the machine running your SQL server (e.g. using `scp -C` for compression) and run your `LOAD DATA LOCAL INFILE` commands on the mysql command line (this may require you to start the command line utility using `mysql --local-infile`, e.g.:
+1. (15 mins) load the CSV tables into the DB, using the SQL commands printed in step 6 (the ones that start something like `TRUNCATE TABLE ordered_leaves; LOAD DATA LOCAL INFILE ...;` `TRUNCATE TABLE ordered_nodes; LOAD DATA LOCAL INFILE ...;`). Either do so via a GUI utility, or copy the `.csv.mySQL` files to a local directory on the machine running your SQL server (e.g. using `scp -C` for compression) and run your `LOAD DATA LOCAL INFILE` commands on the mysql command line (this may require you to start the command line utility using `mysql --local-infile`, e.g.:
 
    ```
    mysql --local-infile --host db.sundivenetworks.net --user onezoom --password --database onezoom_dev
    ```
-9. Check for dups, and if any sponsors are no longer on the tree, using something like the following SQL command:
+1. Check for dups, and if any sponsors are no longer on the tree, using something like the following SQL command:
 
     ```
     select * from reservations left outer join ordered_leaves on reservations.OTT_ID = ordered_leaves.ott where ordered_leaves.ott is null and reservations.verified_name IS NOT NULL;
@@ -130,19 +139,19 @@ If you already have your own newick tree with open tree ids on it already, and d
     
     ## Fill in additional server fields
 
-10. (15 mins) create example pictures for each node by percolating up. This requires the most recent `images_by_ott` table, so either do this on the main server, or (if you are doing it locally) update your `images_by_ott` to the most recent server version.
+1. (15 mins) create example pictures for each node by percolating up. This requires the most recent `images_by_ott` table, so either do this on the main server, or (if you are doing it locally) update your `images_by_ott` to the most recent server version.
 
 	```
 	OZprivate/ServerScripts/Utilities/picProcess.py -v
 	```
-11. (5 mins) percolate the IUCN data up using 
+1. (5 mins) percolate the IUCN data up using 
 	
 	```
 	OZprivate/ServerScripts/Utilities/IUCNquery.py -v
 	```
-	(note that this both updates the ICUN data in the DB and percolates up interior node info)
-12. (10 mins) If this is a site with sponsorship (only the main OZ site), set the pricing structure using SET_PRICES.html (accessible from the management pages).
-13. (5 mins - this does seem to be necessary for ordered nodes & ordered leaves). Make sure indexes are reset. Look at `OZprivate/ServerScripts/SQL/create_db_indexes.sql`  for the SQL to do this - this may involve logging in to the SQL server (e.g. via Sequel Pro on Mac) and pasting all the drop index and create index commands.
+	(note that this both updates the IUCN data in the DB and percolates up interior node info)
+1. (10 mins) If this is a site with sponsorship (only the main OZ site), set the pricing structure using SET_PRICES.html (accessible from the management pages).
+1. (5 mins - this does seem to be necessary for ordered nodes & ordered leaves). Make sure indexes are reset. Look at `OZprivate/ServerScripts/SQL/create_db_indexes.sql`  for the SQL to do this - this may involve logging in to the SQL server (e.g. via Sequel Pro on Mac) and pasting all the drop index and create index commands.
     
     ## at last
-14. Have a well deserved cup of tea
+1. Have a well deserved cup of tea

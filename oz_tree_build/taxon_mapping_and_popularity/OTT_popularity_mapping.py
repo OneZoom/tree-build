@@ -927,7 +927,9 @@ def sum_popularity_over_tree(
                 node._parent_node.descendants_popsum = (
                     node.pop_store + node.descendants_popsum
                 )
-            except AttributeError:  # this could be the root, with node._parent_node = None
+            except (
+                AttributeError
+            ):  # this could be the root, with node._parent_node = None
                 root_descendants = node.n_descendants
 
     # go down the tree from the root, summing up the popularity indices above, and summing up numbers of nodes

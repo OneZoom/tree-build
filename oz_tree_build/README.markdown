@@ -79,9 +79,9 @@ If you already have your own newick tree with open tree ids on it already, and d
 	gzip < data/OZTreeBuild/${OZ_TREE}/${OZ_TREE}_full_tree.phy > static/FinalOutputs/${OZ_TREE}_full_tree.phy.gz
 	```
 
-	## create the base tree and table data
+	## Create the base tree and table data
    
-1. (5 hours) This is the long step. It generates filtered versions of the raw input files, which then makes them faster to work with. For example, for the massive wikimedia dump file (`latest-all.json.bz2`), it remove all entries that aren't taxons or vernaculars, and for each remaining entry, in only keeps the small subset of fields that we care about.
+1. (5 to 7 hours) This is the long step. It generates filtered versions of the raw input files, which then makes them faster to work with. For example, for the massive wikimedia dump file (`latest-all.json.bz2`), it remove all entries that aren't taxons or vernaculars, and for each remaining entry, in only keeps the small subset of fields that we care about.
 
 	The output files have the same names as the input files, but with a `OneZoom_` prefix, and without using compression (e.g. `OneZoom_latest-all.json` for `latest-all.json`.bz2). They are stored next to their matching input files.
 
@@ -113,7 +113,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 
     Since round braces, curly braces, and commas are banned from the `simplified_ottnames` file, we can create minimal topology files by simply removing everything except these characters from the `.nwk` and `.poly` files. If the tree has been ladderised, with polytomies and unifurcations removed, the commas are also redundant, and can be removed. This is done in the next step, which saves these highly shortened strings into .js data files. 
 
-1. (5 mins) turn the most recently saved tree files (saved in the previous step as `data/output_files/ordered_tree_XXXXXX.poly` and `ordered_dates_XXXXXX.json`) into bracketed newick strings in `static/FinalOutputs/data/basetree_XXXXXX.js`, `static/FinalOutputs/data/polytree_XXXXXX.js`, a cutpoints file in `static/FinalOutputs/data/cut_position_map_XXXXXX.js`, and a dates file in `static/FinalOutputs/data/dates_XXXXXX.json` as well as their gzipped equivalents, using 
+1. (1 min) turn the most recently saved tree files (saved in the previous step as `data/output_files/ordered_tree_XXXXXX.poly` and `ordered_dates_XXXXXX.json`) into bracketed newick strings in `static/FinalOutputs/data/basetree_XXXXXX.js`, `static/FinalOutputs/data/polytree_XXXXXX.js`, a cutpoints file in `static/FinalOutputs/data/cut_position_map_XXXXXX.js`, and a dates file in `static/FinalOutputs/data/dates_XXXXXX.json` as well as their gzipped equivalents, using 
 	
 	```
 	make_js_treefiles
@@ -125,7 +125,7 @@ If you already have your own newick tree with open tree ids on it already, and d
     
 1. If you are running the tree building scripts on a different computer to the one running the web server, you will need to push the `completetree_XXXXXX.js`, `completetree_XXXXXX.js.gz`, `cut_position_map_XXXXXX.js`, `cut_position_map_XXXXXX.js.gz`, `dates_XXXXXX.js`
 , `dates_XXXXXX.js.gz` files onto your server, e.g. by pushing to your local Github repo then pulling the latest github changes to the server.
-1. (15 mins) load the CSV tables into the DB, using the SQL commands printed in step 5 (the ones that start something like `TRUNCATE TABLE ordered_leaves; LOAD DATA LOCAL INFILE ...;` `TRUNCATE TABLE ordered_nodes; LOAD DATA LOCAL INFILE ...;`). Either do so via a GUI utility, or copy the `.csv.mySQL` files to a local directory on the machine running your SQL server (e.g. using `scp -C` for compression) and run your `LOAD DATA LOCAL INFILE` commands on the mysql command line (this may require you to start the command line utility using `mysql --local-infile`, e.g.:
+1. (15 mins) load the CSV tables into the DB, using the SQL commands printed in step 6 (the ones that start something like `TRUNCATE TABLE ordered_leaves; LOAD DATA LOCAL INFILE ...;` `TRUNCATE TABLE ordered_nodes; LOAD DATA LOCAL INFILE ...;`). Either do so via a GUI utility, or copy the `.csv.mySQL` files to a local directory on the machine running your SQL server (e.g. using `scp -C` for compression) and run your `LOAD DATA LOCAL INFILE` commands on the mysql command line (this may require you to start the command line utility using `mysql --local-infile`, e.g.:
 
    ```
    mysql --local-infile --host db.sundivenetworks.net --user onezoom --password --database onezoom_dev

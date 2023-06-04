@@ -23,7 +23,7 @@ To run the test suite, from the root of the repo, and from your activated enviro
 
 ## Downloading required files
 
-To actually build a full tree of life, you first need to download various files from the internet, as [documented here](data/README.markdown).
+To actually build a full tree of life, you first need to download various files from the internet, and place them within the appropriate directories in the `data` directory, as [documented here](data/README.markdown).
 
 ## Building the tree
 

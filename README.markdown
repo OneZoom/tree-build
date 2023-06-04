@@ -1,6 +1,6 @@
 # OneZoom Tree Building repo
 
-This repository contains everything that is needed to build the OneZoom tree and  all the other files needed by the backend.
+This repository contains everything that is needed to build the OneZoom tree and all the other files needed by the backend.
 
 ## Setting up the environment
 
@@ -21,10 +21,24 @@ To run the test suite, from the root of the repo, and from your activated enviro
 
     python -m pytest
 
-## Downloading required files
+## Building the latest tree from OpenTree
 
-To actually build a full tree of life, you first need to download various files from the internet, and place them within the appropriate directories in the `data` directory, as [documented here](data/README.markdown).
+### Setup
 
-## Building the tree
+We assume that you want to build a OneZoom tree based on the most recent online OpenTree version.
+You can check the most recent version of both the synthetic tree (`synth_id`) and the taxonomy (`taxonomy_version`) via the
+[API](https://github.com/OpenTreeOfLife/germinator/wiki/Open-Tree-of-Life-Web-APIs) e.g. by running `curl -X POST https://api.opentreeoflife.org/v3/tree_of_life/about`. Later in the build, we use specific environment variables set to these version numbers. Assuming you are in a bash shell or similar, you can set them as follows:
+
+```
+OT_VERSION=14_7 #or whatever your OpenTree version is
+OT_TAXONOMY_VERSION=3.5
+OT_TAXONOMY_EXTRA=draft1 #optional - the draft for this version, e.g. `draft1` if the taxonomy_version is 3.5draft1
+```
+
+### Download
+
+Constructing the full tree of life requires various files downloaded from the internet. They should be placed within the appropriate directories in the `data` directory, as [documented here](data/README.markdown).
+
+### Building the tree
 
 Once data files are downloaded, you should be set up to actually build the tree and other backend files, by following [these instructions](oz_tree_build/README.markdown)

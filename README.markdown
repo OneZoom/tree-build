@@ -15,10 +15,16 @@ The first step to using this repo is to create a Python virtual environment and 
 
 After the first time, you just need to run the `source .venv/bin/activate` each time you want to activate it in a new shell.
 
-## Downloading all required files
+## Testing
 
-You then need to download various files from the internet, as [documented here](data/README.markdown).
+To run the test suite, from the root of the repo, and from your activated environment, run
+
+    python -m pytest
+
+## Downloading required files
+
+To actually build a full tree of life, you first need to download various files from the internet, as [documented here](data/README.markdown).
 
 ## Building the tree
 
-Now you are set up to actually build the tree and other backend files, by following [these instructions](oz_tree_build/README.markdown)
+Once data files are downloaded, you should be set up to actually build the tree and other backend files, by following [these instructions](oz_tree_build/README.markdown)

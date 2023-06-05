@@ -9,16 +9,15 @@ and which can be loaded into the database and for the tree viewer) are saved in 
 
 ## Settings
 
-We assume you are running in a bash shell, so that you can define the following settings before you create a tree, and use them in the scripts below as `${OT_VERSION}` and `${OZ_TREE}`
+Assuming that the environment variables OT_VERSION and OT_TAXONOMY_VERSION have already
+been set as described in the [main README file](../README.markdown), and the
+appropriate data files downloaded as described [here](../data/README.markdown),
+the instructions below only require the following environmental variable to be
+set up:
 
 ```
-OT_VERSION=13_4 #or whatever your OpenTree version is
-OT_TAXONOMY_VERSION=3.3
-OT_TAXONOMY_EXTRA=draft1 #optional - the draft for this version, e.g. for 3.3draft1
 OZ_TREE=AllLife #a tree directory in data/OZTreeBuild
 ```
-
-In the instructions which follow, we assume that your tree version corresponds to that in the online OpenTree API. You can check this by running `curl -X POST https://api.opentreeoflife.org/v3/tree_of_life/about`, and also check that the taxonomy version in the API corresponds to that used in your tree, by running `curl -X POST https://api.opentreeoflife.org/v3/taxonomy/about`. If these do not match, the tree and taxonomy versions above, you may not fully map all the names in your tree in step 1 below.
 
 If you are have installed perl modules to a different location (e.g. as a local user), you may also need to set `export PERL5LIB=/path/to/my_perl_modules/lib/perl5`.
 

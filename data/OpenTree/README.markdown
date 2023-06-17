@@ -14,7 +14,7 @@ Files herein are .gitignored. To get the site working, this folder should contai
 	perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' labelled_supertree_simplified_ottnames.tre > draftversion${OT_VERSION}.tre
 	```
 
-* The OpenTree taxonomy, in a subfolder called ottYYY/ (where YYY is the OT_TAXONOMY_VERSION; the only important file is ottYYY/taxonomy.tsv). Get the `ottYYY.tgz` file (where YYY is the correct taxonomy version for your version XXX of the tree) from [http://files.opentreeoflife.org/ott](http://files.opentreeoflife.org/ott/) and unpack it. Alternatively, the the lastest is usually at [https://tree.opentreeoflife.org/about/taxonomy-version](https://tree.opentreeoflife.org/about/taxonomy-version)).
+* The OpenTree taxonomy, in a subfolder called ottYYY/ (where YYY is the OT_TAXONOMY_VERSION; the only important file is ottYYY/taxonomy.tsv). Get the `ottYYY.tgz` file (where YYY is the correct taxonomy version for your version XXX of the tree) from [http://files.opentreeoflife.org/ott](http://files.opentreeoflife.org/ott/) and unpack it. Alternatively, the lastest is usually at [https://tree.opentreeoflife.org/about/taxonomy-version](https://tree.opentreeoflife.org/about/taxonomy-version).
 
 ### Use
 

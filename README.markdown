@@ -19,7 +19,7 @@ After the first time, you just need to run the `source .venv/bin/activate` each 
 
 To run the test suite, from the root of the repo, and from your activated environment, run
 
-    python -m pytest
+    pytest
 
 ## Building the latest tree from OpenTree
 
@@ -41,4 +41,4 @@ Constructing the full tree of life requires various files downloaded from the in
 
 ### Building the tree
 
-Once data files are downloaded, you should be set up to actually build the tree and other backend files, by following [these instructions](oz_tree_build/README.markdown)
+Once data files are downloaded, you should be set up to actually build the tree and other backend files, by following [these instructions](oz_tree_build/README.markdown).

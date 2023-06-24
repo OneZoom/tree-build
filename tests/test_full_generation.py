@@ -8,7 +8,7 @@ from oz_tree_build.taxon_mapping_and_popularity import CSV_base_table_creator
 def test_full_felidae_generation():
     """
     This is more of a functional test than a unit test. It runs the full pipeline
-    on a small a small clade. It then compares the output to the expected output.
+    on a small clade. It then compares the output to the expected output.
     """
 
     args = types.SimpleNamespace()

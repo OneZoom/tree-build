@@ -1,0 +1,1 @@
+INSERT INTO `page` VALUES (,0,'Margay',,,,,,,20217,,),(,0,'Ocelot',,,,,,,63596,,),(,0,'Oncilla',,,,,,,14627,,),(,0,'Kodkod',,,,,,,13820,,),(,0,'Colocolo',,,,,,,72,,),(,0,'Andean_mountain_cat',,,,,,,15500,,),(,0,'Leopardus',,,,,,,20390,,),(,0,'Pampas_cat',,,,,,,18639,,),(,0,'Pantanal_cat',,,,,,,7203,,)

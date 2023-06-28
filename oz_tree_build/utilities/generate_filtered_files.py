@@ -441,6 +441,35 @@ def generate_all_filtered_files(
         )
 
 
+def process_args(args):
+    # Create a context object to hold various things we need to pass around
+    context = type(
+        "",
+        (object,),
+        {
+            "wikilang": "en",
+            "clade": args.clade,
+            "compress": args.compress,
+            "force": args.force,
+        },
+    )()
+
+    start = time.time()
+
+    generate_all_filtered_files(
+        context,
+        args.Tree,
+        args.OpenTreeTaxonomy,
+        args.EOLidentifiers,
+        args.wikidataDumpFile,
+        args.wikipediaSQLDumpFile,
+        args.wikipedia_totals_bz2_pageviews,
+    )
+
+    end = time.time()
+    logging.debug("Time taken: {} seconds".format(end - start))
+
+
 def main():
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
@@ -487,32 +516,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # Create a context object to hold various things we need to pass around
-    context = type(
-        "",
-        (object,),
-        {
-            "wikilang": "en",
-            "clade": args.clade,
-            "compress": args.compress,
-            "force": args.force,
-        },
-    )()
-
-    start = time.time()
-
-    generate_all_filtered_files(
-        context,
-        args.Tree,
-        args.OpenTreeTaxonomy,
-        args.EOLidentifiers,
-        args.wikidataDumpFile,
-        args.wikipediaSQLDumpFile,
-        args.wikipedia_totals_bz2_pageviews,
-    )
-
-    end = time.time()
-    logging.debug("Time taken: {} seconds".format(end - start))
+    process_args(args)
 
 
 if __name__ == "__main__":

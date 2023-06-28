@@ -1,0 +1,11 @@
+uid	|	parent_uid	|	name	|	rank	|	sourceinfo	|	uniqname	|	flags	|	
+774314	|	626916	|	Leopardus	|	genus	|	ncbi:46841,gbif:2434918,irmng:1384113	|		|		|	
+507542	|	774314	|	Leopardus guigna	|	species	|	ncbi:61386,gbif:2434923,irmng:11170429	|		|		|	
+507553	|	774314	|	Leopardus wiedii	|	species	|	ncbi:61382,gbif:2434950,irmng:10592818	|		|		|	
+752746	|	774314	|	Leopardus pardalis	|	species	|	ncbi:32538,gbif:2434982,irmng:10212871	|		|		|	
+86175	|	774314	|	Leopardus colocolo	|	species	|	ncbi:61406,gbif:2434919,irmng:10534600	|		|		|	
+774303	|	774314	|	Leopardus geoffroyi	|	species	|	ncbi:46844,gbif:2434942,irmng:10765089	|		|		|	
+774309	|	774314	|	Leopardus tigrinus	|	species	|	ncbi:46842,gbif:2434930,irmng:11116645	|		|		|	
+904397	|	774314	|	Leopardus jacobita	|	species	|	ncbi:713925,gbif:2434979,irmng:10909680	|		|		|	
+3613208	|	774314	|	Leopardus braccatus	|	species	|	gbif:2434927	|		|		|	
+3613206	|	774314	|	Leopardus pajeros	|	species	|	gbif:2434935	|		|		|	

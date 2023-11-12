@@ -67,7 +67,6 @@ from oz_tree_build.utilities.file_utils import open_file_based_on_extension
 
 # local packages
 from .dendropy_extras import write_pop_newick
-from indexed_bzip2 import IndexedBzip2File
 
 from . import OTT_popularity_mapping
 

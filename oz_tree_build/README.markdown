@@ -19,7 +19,7 @@ set up:
 OZ_TREE=AllLife #a tree directory in data/OZTreeBuild
 ```
 
-If you are have installed perl modules to a different location (e.g. as a local user), you may also need to set `export PERL5LIB=/path/to/my_perl_modules/lib/perl5`.
+If you have installed perl modules to a different location (e.g. as a local user), you may also need to set `export PERL5LIB=/path/to/my_perl_modules/lib/perl5`.
 
 
 # Preliminaries

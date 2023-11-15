@@ -142,7 +142,16 @@ def set_node_ages(self):
             for ch in node.child_node_iter():
                 if getattr(ch, "age", None) is None and ch.edge.length is not None:
                     ch.age = node.age - (ch.edge.length if ch.edge.length > 0 else 0)
+                    # If the percolated age is less then 50k years, assume that it's
+                    # a quirk or a rounding error, and set it to 0 (See https://github.com/OneZoom/tree-build/issues/18)
+                    if ch.age > 0 and ch.age < 0.05:
+                        logging.warning(
+                            f"Not setting age of {ch.age} on {ch.label} as it's too small (parent: {node.label})"
+                        )
+                        ch.age = 0
                     tot_ages += 1
+                if ch.age is not None and ch.age < 0:
+                    logging.warning(f"Negative age for {ch.label}, which is suspicious")
 
     # Now that we have calculated dates, remove 'extinction props', and flag up extinct species
     removed = 0

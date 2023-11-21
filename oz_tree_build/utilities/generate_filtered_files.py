@@ -21,10 +21,7 @@ from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
     Qid,
     label,
 )
-from .apply_mask_to_object_graph import (
-    KEEP,
-    apply_mask_to_object_graph,
-)
+from .apply_mask_to_object_graph import *
 from .temp_helpers import *
 from .file_utils import *
 
@@ -217,7 +214,7 @@ def generate_filtered_wikidata_dump(
                 {"references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}]}
             ],  # IUCN id
         },
-        "sitelinks": KEEP,
+        "sitelinks": {ANY: {"title": KEEP}},
     }
 
     included_qids = set()
@@ -269,12 +266,8 @@ def generate_filtered_wikidata_dump(
             apply_mask_to_object_graph(json_item, mask)
 
             # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.
-            # And among those, only keep the original value for the language we want, since the
-            # rest is just needed to collect the language names into the bit field
             json_item["sitelinks"] = {
-                k: v if k == sitelinks_key else {}
-                for k, v in json_item["sitelinks"].items()
-                if k.endswith("wiki")
+                k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")
             }
 
             if is_taxon:

@@ -3,10 +3,7 @@ Unit tests for apply_mask_to_object_graph()
 """
 
 import copy
-from oz_tree_build.utilities.apply_mask_to_object_graph import (
-    apply_mask_to_object_graph,
-    KEEP,
-)
+from oz_tree_build.utilities.apply_mask_to_object_graph import *
 
 
 def run_test(obj, mask, expected):
@@ -33,6 +30,7 @@ def test_complex_objects():
             "c": [{"d": 2, "e": "foo"}, {"d": 2, "e": "bar"}, {"d": 2, "e": "baz"}],
         },
         "f": {"g": 3, "h": []},
+        "i": {"j": {"k": 1, "l": 2}, "m": {"k": 3, "l": 4}},
     }
 
     run_test(o, {"f": {"g": KEEP}}, {"f": {"g": 3}})
@@ -46,3 +44,6 @@ def test_complex_objects():
         o, {"a": {"c": [{"d": KEEP}]}}, {"a": {"c": [{"d": 2}, {"d": 2}, {"d": 2}]}}
     )
     run_test(o, {"f": {"h": KEEP}}, {"f": {"h": []}})
+
+    # Test the 'ANY' functionality
+    run_test(o, {"i": {ANY: {"l": KEEP}}}, {"i": {"j": {"l": 2}, "m": {"l": 4}}})

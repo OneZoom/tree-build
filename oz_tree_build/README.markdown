@@ -19,9 +19,6 @@ set up:
 OZ_TREE=AllLife #a tree directory in data/OZTreeBuild
 ```
 
-If you have installed perl modules to a different location (e.g. as a local user), you may also need to set `export PERL5LIB=/path/to/my_perl_modules/lib/perl5`.
-
-
 # Preliminaries
 
 Follow [these instructions](../data/README.markdown) to download all required files.
@@ -60,7 +57,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	```
 	If you are not including any OpenTree subtrees in your final tree, you should have no `.PHY` files, and this step will output a warning, which can be ignored.
 	
-1. (1 sec) substitute these subtrees into the main tree, and save the resulting full newick file using the hacky perl script: 
+1. (1 sec) substitute these subtrees into the main tree, and save the resulting full newick file using the `build_oz_tree` script: 
 
 	```
 	(cd data/OZTreeBuild/${OZ_TREE} && \

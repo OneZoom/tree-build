@@ -13,7 +13,7 @@ from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
 
 
 regexp_match = "|".join([str(v) for v in list(match_taxa) + list(match_vernacular)])
-quick_byte_match = re.compile('numeric-id":(?:{})\D'.format(regexp_match))
+quick_byte_match = re.compile('numeric-id":(?:{})\\D'.format(regexp_match))
 
 
 def find_taxon_and_vernaculars(json_item):

@@ -266,6 +266,7 @@ def generate_filtered_wikidata_dump(
             apply_mask_to_object_graph(json_item, mask)
 
             # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.
+            # This leaves out the ones that end in "wikiquote", "wikivoyage", "wikinews", "wikibooks", etc.
             json_item["sitelinks"] = {
                 k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")
             }

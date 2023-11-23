@@ -1,6 +1,9 @@
 # This is a marker object that is used to indicate that a property should be kept
 KEEP = {}
 
+# This is a marker key that states that we should apply the mask to all keys
+ANY = "__ANY__"
+
 
 def apply_mask_to_object_graph(
     obj,
@@ -18,7 +21,10 @@ def apply_mask_to_object_graph(
         # Loop through all the keys in the object
         # We need to copy the keys into a list because we are going to be deleting some
         for key in list(obj.keys()):
-            if key in mask:
+            if ANY in mask:
+                # The mask key is ANY, so apply mask to all actual keys
+                apply_mask_to_object_graph(obj[key], mask[ANY])
+            elif key in mask:
                 # The key is in the mask, so apply recursively
                 apply_mask_to_object_graph(obj[key], mask[key])
             else:

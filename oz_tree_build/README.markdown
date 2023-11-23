@@ -81,7 +81,9 @@ If you already have your own newick tree with open tree ids on it already, and d
 
 	The output files have the same names as the input files, but with a `OneZoom_` prefix, and without using compression (e.g. `OneZoom_latest-all.json` for `latest-all.json`.bz2). They are stored next to their matching input files.
 
-	From the data folder:
+   	Note that by default, it works incrementally and only generates missing files. It does this by setting the timestamp of generated files to match their source file. So if for instance it has already filtered `latest-all.json.bz2`, but has not processed the SQL or Page Count files, you can just rerun the same command, and it will not need to reprocess `latest-all.json.bz2`. You can override this behavior and force full regeneration by passing in a `-f` flag.
+
+	From the data folder, run:
 
 	```
 	(cd data && generate_filtered_files OZTreeBuild/AllLife/AllLife_full_tree.phy OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv EOL/provider_ids.csv.gz Wiki/wd_JSON/latest-all.json.bz2 Wiki/wp_SQL/enwiki-latest-page.sql.gz Wiki/wp_pagecounts/pagecounts*.bz2)

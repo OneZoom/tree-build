@@ -422,7 +422,7 @@ def generate_all_filtered_files(
     filtered_wikidata_dump_file = generate_and_cache_filtered_file(
         wikidata_dump_file, context, generate_filtered_wikidata_dump
     )
-    # filtered_wikipedia_dump_file = generate_and_cache_filtered_file(wikidata_dump_file, context, generate_filtered_wikipedia_dump)
+
     read_wikidata_dump(filtered_wikidata_dump_file, context)
 
     generate_and_cache_filtered_file(

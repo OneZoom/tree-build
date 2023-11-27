@@ -31,10 +31,12 @@ def trim_tree(tree):
     return tree
 
 
-def build_oz_tree(base_file, ot_parts_folder, output_stream):
+def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
     """
     Do all the token replacement, starting with the base file
     """
+
+    depth = 0
 
     def process_newick(
         file,
@@ -46,8 +48,15 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream):
         """
         Copy the input file to the output file, recursively expanding any OneZoom tokens
         """
+        nonlocal depth
 
         logging.debug(f"Processing {file}")
+
+        # If we're printing the file tree, print the current file
+        if print_file_tree and expand_nodes:
+            print(
+                f"{'  ' * depth}{node_name_in_parent}: {edge_length_in_parent} {mapping_entry['edge_length'] if mapping_entry else 0}"
+            )
 
         if not os.path.exists(file):
             logging.warning(f"Subtree file {file} does not exist")
@@ -88,6 +97,7 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream):
                     )
                     expand_child_nodes = True
 
+                depth += 1
                 if process_newick(
                     sub_file,
                     child_full_name,
@@ -99,6 +109,7 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream):
                 else:
                     # If the child file doesn't exist, we'll need to write the child token as-is
                     index = result["start"]
+                depth -= 1
 
         # We've processed all the children, and we need to write the rest of the tree
         last_chunk = tree[index:]
@@ -150,6 +161,11 @@ def main():
         default=0,
         help="verbosity level: output extra non-essential info",
     )
+    parser.add_argument(
+        "--printfiletree",
+        action="store_true",
+        help="Print a tree of all the OneZoom included files",
+    )
     parser.add_argument("treefile", help="The base tree file in newick form")
     parser.add_argument(
         "ot_parts_folder", help="The folder containing the Open Tree parts"
@@ -170,7 +186,7 @@ def main():
     elif args.verbosity == 2:
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
-    build_oz_tree(args.treefile, args.ot_parts_folder, args.outfile)
+    build_oz_tree(args.treefile, args.ot_parts_folder, args.outfile, args.printfiletree)
 
     # Write out the ending semi-colon and flush the stream
     args.outfile.write(";")

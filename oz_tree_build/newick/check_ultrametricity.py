@@ -38,8 +38,9 @@ def check_ultrametricity(tree, print_details=False):
         if name.endswith("@"):
             return
 
-        # If it's a leaf node, process it
         if len(node.child_nodes()) == 0:
+            # It's a leaf node
+
             age = round(sum(edge_lengths), 12)
 
             # If it's the first one we see, record its age and name
@@ -67,11 +68,10 @@ def check_ultrametricity(tree, print_details=False):
                 process_node(child)
                 edge_lengths.pop()
 
-    process_node(tree)
+    process_node(tree.seed_node)
 
-    if print_details:
-        # Dump the age counts in descending order of count
-        print(f"Age counts instances ({len(age_instances)} variants): {age_instances}")
+    # Dump the age counts in descending order of count
+    print(f"Age counts instances ({len(age_instances)} variants): {age_instances}")
 
     if non_ultrametric_message:
         print(non_ultrametric_message)
@@ -80,11 +80,11 @@ def check_ultrametricity(tree, print_details=False):
 
 
 def process_file(file_path, print_details):
-    print("====== " + os.path.basename(file_path))
+    print(f"====== {os.path.basename(file_path)} ======")
 
     tree = dendropy.Tree.get(path=file_path, schema="newick")
 
-    check_ultrametricity(tree.seed_node, print_details)
+    check_ultrametricity(tree, print_details)
 
 
 def main():

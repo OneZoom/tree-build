@@ -8,7 +8,7 @@ from oz_tree_build.newick.check_ultrametricity import check_ultrametricity
 
 def check_tree_string(tree_string):
     tree = dendropy.Tree.get(data=tree_string, schema="newick")
-    return check_ultrametricity(tree.seed_node)
+    return check_ultrametricity(tree)
 
 
 def test_ultrametric_tree_with_root_length():

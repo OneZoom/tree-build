@@ -23,14 +23,14 @@ def get_taxon_name(node):
 
 
 def check_ultrametricity(tree, print_details=False):
-    known_age = None
+    known_total_length = None
     initial_name = None
     non_ultrametric_message = None
     edge_lengths = []
     age_instances = {}
 
     def process_node(node):
-        nonlocal known_age, initial_name, non_ultrametric_message
+        nonlocal known_total_length, initial_name, non_ultrametric_message
 
         name = get_taxon_name(node)
 
@@ -41,24 +41,31 @@ def check_ultrametricity(tree, print_details=False):
         if len(node.child_nodes()) == 0:
             # It's a leaf node
 
-            age = round(sum(edge_lengths), 12)
+            # If the edge length is None, it's unknown, so we can't check ultrametricity
+            if node.edge_length is None:
+                return
 
-            # If it's the first one we see, record its age and name
-            if not known_age:
-                known_age = age
+            # We round up to 10 decimal places, to avoid floating point errors
+            total_length = round(sum(edge_lengths), 10)
+
+            # If it's the first one we see, record its total length and name
+            if not known_total_length:
+                known_total_length = total_length
                 initial_name = name
             elif not non_ultrametric_message:
-                # For other leaves, check that they have the same age. If not, record the error
-                if known_age != age:
-                    non_ultrametric_message = f"Not ultrametric! {name} has age {age}, but {initial_name} has age {known_age}"
+                # For other leaves, check that they have the same total length. If not, record the error
+                if known_total_length != total_length:
+                    non_ultrametric_message = f"Not ultrametric! {name} has length {total_length}, but {initial_name} has length {known_total_length}"
 
             if print_details:
-                print(f"{name}: {age}={'+'.join([str(x) for x in edge_lengths])}")
+                print(
+                    f"{name}: {total_length}={'+'.join([str(x) for x in edge_lengths])}"
+                )
 
-            # Count the number of times this age occurs
-            if age not in age_instances:
-                age_instances[age] = 0
-            age_instances[age] += 1
+            # Count the number of times this length occurs
+            if total_length not in age_instances:
+                age_instances[total_length] = 0
+            age_instances[total_length] += 1
         else:
             # If it's not a leaf node, recurse into its children
             for child in node.child_node_iter():
@@ -70,7 +77,7 @@ def check_ultrametricity(tree, print_details=False):
 
     process_node(tree.seed_node)
 
-    # Dump the age counts in descending order of count
+    # Dump the instance count for each total length
     print(f"Age counts instances ({len(age_instances)} variants): {age_instances}")
 
     if non_ultrametric_message:
@@ -92,7 +99,7 @@ def main():
     parser.add_argument(
         "--print_details",
         action="store_true",
-        help="Print detailed age information for each leaf",
+        help="Print detailed edge length information for each leaf",
     )
     parser.add_argument("newick_files", nargs="+")
     args = parser.parse_args()

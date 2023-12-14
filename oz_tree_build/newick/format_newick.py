@@ -24,12 +24,15 @@ import argparse
 import re
 import sys
 
+from oz_tree_build.tree_build.build_oz_tree import trim_tree
+
 __author__ = "David Ebbo"
 
 whole_token_regex = re.compile("[^(),;]+")
 
 
 def format(newick_tree, output_stream, indent_spaces=2):
+    newick_tree = trim_tree(newick_tree, strip_semicolon=False)
 
     indent_string = " " * indent_spaces
 
@@ -37,7 +40,6 @@ def format(newick_tree, output_stream, indent_spaces=2):
     depth = 0
 
     while index < len(newick_tree):
-
         # If we've reached a new branch, write the opening brace and increase the depth
         if newick_tree[index] == "(":
             index += 1

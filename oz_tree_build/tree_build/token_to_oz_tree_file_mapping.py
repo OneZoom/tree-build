@@ -122,17 +122,17 @@ token_to_file_map = {
     "AMPHIBIA": {"file": "AmphibiansOpenTree.PHY", "edge_length": 30, "taxon": None},
     "CROCODYLIA": {
         "file": "Crocodylia_OneZoom.phy",
-        "edge_length": 152.86,
+        "edge_length": 152.858636,
         "taxon": None,
     },
     "TESTUDINES": {
         "file": "Testudines_OneZoom.phy",
-        "edge_length": 55.77,
+        "edge_length": 55.7715,
         "taxon": None,
     },
     "NEOGNATHAE": {
         "file": "Neognathae_minus_passerines_OneZoom.PHY",
-        "edge_length": 15.69,
+        "edge_length": 15.6894,
         "taxon": None,
     },
     "PALAEOGNATHAE": {
@@ -142,13 +142,17 @@ token_to_file_map = {
     },
     "TINAMIFORMES": {
         "file": "Tinamous_OneZoom.phy",
-        "edge_length": 6.85,
+        "edge_length": 16.4,
         "taxon": None,
     },
-    "PASSERIFORMES": {"file": "PasserinesOneZoom.phy", "edge_length": 8, "taxon": None},
+    "PASSERIFORMES": {
+        "file": "PasserinesOneZoom.phy",
+        "edge_length": 7.999283,
+        "taxon": None,
+    },
     "GALAPAGOS_FINCHES_AND_ALLIES_": {
         "file": "GalapagosFinchesLamichhaney2015.phy",
-        "edge_length": 3.6,
+        "edge_length": 3.596743,
         "taxon": None,
     },
     # for original onezoom tree use

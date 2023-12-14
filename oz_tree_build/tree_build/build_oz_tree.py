@@ -16,7 +16,7 @@ from .token_to_oz_tree_file_mapping import token_to_file_map
 __author__ = "David Ebbo"
 
 
-def trim_tree(tree):
+def trim_tree(tree, strip_semicolon=True):
     # Skip the comment block at the start of the file, if any
     if "[" in tree:
         tree = tree[tree.index("]") + 1 :]
@@ -25,7 +25,7 @@ def trim_tree(tree):
     tree = tree.strip()
 
     # Strip the trailing semicolon
-    if tree[-1] == ";":
+    if strip_semicolon and tree[-1] == ";":
         tree = tree[:-1]
 
     return tree

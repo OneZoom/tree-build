@@ -1,0 +1,19 @@
+Synapsid 2 Synapsida
+    Therapsid 1 Therapsida
+        Burnetiamorpha 1 Biarmosuchia
+        Anteosauridae 1 Dinocephalia
+        Anomodont 2 Anomodontia
+            Eodicynodon 2 Dicynodontia # But Therochelonia has a completely different tree!
+                Kannemeyeriiformes
+                #Lystrosauridae is here, but there are is phylogeny on the page
+        Gorgonopsia
+        Therocephalia 2
+        Cynodont 1 Cynodontia
+            Mammaliaformes
+                Docodonta
+                Yinotheria
+                Eutriconodonta
+                #Multituberculata 1 Allotheria # Need to add support for case where Allotheria replaces Multituberculata
+                Mammaliaformes 2 Trechnotheria
+                    Metatheria
+    Dimetrodon 2 Sphenacodontidae

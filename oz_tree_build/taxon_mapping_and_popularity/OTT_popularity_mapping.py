@@ -415,6 +415,8 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
                     except LookupError:
                         pass
 
+                OTT_ptrs[OTTid]["rank"] = OTTrow["rank"]
+
     logging.info(
         f"✔ created {used} source pointers for {len(source_ptrs)} sources "
         f"{list(source_ptrs.keys())}. Mem usage {mem():.1f} Mb"

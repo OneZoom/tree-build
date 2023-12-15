@@ -668,6 +668,8 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
         node_extras["wikidata"] = ["wd", "Q"]
         node_extras["wikipedia_lang_flag"] = ["wd", "wikipedia_lang_flag"]
         node_extras["eol"] = ["eol"]
+        # We avoid using 'rank' as it is a reserved word in mysql
+        node_extras["rnk"] = ["rank"]
         node_extras["raw_popularity"] = ["wd", "raw_popularity"]
         node_extras["popularity"] = ["popularity"]
         node_extras["ncbi"] = ["sources", "ncbi", "id"]

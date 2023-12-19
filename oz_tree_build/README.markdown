@@ -77,11 +77,11 @@ If you already have your own newick tree with open tree ids on it already, and d
 
 	## Create the base tree and table data
    
-1. (5 to 7 hours) This is the long step. It generates filtered versions of the raw input files, which then makes them faster to work with. For example, for the massive wikimedia dump file (`latest-all.json.bz2`), it remove all entries that aren't taxons or vernaculars, and for each remaining entry, in only keeps the small subset of fields that we care about.
+1. (5 to 7 hours, or a few mins if files are already filtered, see below) This generates filtered versions of the raw input files, which then makes them faster to work with. For example, for the massive wikimedia dump file (`latest-all.json.bz2`), it remove all entries that aren't taxons or vernaculars, and for each remaining entry, in only keeps the small subset of fields that we care about.
 
 	The output files have the same names as the input files, but with a `OneZoom_` prefix, and without using compression (e.g. `OneZoom_latest-all.json` for `latest-all.json`.bz2). They are stored next to their matching input files.
 
-   	Note that by default, it works incrementally and only generates missing files. It does this by setting the timestamp of generated files to match their source file. So if for instance it has already filtered `latest-all.json.bz2`, but has not processed the SQL or Page Count files, you can just rerun the same command, and it will not need to reprocess `latest-all.json.bz2`. You can override this behavior and force full regeneration by passing in a `-f` flag.
+   	Note that by default, it works incrementally and only generates new filtered files if they are missing or old versions. It does this by setting the timestamp of generated files to match their source file. So if for instance it has already filtered `latest-all.json.bz2`, but has not processed the SQL or Page Count files, you can just rerun the same command, and it will not need to reprocess `latest-all.json.bz2`. You can override this behavior and force full regeneration by passing in a `-f` flag.
 
 	From the data folder, run:
 

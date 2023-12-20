@@ -412,6 +412,7 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
                     source_ptrs[src][id] = {"id": id}
                     try:
                         OTT_ptrs[OTTid]["sources"][src] = source_ptrs[src][id]
+                        OTT_ptrs[OTTid]["rank"] = OTTrow["rank"]
                     except LookupError:
                         pass
 

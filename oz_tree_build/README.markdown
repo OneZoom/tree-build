@@ -16,7 +16,8 @@ the instructions below only require the following environmental variable to be
 set up:
 
 ```
-OZ_TREE=AllLife #a tree directory in data/OZTreeBuild
+OZ_TREE=AllLife  # a tree directory in data/OZTreeBuild
+OZ_DIR=../OZtree  # the path to the OneZoom/OZtree github directory (here we assume the `tree-build` repo is a sibling to the `OZtree` repo)
 ```
 
 # Preliminaries
@@ -64,7 +65,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	build_oz_tree BespokeTree/include_files/Base.PHY OpenTreeParts/OpenTree_all/ AllLife_full_tree.phy)
 	```
 
-	Now that we are not having to run this every sponsorship time, we should probably re-write this to actually know what tree structure looks like, maybe using Python/DendroPy (see https://github.com/jrosindell/OneZoomComplete/issues/340) and also to automatically create the list of DOIs at `static/FinalOutputs/refs.txt`. Note that any '@' signs in the `${OZ_TREE}_full_tree.phy` output file are indicative of OpenTree substitutions that have not been possible: it would be good to check to see if there are other sources (or old OpenTree versions) that have trees for these nodes, and place them as .phy files in `data/OZTreeBuild/${OZ_TREE}/OpenTreeParts/OT_required/`. You can check with
+	Now that we are not having to run this every sponsorship time, we should probably re-write this to actually know what tree structure looks like, maybe using Python/DendroPy (see https://github.com/jrosindell/OneZoomComplete/issues/340) and also to automatically create the list of DOIs at `${OZ_DIR}/static/FinalOutputs/refs.txt`. Note that any '@' signs in the `${OZ_TREE}_full_tree.phy` output file are indicative of OpenTree substitutions that have not been possible: it would be good to check to see if there are other sources (or old OpenTree versions) that have trees for these nodes, and place them as .phy files in `data/OZTreeBuild/${OZ_TREE}/OpenTreeParts/OT_required/`. You can check with
 
 	```
 	grep -o '.............@' data/OZTreeBuild/${OZ_TREE}/${OZ_TREE}_full_tree.phy
@@ -72,7 +73,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	You may also want to save a zipped version of the full tree file in a place where users can download it for reference purposes, in which case you can do
 
 	```
-	gzip < data/OZTreeBuild/${OZ_TREE}/${OZ_TREE}_full_tree.phy > static/FinalOutputs/${OZ_TREE}_full_tree.phy.gz
+	gzip < data/OZTreeBuild/${OZ_TREE}/${OZ_TREE}_full_tree.phy > ${OZ_DIR}/static/FinalOutputs/${OZ_TREE}_full_tree.phy.gz
 	```
 
 	## Create the base tree and table data
@@ -111,13 +112,11 @@ If you already have your own newick tree with open tree ids on it already, and d
 
     Since round braces, curly braces, and commas are banned from the `simplified_ottnames` file, we can create minimal topology files by simply removing everything except these characters from the `.nwk` and `.poly` files. If the tree has been ladderised, with polytomies and unifurcations removed, the commas are also redundant, and can be removed. This is done in the next step, which saves these highly shortened strings into .js data files. 
 
-1. (1 min) turn the most recently saved tree files (saved in the previous step as `data/output_files/ordered_tree_XXXXXX.poly` and `ordered_dates_XXXXXX.json`) into bracketed newick strings in `static/FinalOutputs/data/basetree_XXXXXX.js`, `static/FinalOutputs/data/polytree_XXXXXX.js`, a cutpoints file in `static/FinalOutputs/data/cut_position_map_XXXXXX.js`, and a dates file in `static/FinalOutputs/data/dates_XXXXXX.json` as well as their gzipped equivalents, using 
+1. (1 min) turn the most recently saved tree files (saved in the previous step as `data/output_files/ordered_tree_XXXXXX.poly` and `ordered_dates_XXXXXX.json`) into bracketed newick strings in `${OZ_DIR}/static/FinalOutputs/data/basetree_XXXXXX.js`, ``${OZ_DIR}/static/FinalOutputs/data/polytree_XXXXXX.js`, a cutpoints file in ``${OZ_DIR}/static/FinalOutputs/data/cut_position_map_XXXXXX.js`, and a dates file in ``${OZ_DIR}/static/FinalOutputs/data/dates_XXXXXX.json` as well as their gzipped equivalents, using 
 	
 	```
-	make_js_treefiles
+	make_js_treefiles --outdir ${OZ_DIR}/static/FinalOutputs/data
 	```
-
-	This command assumes that you have the `tree-build` repo as a sibling to the `OZtree` repo. You can override this by specifying the `--outdir` flag, pointing it to wherever your `static/FinalOutputs/data` is.
     
     ## Upload data to the server and check it
     
@@ -126,7 +125,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 1. (15 mins) load the CSV tables into the DB, using the SQL commands printed in step 6 (the ones that start something like `TRUNCATE TABLE ordered_leaves; LOAD DATA LOCAL INFILE ...;` `TRUNCATE TABLE ordered_nodes; LOAD DATA LOCAL INFILE ...;`). Either do so via a GUI utility, or copy the `.csv.mySQL` files to a local directory on the machine running your SQL server (e.g. using `scp -C` for compression) and run your `LOAD DATA LOCAL INFILE` commands on the mysql command line (this may require you to start the command line utility using `mysql --local-infile`, e.g.:
 
    ```
-   mysql --local-infile --host db.sundivenetworks.net --user onezoom --password --database onezoom_dev
+   mysql --local-infile --host db.MYSERVER.net --user onezoom --password --database onezoom_dev
    ```
 1. Check for dups, and if any sponsors are no longer on the tree, using something like the following SQL command:
 
@@ -140,12 +139,12 @@ If you already have your own newick tree with open tree ids on it already, and d
 1. (15 mins) create example pictures for each node by percolating up. This requires the most recent `images_by_ott` table, so either do this on the main server, or (if you are doing it locally) update your `images_by_ott` to the most recent server version.
 
 	```
-	OZprivate/ServerScripts/Utilities/picProcess.py -v
+	${OZ_DIR}/OZprivate/ServerScripts/Utilities/picProcess.py -v
 	```
 1. (5 mins) percolate the IUCN data up using 
 	
 	```
-	OZprivate/ServerScripts/Utilities/IUCNquery.py -v
+	${OZ_DIR}/OZprivate/ServerScripts/Utilities/IUCNquery.py -v
 	```
 	(note that this both updates the IUCN data in the DB and percolates up interior node info)
 1. (10 mins) If this is a site with sponsorship (only the main OZ site), set the pricing structure using SET_PRICES.html (accessible from the management pages).

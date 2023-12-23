@@ -18,11 +18,6 @@ def validate_clean_taxon(taxon):
     if not taxon.replace(" ", "").isalnum():
         return None
 
-    # Ignore it if it contains 2 uppercase letters in a row, e.g. "AZ"
-    # This is a hack to skip non-species things like "SAM-PK-K8516 (from Cistecephalus AZ)"
-    if re.search("[A-Z]{2}", taxon):
-        return None
-
     # Some show up as e.g. "Unnamed species", which we ignore
     if taxon.startswith("Unnamed"):
         return None
@@ -48,7 +43,13 @@ def get_taxon_name(wikicode, index=0):
 
         # This may return None if the taxon name is not usable
         taxon = validate_clean_taxon(taxon)
+
         if taxon:
+            # Ignore it if it contains 2 uppercase letters in a row, e.g. "AZ"
+            # This is a hack to skip non-species things like "SAM-PK-K8516 (from Cistecephalus AZ)"
+            if re.search("[A-Z]{2}", taxon):
+                return None
+
             return taxon
 
     return None

@@ -1,0 +1,34 @@
+Dinosaur @Taxonomy Dinosauria
+    Ornithischia 1
+        Stegosauria 2
+        Ankylosauria 2
+        Pachycephalosauria 3
+        Talenkauen 1 Elasmaria
+    #Saurischia Page not used, but shown here is a marker
+        Herrerasauridae 2
+        Massospondylidae 1
+        Mierasaurus 1 Turiasauria
+        Rebbachisauridae
+        Dicraeosauridae
+        Diplodocidae
+        Brachiosauridae 2
+        Euhelopodidae 2
+        Titanosauria 8
+        #Theropoda Page not used, but shown here is a marker
+            Coelophysoidea 3
+            #Ceratosauria 3 Ceratosauroidea # Dino tree has Ceratosauria and Ceratosauridae but not Ceratosauroidea.
+            Megalosauroidea 2
+            Megaraptora 3
+            Carnosauria 2
+            #Metriacanthosauridae
+            Compsognathidae
+            Tyrannosauroidea 1 # Seems to hit the Geo clade, so we're not seeing the first two. Has a weird "20px" entry
+            Ornithomimidae
+            Alvarezsauridae 1
+            # Has 20px token
+            Therizinosauridae
+            Oviraptorosauria
+            #Archaeopterygidae Can't find proper cladogram
+            Troodontidae 2
+            Dromaeosauridae 2
+            Avialae 2

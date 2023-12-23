@@ -22,10 +22,9 @@ Dinosaur @Taxonomy Dinosauria
             Carnosauria 2
             #Metriacanthosauridae
             Compsognathidae
-            Tyrannosauroidea 1 # Seems to hit the Geo clade, so we're not seeing the first two. Has a weird "20px" entry
+            Tyrannosauroidea 1 # Seems to hit the Geo clade, so we're not seeing the first two
             Ornithomimidae
             Alvarezsauridae 1
-            # Has 20px token
             Therizinosauridae
             Oviraptorosauria
             #Archaeopterygidae Can't find proper cladogram

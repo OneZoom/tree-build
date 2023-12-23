@@ -12,9 +12,13 @@ def find_wikicode_node(wikicode, start_index, type, func):
 
 def validate_clean_taxon(taxon):
     # Remove any heading/trailing punctuation
-    taxon = taxon.strip().strip("[]()'" "†? ")
+    taxon = taxon.strip().strip("[]()'†?\"")
 
-    # If the string contains anything other than letters, we can't use it
+    # Deal with scenario where one word of the taxon is double-quoted
+    # e.g. '"Nanshiungosaurus" bohlini'
+    taxon = taxon.replace('"', "")
+
+    # If the string contains anything other than letters/numbers, we can't use it
     if not taxon.replace(" ", "").isalnum():
         return None
 
@@ -27,7 +31,9 @@ def validate_clean_taxon(taxon):
 
 def get_taxon_name(wikicode, index=0):
     for node in wikicode.nodes[index:]:
-        if isinstance(node, mwparserfromhell.nodes.Wikilink):
+        if isinstance(
+            node, mwparserfromhell.nodes.Wikilink
+        ) and not node.title.startswith("File:"):
             taxon = str(node.text) if node.text else str(node.title)
         elif isinstance(node, mwparserfromhell.nodes.Text):
             taxon = node.value
@@ -47,7 +53,7 @@ def get_taxon_name(wikicode, index=0):
         if taxon:
             # Ignore it if it contains 2 uppercase letters in a row, e.g. "AZ"
             # This is a hack to skip non-species things like "SAM-PK-K8516 (from Cistecephalus AZ)"
-            if re.search("[A-Z]{2}", taxon):
+            if re.search("[_A-Z]{2}", taxon):
                 return None
 
             return taxon

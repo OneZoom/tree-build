@@ -22,12 +22,18 @@ def replace_spaces(s):
     return s.replace(" ", "_")
 
 
-def get_taxon_name(wikicode):
-    for node in wikicode.nodes:
-        if isinstance(node, mwparserfromhell.nodes.wikilink.Wikilink):
+def get_taxon_name(wikicode, index=0):
+    for node in wikicode.nodes[index:]:
+        if isinstance(node, mwparserfromhell.nodes.Wikilink):
             taxon = str(node.text) if node.text else str(node.title)
-        elif isinstance(node, mwparserfromhell.nodes.text.Text):
+        elif isinstance(node, mwparserfromhell.nodes.Text):
             taxon = node.value
+        elif isinstance(node, mwparserfromhell.nodes.tag.Tag):
+            # Never go past a colon or asterisk, which start a new taxonomy item
+            # (not relevant for clade diagrams, but harmless)
+            if node.wiki_markup in [":", "*"]:
+                break
+            continue
         else:
             # Ignore all other types, e.g. HTMLEntity
             continue
@@ -40,9 +46,30 @@ def get_taxon_name(wikicode):
     return None
 
 
+def is_clade_template_name(name):
+    return name.strip().casefold() == "clade" or name.strip().casefold() == "cladogram"
+
+
 class WikiCladeNode:
-    def __init__(self, name, template=None, subclades=None):
-        self.name = name
+    @classmethod
+    def create_root_node(cls, wikicode, cladogram_index):
+        templates = wikicode.filter_templates(
+            recursive=False, matches=lambda n: is_clade_template_name(n.name)
+        )
+
+        # We subtract one since the argument is 1-based
+        template = templates[cladogram_index - 1]
+
+        if template.name.strip() == "cladogram":
+            param_name = "clades" if template.has_param("clades") else "cladogram"
+            template = template.get(param_name).value.filter_templates(recursive=False)[
+                0
+            ]
+
+        return WikiCladeNode(None, template)
+
+    def __init__(self, taxon, template=None, subclades=None):
+        self.taxon = taxon
 
         # Get the subclades if not passed in, which happens at the root node
         if template and not subclades:

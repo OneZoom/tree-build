@@ -1,3 +1,4 @@
+import argparse
 import dendropy
 
 from oz_tree_build.wiki_extraction.wiki_extractor import get_clade_tree_from_wiki_page
@@ -22,8 +23,12 @@ def insert_child_tree(parent_tree, child_tree, taxon):
 def process_file(filename):
     main_tree = None
     for line in open(filename):
+        # Ignore # comments
+        if "#" in line:
+            line = line[: line.index("#")]
+
         line = line.strip()
-        if line == "" or line.startswith("#"):
+        if line == "":
             continue
 
         tokens = line.split()
@@ -53,6 +58,19 @@ def process_file(filename):
     return main_tree
 
 
-# tree = process_file("data/OZTreeBuild/ExtinctSpecies/Dinosauria.wikiclades")
-tree = process_file("data/OZTreeBuild/ExtinctSpecies/Synapsida.wikiclades")
-print(tree.as_string(schema="newick"))
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "wikiclades_file",
+        type=str,
+        help="Path to the .wikiclades file",
+    )
+
+    args = parser.parse_args()
+
+    tree = process_file(args.wikiclades_file)
+    print(tree.as_string(schema="newick"))
+
+
+if __name__ == "__main__":
+    main()

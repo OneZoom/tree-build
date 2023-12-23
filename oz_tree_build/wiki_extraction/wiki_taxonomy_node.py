@@ -1,7 +1,8 @@
 import mwparserfromhell
-from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import find_wikicode_node
-
-from oz_tree_build.wiki_extraction.wiki_clade_node import get_taxon_name
+from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
+    find_wikicode_node,
+    get_taxon_name,
+)
 
 
 class WikiTaxonomyNode:

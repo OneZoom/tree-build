@@ -44,35 +44,6 @@ def process_file(filename):
     return main_tree
 
 
-# tree1 = dendropy.Tree.get(data="(A:1,B:1,(C:1,D:1)E:1)F;", schema="newick")
-# tree2 = dendropy.Tree.get(data="(G,H)I;", schema="newick")
-
-# tree1.seed_node.add_child(tree2.seed_node)
-# tree1.seed_node.child_nodes()[2].add_child(tree2.seed_node)
-
-# node = tree1.find_node_with_label("D")
-# node = tree1.find_node_for_taxon("D")
-
-# s = "E"
-# node = tree1.find_node_with_taxon(lambda taxon: taxon.label == s)
-
-
-# print(tree1.as_ascii_plot())
-# print(tree1.as_string(schema="newick"))
-
-# tree1_string = get_clade_tree_from_wiki_page("Ornithischia", 1)
-# tree1 = dendropy.Tree.get(data=tree1_string, schema="newick")
-
-# tree2_string = get_clade_tree_from_wiki_page("Stegosauria", 2)
-# tree2 = dendropy.Tree.get(data=tree2_string, schema="newick")
-# insert_child_tree(tree1, tree2, "Stegosauria")
-
-# tree2_string = get_clade_tree_from_wiki_page("Talenkauen", 1)
-# tree2 = dendropy.Tree.get(data=tree2_string, schema="newick")
-# insert_child_tree(tree1, tree2, "Elasmaria")
-
-# print(tree1.as_string(schema="newick"))
-
-tree = process_file("data/OZTreeBuild/ExtinctSpecies/Dinosauria.wikiclades")
-# tree = process_file("data/OZTreeBuild/ExtinctSpecies/Synapsida.wikiclades")
+# tree = process_file("data/OZTreeBuild/ExtinctSpecies/Dinosauria.wikiclades")
+tree = process_file("data/OZTreeBuild/ExtinctSpecies/Synapsida.wikiclades")
 print(tree.as_string(schema="newick"))

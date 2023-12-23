@@ -15,7 +15,8 @@ class WikiCladeNode:
         # We subtract one since the argument is 1-based
         template = templates[cladogram_index - 1]
 
-        if template.name.strip() == "cladogram":
+        # If the template is wrapped in a {{cladogram}} template, use the inner clade template
+        if template.name.strip().casefold() == "cladogram".casefold():
             param_name = "clades" if template.has_param("clades") else "cladogram"
             template = template.get(param_name).value.filter_templates(recursive=False)[
                 0

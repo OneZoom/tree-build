@@ -4,8 +4,10 @@ import argparse
 import mwparserfromhell
 import requests_cache
 import dendropy
+from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import find_wikicode_node
 
 from oz_tree_build.wiki_extraction.wiki_clade_node import WikiCladeNode
+from oz_tree_build.wiki_extraction.wiki_taxonomy_node import WikiTaxonomyNode
 
 session = requests_cache.CachedSession("http_cache")
 
@@ -32,40 +34,31 @@ def get_text_from_wiki_page(title):
 
 def process_node(node):
     tree_node = dendropy.Node()
-    tree_node.taxon = dendropy.Taxon(label=node.name)
+    tree_node.taxon = dendropy.Taxon(label=node.taxon)
     for child in node.enumerate_children():
         tree_node.add_child(process_node(child))
     return tree_node
 
 
-def is_clade_template_name(name):
-    return name.strip().casefold() == "clade" or name.strip().casefold() == "cladogram"
-
-
-def get_clade_tree_from_wiki_page_string(wiki_page_string, index):
+def get_clade_tree_from_wiki_page_string(
+    wiki_page_string, index=None, taxonomy_header=None
+):
     wikicode = mwparserfromhell.parse(wiki_page_string, skip_style_tags=True)
 
-    templates = wikicode.filter_templates(
-        recursive=False, matches=lambda n: is_clade_template_name(n.name)
-    )
+    if taxonomy_header:
+        node = WikiTaxonomyNode.create_root_node(wikicode, taxonomy_header)
+    else:
+        node = WikiCladeNode.create_root_node(wikicode, index)
 
-    # We subtract one since the argument is 1-based
-    template = templates[index - 1]
-
-    if template.name.strip() == "cladogram":
-        param_name = "clades" if template.has_param("clades") else "cladogram"
-        template = template.get(param_name).value.filter_templates(recursive=False)[0]
-
-    node = WikiCladeNode(None, template)
     tree = dendropy.Tree()
     tree.seed_node = process_node(node)
     return tree.as_string(schema="newick")
 
 
-def get_clade_tree_from_wiki_page(wiki_title, index):
+def get_clade_tree_from_wiki_page(wiki_title, index=None, taxonomy_header=None):
     wiki_string = get_text_from_wiki_page(wiki_title)
 
-    return get_clade_tree_from_wiki_page_string(wiki_string, index)
+    return get_clade_tree_from_wiki_page_string(wiki_string, index, taxonomy_header)
 
 
 def main():
@@ -77,11 +70,16 @@ def main():
         help="Path to the pre-downloaded wiki file",
     )
     parser.add_argument(
-        "index",
+        "--cladogram_index",
         type=int,
         nargs="?",
-        default=1,
         help="Index of the cladogram within the page",
+    )
+    parser.add_argument(
+        "--taxonomy_header",
+        type=str,
+        nargs="?",
+        help="Header of the taxonomy section",
     )
 
     args = parser.parse_args()
@@ -89,9 +87,17 @@ def main():
     if args.wiki_file:
         with open(args.wiki_file) as f:
             wiki_string = f.read()
-        print(get_clade_tree_from_wiki_page_string(wiki_string, args.index))
+        print(
+            get_clade_tree_from_wiki_page_string(
+                wiki_string, args.cladogram_index, args.taxonomy_header
+            )
+        )
     else:
-        print(get_clade_tree_from_wiki_page(args.title, args.index))
+        print(
+            get_clade_tree_from_wiki_page(
+                args.title, args.cladogram_index, args.taxonomy_header
+            )
+        )
 
 
 if __name__ == "__main__":

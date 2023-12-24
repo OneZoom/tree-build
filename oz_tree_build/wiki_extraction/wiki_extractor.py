@@ -71,7 +71,7 @@ def main():
     )
     parser.add_argument(
         "--location",
-        type=int,
+        type=str,
         nargs="?",
         help="Index of the cladogram within the page, or name of the taxonomy header",
     )

@@ -26,13 +26,20 @@ class WikiTaxonomyNode:
         if i is None:
             raise Exception(f"Could not find '*' after header '{header_title}'")
 
-        return cls(wikicode, i + 1, depth=0)
+        return cls.create_node(wikicode, i + 1, depth=0)
 
-    def __init__(self, wikicode, index, depth):
+    @classmethod
+    def create_node(cls, wikicode, index, depth):
+        taxon = get_taxon_name(wikicode, index)
+        if not taxon:
+            return None
+        return cls(wikicode, index, depth, taxon)
+
+    def __init__(self, wikicode, index, depth, taxon):
         self.wikicode = wikicode
         self.index = index
         self.depth = depth
-        self.taxon = get_taxon_name(wikicode, index)
+        self.taxon = taxon
 
     def enumerate_children(self):
         # Do an infinite loop
@@ -72,4 +79,6 @@ class WikiTaxonomyNode:
             assert colon_count == self.depth + 1
 
             i += 1
-            yield WikiTaxonomyNode(self.wikicode, i, self.depth + 1)
+            child_node = WikiTaxonomyNode.create_node(self.wikicode, i, self.depth + 1)
+            if child_node:
+                yield child_node

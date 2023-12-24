@@ -16,11 +16,11 @@ Dinosauria FROM Dinosaur@Taxonomy
         Titanosauria FROM Titanosauria@8
         #Theropoda Page not used, but shown here is a marker
             Coelophysoidea FROM Coelophysoidea@3
-            Ceratosauria FROM Ceratosauria@1 # Second tree is newer, but Dino tree has Ceratosauria and Ceratosauridae but not Ceratosauroidea.
+            Ceratosauroidea->Ceratosauria FROM Ceratosauria@2 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
             Megalosauroidea FROM Megalosauroidea@2
             Megaraptora FROM Megaraptora@3
             Carnosauria FROM Carnosauria@2
-            #Metriacanthosauridae FROM Metriacanthosauridae@1
+            Metriacanthosauridae FROM Metriacanthosauridae@1
             Compsognathidae FROM Compsognathidae@1
             Tyrannosauroidea FROM Tyrannosauroidea@1 # Seems to hit the Geo clade, so we're not seeing the first two
             Ornithomimidae FROM Ornithomimidae@1

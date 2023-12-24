@@ -1,33 +1,38 @@
-Dinosaur @Taxonomy Dinosauria
-    Ornithischia 1
-        Stegosauria 2
-        Ankylosauria 2
-        Pachycephalosauria 3
-        Talenkauen 1 Elasmaria
+Dinosauria FROM Dinosaur@Taxonomy
+    Ornithischia FROM Ornithischia@1
+        Stegosauria FROM Stegosauria@2
+        Ankylosauria FROM Ankylosauria@2
+        Pachycephalosauria FROM Pachycephalosauria@3
+        Elasmaria FROM Talenkauen@1 
     #Saurischia Page not used, but shown here is a marker
-        Herrerasauridae 2
-        Massospondylidae 1
-        Mierasaurus 1 Turiasauria
-        Rebbachisauridae
-        Dicraeosauridae
-        Diplodocidae
-        Brachiosauridae 2
-        Euhelopodidae 2
-        Titanosauria 8
+        Herrerasauridae FROM Herrerasauridae@2
+        Massospondylidae FROM Massospondylidae@1
+        Turiasauria FROM Mierasaurus@1 
+        Rebbachisauridae FROM Rebbachisauridae@1
+        Dicraeosauridae FROM Dicraeosauridae@1
+        Diplodocidae FROM Diplodocidae@1
+        Brachiosauridae FROM Brachiosauridae@2
+        Euhelopodidae FROM Euhelopodidae@2
+        Titanosauria FROM Titanosauria@8
         #Theropoda Page not used, but shown here is a marker
-            Coelophysoidea 3
-            #Ceratosauria 3 Ceratosauroidea # Dino tree has Ceratosauria and Ceratosauridae but not Ceratosauroidea.
-            Megalosauroidea 2
-            Megaraptora 3
-            Carnosauria 2
-            #Metriacanthosauridae
-            Compsognathidae
-            Tyrannosauroidea 1 # Seems to hit the Geo clade, so we're not seeing the first two
-            Ornithomimidae
-            Alvarezsauridae 1
-            Therizinosauridae
-            Oviraptorosauria
+            Coelophysoidea FROM Coelophysoidea@3
+            Ceratosauria FROM Ceratosauria@1 # Second tree is newer, but Dino tree has Ceratosauria and Ceratosauridae but not Ceratosauroidea.
+            Megalosauroidea FROM Megalosauroidea@2
+            Megaraptora FROM Megaraptora@3
+            Carnosauria FROM Carnosauria@2
+            #Metriacanthosauridae FROM Metriacanthosauridae@1
+            Compsognathidae FROM Compsognathidae@1
+            Tyrannosauroidea FROM Tyrannosauroidea@1 # Seems to hit the Geo clade, so we're not seeing the first two
+            Ornithomimidae FROM Ornithomimidae@1
+            Alvarezsauridae FROM Alvarezsauridae@1
+            Therizinosauridae FROM Therizinosauridae@1
+            Oviraptorosauria FROM Oviraptorosauria@1
             #Archaeopterygidae Can't find proper cladogram
-            Troodontidae 2
-            Dromaeosauridae 2
-            Avialae 2
+            Troodontidae FROM Troodontidae@2
+            Dromaeosauridae FROM Dromaeosauridae@2
+            Avialae FROM Avialae@2 # Need to exclude -Scansoriopterygidae
+                Ornithothoraces FROM Ornithothoraces@1
+                    Hongshanornithidae FROM Archaeornithura@1
+                    Songlingornithidae FROM Songlingornithidae@1
+                    Ornithurae FROM Ornithurae@1
+                        Hesperornithes FROM Hesperornithes@1

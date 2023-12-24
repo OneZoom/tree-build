@@ -40,25 +40,25 @@ def process_node(node):
     return tree_node
 
 
-def get_clade_tree_from_wiki_page_string(
-    wiki_page_string, index=None, taxonomy_header=None
-):
+def get_clade_tree_from_wiki_page_string(wiki_page_string, location):
     wikicode = mwparserfromhell.parse(wiki_page_string, skip_style_tags=True)
 
-    if taxonomy_header:
-        node = WikiTaxonomyNode.create_root_node(wikicode, taxonomy_header)
+    # If location string is a number, it's a cladogram index
+    # If it's a string, it's a taxonomy header
+    if location.isnumeric():
+        node = WikiCladeNode.create_root_node(wikicode, int(location))
     else:
-        node = WikiCladeNode.create_root_node(wikicode, index)
+        node = WikiTaxonomyNode.create_root_node(wikicode, location)
 
     tree = dendropy.Tree()
     tree.seed_node = process_node(node)
     return tree.as_string(schema="newick")
 
 
-def get_clade_tree_from_wiki_page(wiki_title, index=None, taxonomy_header=None):
+def get_clade_tree_from_wiki_page(wiki_title, location):
     wiki_string = get_text_from_wiki_page(wiki_title)
 
-    return get_clade_tree_from_wiki_page_string(wiki_string, index, taxonomy_header)
+    return get_clade_tree_from_wiki_page_string(wiki_string, location)
 
 
 def main():
@@ -70,34 +70,21 @@ def main():
         help="Path to the pre-downloaded wiki file",
     )
     parser.add_argument(
-        "--cladogram_index",
+        "--location",
         type=int,
         nargs="?",
-        help="Index of the cladogram within the page",
+        help="Index of the cladogram within the page, or name of the taxonomy header",
     )
-    parser.add_argument(
-        "--taxonomy_header",
-        type=str,
-        nargs="?",
-        help="Header of the taxonomy section",
-    )
-
     args = parser.parse_args()
+
+    args.location = args.location or 1
 
     if args.wiki_file:
         with open(args.wiki_file) as f:
             wiki_string = f.read()
-        print(
-            get_clade_tree_from_wiki_page_string(
-                wiki_string, args.cladogram_index, args.taxonomy_header
-            )
-        )
+        print(get_clade_tree_from_wiki_page_string(wiki_string, args.location))
     else:
-        print(
-            get_clade_tree_from_wiki_page(
-                args.title, args.cladogram_index, args.taxonomy_header
-            )
-        )
+        print(get_clade_tree_from_wiki_page(args.title, args.location))
 
 
 if __name__ == "__main__":

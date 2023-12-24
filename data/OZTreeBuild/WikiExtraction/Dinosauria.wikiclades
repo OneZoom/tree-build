@@ -30,7 +30,7 @@ Dinosauria FROM Dinosaur@Taxonomy
             #Archaeopterygidae Can't find proper cladogram
             Troodontidae FROM Troodontidae@2
             Dromaeosauridae FROM Dromaeosauridae@2
-            Avialae FROM Avialae@2 # Need to exclude -Scansoriopterygidae
+            Avialae-Scansoriopterygidae FROM Avialae@2 # Exclude Scansoriopterygidae to avoid duplicate
                 Ornithothoraces FROM Ornithothoraces@1
                     Hongshanornithidae FROM Archaeornithura@1
                     Songlingornithidae FROM Songlingornithidae@1

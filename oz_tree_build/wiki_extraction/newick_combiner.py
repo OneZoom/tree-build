@@ -13,12 +13,17 @@ def find_node_by_taxon(tree, taxon):
     return node
 
 
-def insert_child_tree(parent_tree, child_tree, taxon, child_taxon=None):
+def insert_child_tree(parent_tree, child_tree, taxon, child_taxon, excluded_taxa):
     node_in_parent_tree = find_node_by_taxon(parent_tree, taxon)
-    node_in_child_tree = find_node_by_taxon(child_tree, child_taxon or taxon)
+    node_in_child_tree = find_node_by_taxon(child_tree, child_taxon)
+
+    # Remove all excluded taxa from the child tree
+    for excluded_taxon in excluded_taxa:
+        node = find_node_by_taxon(child_tree, excluded_taxon)
+        node.parent_node.remove_child(node)
 
     # We either replace the node, or add a child to it
-    if child_taxon:
+    if child_taxon != taxon:
         node_in_parent_tree.add_child(node_in_child_tree)
     else:
         node_in_parent_tree.set_child_nodes(node_in_child_tree.child_nodes())
@@ -66,11 +71,22 @@ def process_file(filename, use_line_number_as_edge_length):
             main_tree = dendropy.Tree()
             main_tree.seed_node = find_node_by_taxon(tree, taxon)
         else:
-            child_taxon = None
             if "->" in taxon:
                 # Here, the child taxon is different from the parent taxon
+                # e.g. "the_child->the_parent"
                 child_taxon, taxon = taxon.split("->")
-            insert_child_tree(main_tree, tree, taxon, child_taxon)
+            else:
+                child_taxon = taxon
+
+            # Check for excluded taxa, e.g. "foo-bar-baz"
+            parts = child_taxon.split("-")
+            child_taxon = parts[0]
+            excluded_taxa = parts[1:]
+
+            # For the parent, only use the first part of the taxon, e.g. "foo"
+            taxon = taxon.split("-")[0]
+
+            insert_child_tree(main_tree, tree, taxon, child_taxon, excluded_taxa)
 
     return main_tree
 
@@ -93,6 +109,8 @@ def main():
     tree = process_file(args.wikiclades_file, args.use_line_number_as_edge_length)
 
     tree_string = tree.as_string(schema="newick")
+
+    # This detects if we end up with duplicate taxon names
     tree2 = dendropy.Tree.get(data=tree_string, schema="newick")
 
     print(tree_string)

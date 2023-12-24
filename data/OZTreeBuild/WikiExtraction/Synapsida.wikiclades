@@ -1,19 +1,19 @@
-Synapsid 2 Synapsida
-    Therapsid 1 Therapsida
-        Burnetiamorpha 1 Biarmosuchia
-        Anteosauridae 1 Dinocephalia
-        Anomodont 2 Anomodontia
-            Eodicynodon 2 Dicynodontia # But Therochelonia has a completely different tree!
-                Kannemeyeriiformes
+Synapsida FROM Synapsid@2 
+    Therapsida FROM Therapsid@1 
+        Biarmosuchia FROM Burnetiamorpha@1 
+        Dinocephalia FROM Anteosauridae@1 
+        Anomodontia FROM Anomodont@2 
+            Dicynodontia FROM Eodicynodon@2  # But Therochelonia has a completely different tree!
+                Kannemeyeriiformes FROM Kannemeyeriiformes@1
                 #Lystrosauridae is here, but there are is phylogeny on the page
-        Gorgonopsia
-        Therocephalia 2
-        Cynodont 1 Cynodontia
-            Mammaliaformes
-                Docodonta
-                Yinotheria
-                Eutriconodonta
-                #Multituberculata 1 Allotheria # Need to add support for case where Allotheria replaces Multituberculata
-                Mammaliaformes 2 Trechnotheria
-                    Metatheria
-    Dimetrodon 2 Sphenacodontidae
+        Gorgonopsia FROM Gorgonopsia@1
+        Therocephalia FROM Therocephalia@2
+        Cynodontia FROM Cynodont@1 
+            Mammaliaformes FROM Mammaliaformes@1
+                Docodonta FROM Docodonta@1
+                Yinotheria FROM Yinotheria@1
+                Eutriconodonta FROM Eutriconodonta@1
+                #Allotheria FROM Multituberculata@1  # Need to add support for case where Allotheria replaces Multituberculata
+                Trechnotheria FROM Mammaliaformes@2 
+                    Metatheria FROM Metatheria@1
+    Sphenacodontidae FROM Dimetrodon@2 

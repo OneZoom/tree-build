@@ -1,7 +1,7 @@
 import argparse
 import dendropy
 
-from oz_tree_build.wiki_extraction.wiki_extractor import get_clade_tree_from_wiki_page
+from oz_tree_build.wiki_extraction.wiki_extractor import get_taxon_tree_from_wiki_page
 
 
 def find_node_by_taxon(tree, taxon):
@@ -13,11 +13,15 @@ def find_node_by_taxon(tree, taxon):
     return node
 
 
-def insert_child_tree(parent_tree, child_tree, taxon):
+def insert_child_tree(parent_tree, child_tree, taxon, child_taxon=None):
     node_in_parent_tree = find_node_by_taxon(parent_tree, taxon)
-    node_in_child_tree = find_node_by_taxon(child_tree, taxon)
+    node_in_child_tree = find_node_by_taxon(child_tree, child_taxon or taxon)
 
-    node_in_parent_tree.set_child_nodes(node_in_child_tree.child_nodes())
+    # We either replace the node, or add a child to it
+    if child_taxon:
+        node_in_parent_tree.add_child(node_in_child_tree)
+    else:
+        node_in_parent_tree.set_child_nodes(node_in_child_tree.child_nodes())
 
 
 def process_file(filename, use_line_number_as_edge_length):
@@ -37,30 +41,36 @@ def process_file(filename, use_line_number_as_edge_length):
         # Lines look like:
         #   Dinosauria FROM Dinosaur@Taxonomy   # Taxomomy case
         #   Ornithischia FROM Ornithischia@1    # Cladogram case
+        #   Ceratosauroidea->Ceratosauria FROM Ceratosauria@2   # Add a child instead of replacing the node
         if len(tokens) != 3:
             raise Exception(f"Invalid line: {line}")
 
-        clade = tokens[0]
+        taxon = tokens[0]
         assert tokens[1] == "FROM"
 
         source = tokens[2]
         page_name, location = source.split("@")
 
-        tree_string = get_clade_tree_from_wiki_page(page_name, location)
+        tree_string = get_taxon_tree_from_wiki_page(page_name, location)
         tree = dendropy.Tree.get(data=tree_string, schema="newick")
 
         if use_line_number_as_edge_length:
-            # Go through all the nodes and set the edge lengths to be the line number (for debugging)
+            # Go through all the nodes and set the edge lengths to be the line number.
+            # This is useful for debugging. Add 1 to it, since editors are 1 based
             for node in tree.nodes():
                 if node.label or node.taxon:
-                    node.edge_length = line_number
+                    node.edge_length = line_number + 1
 
         if not main_tree:
             # main_tree = tree
             main_tree = dendropy.Tree()
-            main_tree.seed_node = find_node_by_taxon(tree, clade)
+            main_tree.seed_node = find_node_by_taxon(tree, taxon)
         else:
-            insert_child_tree(main_tree, tree, clade)
+            child_taxon = None
+            if "->" in taxon:
+                # Here, the child taxon is different from the parent taxon
+                child_taxon, taxon = taxon.split("->")
+            insert_child_tree(main_tree, tree, taxon, child_taxon)
 
     return main_tree
 
@@ -83,6 +93,7 @@ def main():
     tree = process_file(args.wikiclades_file, args.use_line_number_as_edge_length)
 
     tree_string = tree.as_string(schema="newick")
+    tree2 = dendropy.Tree.get(data=tree_string, schema="newick")
 
     print(tree_string)
 

@@ -40,7 +40,7 @@ def process_node(node):
     return tree_node
 
 
-def get_clade_tree_from_wiki_page_string(wiki_page_string, location):
+def get_taxon_tree_from_wiki_page_string(wiki_page_string, location):
     wikicode = mwparserfromhell.parse(wiki_page_string, skip_style_tags=True)
 
     # If location string is a number, it's a cladogram index
@@ -55,10 +55,10 @@ def get_clade_tree_from_wiki_page_string(wiki_page_string, location):
     return tree.as_string(schema="newick")
 
 
-def get_clade_tree_from_wiki_page(wiki_title, location):
+def get_taxon_tree_from_wiki_page(wiki_title, location):
     wiki_string = get_text_from_wiki_page(wiki_title)
 
-    return get_clade_tree_from_wiki_page_string(wiki_string, location)
+    return get_taxon_tree_from_wiki_page_string(wiki_string, location)
 
 
 def main():
@@ -82,9 +82,9 @@ def main():
     if args.wiki_file:
         with open(args.wiki_file) as f:
             wiki_string = f.read()
-        print(get_clade_tree_from_wiki_page_string(wiki_string, args.location))
+        print(get_taxon_tree_from_wiki_page_string(wiki_string, args.location))
     else:
-        print(get_clade_tree_from_wiki_page(args.title, args.location))
+        print(get_taxon_tree_from_wiki_page(args.title, args.location))
 
 
 if __name__ == "__main__":

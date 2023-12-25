@@ -1,14 +1,23 @@
 Dinosauria FROM Dinosaur@Taxonomy
-    Ornithischia FROM Ornithischia@1
+    Ornithischia-Heterodontosaurus_tucki FROM Ornithischia@1
+        Heterodontosauridae->Ornithischia FROM Heterodontosauridae@1 # Basically replaces Heterodontosaurus_tucki that we removed
         Stegosauria FROM Stegosauria@2
-        Ankylosauria FROM Ankylosauria@2
+        Ankylosauria FROM Ankylosauria@2    # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2205433
+        Ankylopollexia-Fukuisaurus_tetoriensis FROM Ankylopollexia@1 # Fukuisaurus_tetoriensis comes from Hadrosauroidea
+            Hadrosauroidea FROM Hadrosauroidea@4
+                Hadrosauridae FROM Hadrosauridae@2
         Pachycephalosauria FROM Pachycephalosauria@3
         Elasmaria FROM Talenkauen@1 
+        Ceratopsia FROM Ceratopsia@1
+            Ceratopsidae FROM Ornithischia@1 # Grab back the Ceratopsidae that was reduced when adding Ceratopsia
+                Chasmosaurinae FROM Chasmosaurinae@1
     #Saurischia Page not used, but shown here is a marker
+        Saturnaliinae->Sauropodomorpha FROM Sauropodomorpha@2
         Herrerasauridae FROM Herrerasauridae@2
         Massospondylidae FROM Massospondylidae@1
+        Mamenchisauridae->Eusauropoda FROM Mamenchisauridae@4
         Turiasauria FROM Mierasaurus@1 
-        Rebbachisauridae FROM Rebbachisauridae@1
+        Rebbachisauridae FROM Rebbachisauridae@2
         Dicraeosauridae FROM Dicraeosauridae@1
         Diplodocidae FROM Diplodocidae@1
         Brachiosauridae FROM Brachiosauridae@2
@@ -27,8 +36,7 @@ Dinosauria FROM Dinosaur@Taxonomy
             Alvarezsauridae FROM Alvarezsauridae@1
             Therizinosauridae FROM Therizinosauridae@1
             Oviraptorosauria FROM Oviraptorosauria@1
-            #Archaeopterygidae Can't find proper cladogram
-            Troodontidae FROM Troodontidae@2
+            Troodontidae FROM Troodontidae@3
             Dromaeosauridae FROM Dromaeosauridae@2
             Avialae-Scansoriopterygidae FROM Avialae@2 # Exclude Scansoriopterygidae to avoid duplicate
                 Ornithothoraces FROM Ornithothoraces@1

@@ -5,6 +5,8 @@ from oz_tree_build.wiki_extraction.wiki_extractor import get_taxon_tree_from_wik
 
 
 def find_node_by_taxon(tree, taxon):
+    # Replace underscores with spaces since Dendropy uses spaces
+    taxon = taxon.replace("_", " ")
     node = tree.find_node_with_taxon_label(taxon)
     if not node:
         node = tree.find_node_with_label(taxon)
@@ -15,7 +17,13 @@ def find_node_by_taxon(tree, taxon):
 
 def insert_child_tree(parent_tree, child_tree, taxon, child_taxon, excluded_taxa):
     node_in_parent_tree = find_node_by_taxon(parent_tree, taxon)
-    node_in_child_tree = find_node_by_taxon(child_tree, child_taxon)
+
+    # If the child taxon is "$ROOT", we use the root node of the child tree
+    # This is useful when the root of the child tree is unnamed
+    if child_taxon == "$ROOT":
+        node_in_child_tree = child_tree.seed_node
+    else:
+        node_in_child_tree = find_node_by_taxon(child_tree, child_taxon)
 
     # Remove all excluded taxa from the child tree
     for excluded_taxon in excluded_taxa:
@@ -57,22 +65,22 @@ def process_file(filename, use_line_number_as_edge_length):
         page_name, location = source.split("@")
 
         tree_string = get_taxon_tree_from_wiki_page(page_name, location)
-        tree = dendropy.Tree.get(data=tree_string, schema="newick")
+        child_tree = dendropy.Tree.get(data=tree_string, schema="newick")
 
         if use_line_number_as_edge_length:
             # Go through all the nodes and set the edge lengths to be the line number.
             # This is useful for debugging. Add 1 to it, since editors are 1 based
-            for node in tree.nodes():
+            for node in child_tree.nodes():
                 if node.label or node.taxon:
                     node.edge_length = line_number + 1
 
         if not main_tree:
             # main_tree = tree
             main_tree = dendropy.Tree()
-            main_tree.seed_node = find_node_by_taxon(tree, taxon)
+            main_tree.seed_node = find_node_by_taxon(child_tree, taxon)
         else:
             if "->" in taxon:
-                # Here, the child taxon is different from the parent taxon
+                # Here, the child taxon is different from the parent taxon, and will be *added* to it
                 # e.g. "the_child->the_parent"
                 child_taxon, taxon = taxon.split("->")
             else:
@@ -86,7 +94,7 @@ def process_file(filename, use_line_number_as_edge_length):
             # For the parent, only use the first part of the taxon, e.g. "foo"
             taxon = taxon.split("-")[0]
 
-            insert_child_tree(main_tree, tree, taxon, child_taxon, excluded_taxa)
+            insert_child_tree(main_tree, child_tree, taxon, child_taxon, excluded_taxa)
 
     return main_tree
 

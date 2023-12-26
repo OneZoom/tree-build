@@ -26,6 +26,10 @@ def validate_clean_taxon(taxon):
     if taxon.startswith("Unnamed"):
         return None
 
+    # If it has more than one space, it's probably not a valid taxon
+    if taxon.count(" ") > 1:
+        return None
+
     return taxon
 
 

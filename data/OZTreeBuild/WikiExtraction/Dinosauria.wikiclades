@@ -42,6 +42,7 @@ Dinosauria FROM Dinosaur@Taxonomy
             Dromaeosauridae FROM Dromaeosauridae@2
             Avialae-Scansoriopterygidae FROM Avialae@2 # Exclude Scansoriopterygidae to avoid duplicate
                 Ornithothoraces FROM Ornithothoraces@1
+                    Bohaiornithidae FROM Bohaiornithidae@1
                     Hongshanornithidae FROM Archaeornithura@1
                     Songlingornithidae FROM Songlingornithidae@1
                     Ornithurae FROM Ornithurae@1

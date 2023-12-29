@@ -10,6 +10,8 @@ import logging
 import os
 import sys
 
+from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
+
 from .oz_tokens import enumerate_one_zoom_tokens
 from .token_to_oz_tree_file_mapping import token_to_file_map
 
@@ -149,13 +151,6 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--verbosity",
-        "-v",
-        action="count",
-        default=0,
-        help="verbosity level: output extra non-essential info",
-    )
-    parser.add_argument(
         "--printfiletree",
         action="store_true",
         help="Print a tree of all the OneZoom included files",
@@ -169,14 +164,7 @@ def main():
         default=sys.stdout,
         help="The output tree file",
     )
-    args = parser.parse_args()
-
-    if args.verbosity == 0:
-        logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
-    elif args.verbosity == 1:
-        logging.basicConfig(stream=sys.stderr, level=logging.INFO)
-    elif args.verbosity == 2:
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+    args = parse_args_and_add_logging_switch(parser)
 
     build_oz_tree(args.treefile, args.ot_parts_folder, args.outfile, args.printfiletree)
 

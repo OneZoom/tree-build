@@ -1,4 +1,4 @@
-Dinosauria FROM Dinosaur@Taxonomy
+Dinosauria-Unenlagiidae FROM Dinosaur@Taxonomy # We get Halszkaraptorinae/Unenlagiinae from Dromaeosauridae
     Ornithischia-Heterodontosaurus_tucki FROM Ornithischia@1
         Heterodontosauridae->Ornithischia FROM Heterodontosauridae@1 # Basically replaces Heterodontosaurus_tucki that we removed
         Stegosauria FROM Stegosauria@2
@@ -26,10 +26,10 @@ Dinosauria FROM Dinosaur@Taxonomy
         Titanosauria FROM Titanosauria@8
         #Theropoda Page not used, but shown here is a marker
             Coelophysoidea FROM Coelophysoidea@3
-            Ceratosauroidea->Ceratosauria FROM Ceratosauria@2 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
+            Ceratosauroidea=>Ceratosauria FROM Ceratosauria@2 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
             Megalosauroidea FROM Megalosauroidea@2
             Megaraptora FROM Megaraptora@3
-            Carnosauria FROM Carnosauria@2
+            Carnosauria-Spinosauridae-Megalosauridae-Piatnitzkysauridae FROM Carnosauria@2 # These 3 come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
             Metriacanthosauridae FROM Metriacanthosauridae@1
             Compsognathidae FROM Compsognathidae@1
             Tyrannosauroidea FROM Tyrannosauroidea@1 # Seems to hit the Geo clade, so we're not seeing the first two

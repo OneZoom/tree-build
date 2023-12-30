@@ -23,7 +23,7 @@ def find_node_by_taxon(tree, taxon):
     return node
 
 
-def insert_child_tree(parent_tree, child_tree, taxon, child_taxon):
+def insert_child_tree(parent_tree, child_tree, taxon, child_taxon, replace_parent_node):
     node_in_parent_tree = find_node_by_taxon(parent_tree, taxon)
 
     # If the child taxon is "$ROOT", we use the root node of the child tree
@@ -34,7 +34,7 @@ def insert_child_tree(parent_tree, child_tree, taxon, child_taxon):
         node_in_child_tree = find_node_by_taxon(child_tree, child_taxon)
 
     # We either replace the node, or add a child to it
-    if child_taxon != taxon:
+    if not replace_parent_node:
         node_in_parent_tree.add_child(node_in_child_tree)
     else:
         node_in_parent_tree.set_child_nodes(node_in_child_tree.child_nodes())
@@ -76,10 +76,16 @@ def process_file(filename, use_line_number_as_edge_length):
                 if node.label or node.taxon:
                     node.edge_length = line_number + 1
 
+        replace_parent_node = True
         if "->" in taxon:
             # Here, the child taxon is different from the parent taxon, and will be *added* to it
             # e.g. "the_child->the_parent"
             child_taxon, taxon = taxon.split("->")
+            replace_parent_node = False
+        elif "=>" in taxon:
+            # Here, the child taxon is different from the parent taxon, and will *replace* it
+            # e.g. "the_child=>the_parent"
+            child_taxon, taxon = taxon.split("=>")
         else:
             child_taxon = taxon
 
@@ -102,7 +108,9 @@ def process_file(filename, use_line_number_as_edge_length):
             main_tree = dendropy.Tree()
             main_tree.seed_node = find_node_by_taxon(child_tree, taxon)
         else:
-            insert_child_tree(main_tree, child_tree, taxon, child_taxon)
+            insert_child_tree(
+                main_tree, child_tree, taxon, child_taxon, replace_parent_node
+            )
 
     return main_tree
 

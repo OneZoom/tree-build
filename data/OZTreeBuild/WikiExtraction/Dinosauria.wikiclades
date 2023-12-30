@@ -2,7 +2,7 @@ Dinosauria FROM Dinosaur@Taxonomy
     Ornithischia-Heterodontosaurus_tucki FROM Ornithischia@1
         Heterodontosauridae->Ornithischia FROM Heterodontosauridae@1 # Basically replaces Heterodontosaurus_tucki that we removed
         Stegosauria FROM Stegosauria@2
-        Ankylosauria FROM Ankylosauria@2    # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2205433
+        Ankylosauria-Paw_Paw FROM Ankylosauria@2    # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2205433
         Thescelosauridae-Notohypsilophodon FROM Thescelosauridae@1 # Notohypsilophodon is in Elasmaria
         Ankylopollexia-Fukuisaurus_tetoriensis FROM Ankylopollexia@1 # Fukuisaurus_tetoriensis comes from Hadrosauroidea
             Hadrosauroidea FROM Hadrosauroidea@4
@@ -42,6 +42,7 @@ Dinosauria FROM Dinosaur@Taxonomy
             Dromaeosauridae FROM Dromaeosauridae@2
             Avialae-Scansoriopterygidae FROM Avialae@2 # Exclude Scansoriopterygidae to avoid duplicate
                 Ornithothoraces FROM Ornithothoraces@1
+                    Pengornithidae FROM Pengornithidae@1
                     Bohaiornithidae FROM Bohaiornithidae@1
                     Hongshanornithidae FROM Archaeornithura@1
                     Songlingornithidae FROM Songlingornithidae@1

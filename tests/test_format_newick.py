@@ -2,10 +2,7 @@ import io
 
 import oz_tree_build.newick.format_newick as format_newick
 
-test_tree = (
-    "(A,(BA,((BBAA_ott123,BBAB,BBAC,BBAD)BAA,(BBBA)BBB,(BBCA:12.34,BBCB)BBC_ott456:78.9)"
-    "BB)B_ott789,((CAA,CAB),CB)C,D)Root;"
-)
+test_tree = "(A,(BA,((BBAA_ott123,BBAB,BBAC,'BBAD (foo)')'BAA (bar)',(BBBA)BBB,(BBCA:12.34,BBCB)BBC_ott456:78.9)BB)B_ott789,((CAA,CAB),CB)C,D)Root;"
 
 formatted_test_tree = """(
   A,
@@ -16,8 +13,8 @@ formatted_test_tree = """(
         BBAA_ott123,
         BBAB,
         BBAC,
-        BBAD
-      )BAA,
+        'BBAD (foo)'
+      )'BAA (bar)',
       (
         BBBA
       )BBB,

@@ -26,7 +26,8 @@ from oz_tree_build.tree_build.build_oz_tree import trim_tree
 
 __author__ = "David Ebbo"
 
-whole_token_regex = re.compile("[^(),;]+")
+# Token may be quoted or not
+whole_token_regex = re.compile("'[^']*'|[^(),;]+")
 
 
 def format_nwk(newick_tree, output_stream, indent_spaces=2):

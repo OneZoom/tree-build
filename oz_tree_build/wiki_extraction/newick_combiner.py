@@ -87,7 +87,8 @@ def process_file(
                 logging.info(f"Loaded from cache: {cache_filename}")
 
                 # Load the taxon to page mapping from the comments
-                taxon_to_page_mapping = json.loads(child_tree.comments[0])
+                if child_tree.comments:
+                    taxon_to_page_mapping = json.loads(child_tree.comments[0])
             except FileNotFoundError:
                 logging.info(f"Cache miss: {cache_filename}")
 
@@ -96,7 +97,9 @@ def process_file(
             child_tree = get_taxon_tree_from_wiki_page(
                 page_name, location, taxon_to_page_mapping
             )
-            child_tree.comments.append(json.dumps(taxon_to_page_mapping))
+            # Keep the taxon to page mapping as a newick comment
+            if taxon_to_page_mapping:
+                child_tree.comments.append(json.dumps(taxon_to_page_mapping))
 
             # Save the tree to the cache
             if extraction_cache_folder:
@@ -112,7 +115,7 @@ def process_file(
             # Go through all the nodes and set the edge lengths to be the line number.
             # This is useful for debugging. Add 1 to it, since editors are 1 based
             for node in child_tree.nodes():
-                if node.label or node.taxon:
+                if node.taxon:
                     node.edge_length = line_number + 1
 
         replace_parent_node = True
@@ -189,13 +192,12 @@ def main():
     # Check for duplicate taxons in the tree
     taxons = set()
     for node in tree.nodes():
-        taxon = node.label or (node.taxon and node.taxon.label)
-        if not taxon:
+        if not node.taxon or not node.taxon.label:
             continue
-        if taxon in taxons:
-            logging.error(f"Duplicate taxon: {taxon}")
+        if node.taxon.label in taxons:
+            logging.error(f"Duplicate taxon: {node.taxon.label}")
             continue
-        taxons.add(taxon)
+        taxons.add(node.taxon.label)
 
     # Log the number of nodes and leaves
     logging.info(

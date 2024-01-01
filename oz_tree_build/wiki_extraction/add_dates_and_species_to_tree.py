@@ -59,13 +59,6 @@ PERIOD_LOOKUP = {
 }
 
 
-def get_node_taxon(node):
-    if node.taxon:
-        return node.taxon.label
-    else:
-        return node.label
-
-
 def map_period_name_to_range(period_name):
     period_name = period_name.lower()
     if period_name in PERIOD_LOOKUP:
@@ -248,7 +241,7 @@ def process_interior_node_recursive_and_get_range(node):
         children_date_ranges[child] = child_date_range
 
     # Find the node's taxon name (interior nodes may not have a taxon)
-    taxon = node.label
+    taxon = node.taxon and node.taxon.label
 
     # If we have a taxon name, get data from Wikipedia
     node_data = None
@@ -262,7 +255,7 @@ def process_interior_node_recursive_and_get_range(node):
         date_range = [node_data["from_date"], node_data["to_date"]]
         if oldest_child_from_date > date_range[0]:
             logging.warning(
-                f"Node '{taxon}' has from_date {node_data['from_date']}, but its child {get_node_taxon(child_with_oldest_from_date)} has from_date {oldest_child_from_date}"
+                f"Node '{taxon}' has from_date {node_data['from_date']}, but its child {child_with_oldest_from_date.taxon} has from_date {oldest_child_from_date}"
             )
             date_range[0] = oldest_child_from_date
     else:
@@ -301,7 +294,9 @@ def main():
     args = parse_args_and_add_logging_switch(parser)
 
     # Parse the input tree
-    tree = dendropy.Tree.get(file=args.treefile, schema="newick")
+    tree = dendropy.Tree.get(
+        file=args.treefile, schema="newick", suppress_internal_node_taxa=False
+    )
 
     # Read the mapping from taxon to page title from the tree comments
     if tree.comments:

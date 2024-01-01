@@ -50,7 +50,7 @@ class WikiTaxonomyNode:
         self.taxon = taxon
 
     def enumerate_children(self, taxon_to_page_mapping):
-        # Do an infinite loop
+        # Loop until we find get back to the starting depth
         i = self.index
         while True:
             # Find the next '*' heading

@@ -11,7 +11,7 @@ import os
 import dendropy
 from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
 
-from oz_tree_build.wiki_extraction.wiki_extractor import get_taxon_tree_from_wiki_page
+from oz_tree_build.wiki_extraction.wiki_clade_extractor import get_taxon_tree_from_wiki_page
 
 
 def find_node_by_taxon(tree, taxon):

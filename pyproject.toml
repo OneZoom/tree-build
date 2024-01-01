@@ -19,6 +19,7 @@ dependencies = [
     "pillow==10.3.0",
     "pydal>=20240601.1",
     "cryptography>=42.0",
+    "mwparserfromhell>=0.6.5",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +43,9 @@ extract_trees = "oz_tree_build.newick.extract_trees:main"
 check_ultrametricity = "oz_tree_build.newick.check_ultrametricity:main"
 fix_ultrametricity = "oz_tree_build.newick.fix_ultrametricity:main"
 find_in_file = "oz_tree_build.utilities.find_in_file:main"
+wiki_clade_extractor = "oz_tree_build.wiki_extraction.wiki_clade_extractor:main"
+newick_combiner = "oz_tree_build.wiki_extraction.newick_combiner:main"
+add_dates_and_species_to_tree = "oz_tree_build.wiki_extraction.add_dates_and_species_to_tree:main"
 
 [tool.setuptools]
 packages = ["oz_tree_build"]

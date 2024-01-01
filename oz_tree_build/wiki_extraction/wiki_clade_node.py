@@ -11,7 +11,7 @@ def is_clade_template_name(name):
 
 class WikiCladeNode:
     @classmethod
-    def create_root_node(cls, wikicode, cladogram_index):
+    def create_root_node(cls, page_title, wikicode, cladogram_index):
         templates = wikicode.filter_templates(
             recursive=False, matches=lambda n: is_clade_template_name(n.name)
         )
@@ -26,9 +26,9 @@ class WikiCladeNode:
                 0
             ]
 
-        return WikiCladeNode(None, template)
+        return WikiCladeNode(page_title, None, template)
 
-    def __init__(self, taxon, template=None, subclades=None):
+    def __init__(self, page_title, taxon, template=None, subclades=None):
         self.taxon = taxon
 
         # Get the subclades if not passed in, which happens at the root node
@@ -45,10 +45,11 @@ class WikiCladeNode:
                 else:
                     break
 
+        self.page_title = page_title
         self.template = template
         self.subclades = subclades
 
-    def enumerate_children(self):
+    def enumerate_children(self, taxon_to_page_mapping):
         if not self.template:
             return
 
@@ -67,21 +68,34 @@ class WikiCladeNode:
             sub_templates = sub.filter_templates(
                 recursive=False, matches=lambda n: n.name.lower().startswith("clade")
             )
+            child_is_leaf = len(sub_templates) == 0
 
             taxon = ""
 
             # If there is a label parameter, use that
             if self.template.has_param(f"label{param_name}"):
                 taxon = (
-                    get_taxon_name(self.template.get(f"label{param_name}").value) or ""
+                    get_taxon_name(
+                        self.template.get(f"label{param_name}").value,
+                        link_only=child_is_leaf,
+                        taxon_to_page_mapping=taxon_to_page_mapping,
+                    )
+                    or ""
                 )
 
-            if len(sub_templates) == 0:
+            if child_is_leaf:
                 # Leaf node case (no sub-template)
-                taxon = taxon or get_taxon_name(sub)
+                taxon = taxon or get_taxon_name(
+                    sub,
+                    link_only=True,
+                    page_title=self.page_title,
+                    taxon_to_page_mapping=taxon_to_page_mapping,
+                )
                 if not taxon:
                     continue
-                yield WikiCladeNode(taxon)
+                yield WikiCladeNode(self.page_title, taxon)
             else:
                 assert len(sub_templates) == 1, "Only one sub-template allowed"
-                yield WikiCladeNode(taxon, sub_templates[0], self.subclades)
+                yield WikiCladeNode(
+                    self.page_title, taxon, sub_templates[0], self.subclades
+                )

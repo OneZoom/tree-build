@@ -7,7 +7,9 @@ from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
 
 class WikiTaxonomyNode:
     @classmethod
-    def create_root_node(cls, wikicode, header_title):
+    def create_root_node(
+        cls, page_title, wikicode, header_title, taxon_to_page_mapping
+    ):
         i, _ = find_wikicode_node(
             wikicode,
             0,
@@ -26,22 +28,28 @@ class WikiTaxonomyNode:
         if i is None:
             raise Exception(f"Could not find '*' after header '{header_title}'")
 
-        return cls.create_node(wikicode, i + 1, depth=0)
+        return cls.create_node(page_title, wikicode, i + 1, 0, taxon_to_page_mapping)
 
     @classmethod
-    def create_node(cls, wikicode, index, depth):
-        taxon = get_taxon_name(wikicode, index)
+    def create_node(cls, page_title, wikicode, index, depth, taxon_to_page_mapping):
+        taxon = get_taxon_name(
+            wikicode,
+            start_index=index,
+            page_title=page_title,
+            taxon_to_page_mapping=taxon_to_page_mapping,
+        )
         if not taxon:
             return None
-        return cls(wikicode, index, depth, taxon)
+        return cls(page_title, wikicode, index, depth, taxon)
 
-    def __init__(self, wikicode, index, depth, taxon):
+    def __init__(self, page_title, wikicode, index, depth, taxon):
+        self.page_title = page_title
         self.wikicode = wikicode
         self.index = index
         self.depth = depth
         self.taxon = taxon
 
-    def enumerate_children(self):
+    def enumerate_children(self, taxon_to_page_mapping):
         # Do an infinite loop
         i = self.index
         while True:
@@ -79,6 +87,8 @@ class WikiTaxonomyNode:
             assert colon_count == self.depth + 1
 
             i += 1
-            child_node = WikiTaxonomyNode.create_node(self.wikicode, i, self.depth + 1)
+            child_node = WikiTaxonomyNode.create_node(
+                self.page_title, self.wikicode, i, self.depth + 1, taxon_to_page_mapping
+            )
             if child_node:
                 yield child_node

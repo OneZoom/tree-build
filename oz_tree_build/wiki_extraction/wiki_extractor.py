@@ -26,30 +26,40 @@ from oz_tree_build.wiki_extraction.wiki_clade_node import WikiCladeNode
 from oz_tree_build.wiki_extraction.wiki_taxonomy_node import WikiTaxonomyNode
 
 
-def process_node(node):
+def process_node(node, taxon_to_page_mapping):
     tree_node = dendropy.Node()
     tree_node.taxon = dendropy.Taxon(label=node.taxon)
-    for child in node.enumerate_children():
-        tree_node.add_child(process_node(child))
+    for child in node.enumerate_children(taxon_to_page_mapping):
+        tree_node.add_child(process_node(child, taxon_to_page_mapping))
     return tree_node
 
 
-def get_taxon_tree_from_wikicode(wikicode, taxon_tree_location) -> dendropy.Tree:
+def get_taxon_tree_from_wikicode(
+    page_title, wikicode, taxon_tree_location, taxon_to_page_mapping=None
+) -> dendropy.Tree:
     # If location string is a number, it's a cladogram index
     # If it's a string, it's the wiki header that precedes a taxonomy tree (bullet list)
     if taxon_tree_location.isnumeric():
-        node = WikiCladeNode.create_root_node(wikicode, int(taxon_tree_location))
+        node = WikiCladeNode.create_root_node(
+            page_title, wikicode, int(taxon_tree_location)
+        )
     else:
-        node = WikiTaxonomyNode.create_root_node(wikicode, taxon_tree_location)
+        node = WikiTaxonomyNode.create_root_node(
+            page_title, wikicode, taxon_tree_location, taxon_to_page_mapping
+        )
 
     tree = dendropy.Tree()
-    tree.seed_node = process_node(node)
+    tree.seed_node = process_node(node, taxon_to_page_mapping)
     return tree
 
 
-def get_taxon_tree_from_wiki_page(wiki_title, taxon_tree_location) -> dendropy.Tree:
+def get_taxon_tree_from_wiki_page(
+    wiki_title, taxon_tree_location, taxon_to_page_mapping
+) -> dendropy.Tree:
     wikicode = get_wikicode_for_page(wiki_title)
-    return get_taxon_tree_from_wikicode(wikicode, taxon_tree_location)
+    return get_taxon_tree_from_wikicode(
+        wiki_title, wikicode, taxon_tree_location, taxon_to_page_mapping
+    )
 
 
 def main():
@@ -77,7 +87,7 @@ def main():
     else:
         wikicode = get_wikicode_for_page(args.title)
 
-    tree = get_taxon_tree_from_wikicode(wikicode, args.location)
+    tree = get_taxon_tree_from_wikicode(args.title, wikicode, args.location)
     print(tree.as_string(schema="newick"))
 
 

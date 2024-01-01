@@ -5,6 +5,7 @@ The output tree is in Newick format.
 """
 
 import argparse
+import json
 import logging
 import dendropy
 from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
@@ -40,7 +41,7 @@ def insert_child_tree(parent_tree, child_tree, taxon, child_taxon, replace_paren
         node_in_parent_tree.set_child_nodes(node_in_child_tree.child_nodes())
 
 
-def process_file(filename, use_line_number_as_edge_length):
+def process_file(filename, use_line_number_as_edge_length, taxon_to_page_mapping):
     main_tree = None
     for line_number, line in enumerate(open(filename)):
         # Ignore # comments
@@ -67,7 +68,10 @@ def process_file(filename, use_line_number_as_edge_length):
         source = tokens[2]
         page_name, location = source.split("@")
 
-        child_tree = get_taxon_tree_from_wiki_page(page_name, location)
+        logging.info(f"Processing wiki page '{page_name}@{location}'")
+        child_tree = get_taxon_tree_from_wiki_page(
+            page_name, location, taxon_to_page_mapping
+        )
 
         if use_line_number_as_edge_length:
             # Go through all the nodes and set the edge lengths to be the line number.
@@ -123,16 +127,29 @@ def main():
         help="Path to the .wikiclades file",
     )
     parser.add_argument(
+        "--taxon_to_page_mapping_file",
+        type=str,
+        help="File where the taxon to wiki page mapping will be written",
+    )
+    parser.add_argument(
         "--use_line_number_as_edge_length",
         action="store_true",
         help="Use line number as edge length",
     )
     args = parse_args_and_add_logging_switch(parser)
 
-    tree = process_file(args.wikiclades_file, args.use_line_number_as_edge_length)
+    taxon_to_page_mapping = {}
+    tree = process_file(
+        args.wikiclades_file, args.use_line_number_as_edge_length, taxon_to_page_mapping
+    )
 
     # Print the combined tree
     print(tree.as_string(schema="newick"))
+
+    # Write the taxon to page mapping
+    if args.taxon_to_page_mapping_file:
+        with open(args.taxon_to_page_mapping_file, "w") as f:
+            json.dump(taxon_to_page_mapping, f)
 
     # Check for duplicate taxons in the tree
     taxons = set()

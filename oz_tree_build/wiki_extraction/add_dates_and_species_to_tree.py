@@ -151,13 +151,21 @@ def get_species_from_taxobox(taxobox):
 
 
 nodes_data = {}
+taxon_to_page_mapping = {}
 
 
 def get_taxon_data_from_wikipedia(taxon, is_leaf):
     logging.info(f"Processing taxon '{taxon}'")
 
+    # If we have a mapping from taxon to page title, use that. This is
+    # the case where the link display didn't match the link target
+    if taxon in taxon_to_page_mapping:
+        page_title = taxon_to_page_mapping[taxon]
+    else:
+        page_title = taxon
+
     # Get the Wikipedia page for the taxon
-    wikicode = get_wikicode_for_page(taxon)
+    wikicode = get_wikicode_for_page(page_title)
     if not wikicode:
         return None
 
@@ -290,6 +298,11 @@ def main():
         default=sys.stdin,
         help="The tree file in newick form",
     )
+    parser.add_argument(
+        "--taxon_to_page_mapping_file",
+        type=str,
+        help="File from which to read the taxon to wiki page mapping",
+    )
     args = parse_args_and_add_logging_switch(parser)
 
     # Parse the input tree
@@ -303,8 +316,10 @@ def main():
     except FileNotFoundError:
         pass
 
-    # print(get_taxon_data_from_wikipedia("Patagopelta", is_leaf=True))
-    # return
+    # If we have a taxon to page mapping file, read it in
+    if args.taxon_to_page_mapping_file:
+        with open(args.taxon_to_page_mapping_file) as f:
+            taxon_to_page_mapping.update(json.load(f))
 
     process_node_recursive_and_get_range(tree.seed_node)
 

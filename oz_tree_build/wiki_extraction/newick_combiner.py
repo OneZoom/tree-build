@@ -7,6 +7,7 @@ The output tree is in Newick format.
 import argparse
 import json
 import logging
+import os
 import dendropy
 from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
 
@@ -41,7 +42,12 @@ def insert_child_tree(parent_tree, child_tree, taxon, child_taxon, replace_paren
         node_in_parent_tree.set_child_nodes(node_in_child_tree.child_nodes())
 
 
-def process_file(filename, use_line_number_as_edge_length, taxon_to_page_mapping):
+def process_file(
+    filename,
+    use_line_number_as_edge_length,
+    extraction_cache_folder,
+    combined_taxon_to_page_mapping,
+):
     main_tree = None
     for line_number, line in enumerate(open(filename)):
         # Ignore # comments
@@ -68,10 +74,39 @@ def process_file(filename, use_line_number_as_edge_length, taxon_to_page_mapping
         source = tokens[2]
         page_name, location = source.split("@")
 
-        logging.info(f"Processing wiki page '{page_name}@{location}'")
-        child_tree = get_taxon_tree_from_wiki_page(
-            page_name, location, taxon_to_page_mapping
-        )
+        logging.info(f"Processing wiki page '{source}'")
+
+        child_tree = None
+        taxon_to_page_mapping = {}
+
+        # If we have a cache folder, try to load the tree from there
+        if extraction_cache_folder:
+            cache_filename = f"{extraction_cache_folder}/{source}.phy"
+            try:
+                child_tree = dendropy.Tree.get_from_path(cache_filename, "newick")
+                logging.info(f"Loaded from cache: {cache_filename}")
+
+                # Load the taxon to page mapping from the comments
+                taxon_to_page_mapping = json.loads(child_tree.comments[0])
+            except FileNotFoundError:
+                logging.info(f"Cache miss: {cache_filename}")
+
+        # If we didn't load the tree from the cache, extract it from the wiki page
+        if not child_tree:
+            child_tree = get_taxon_tree_from_wiki_page(
+                page_name, location, taxon_to_page_mapping
+            )
+            child_tree.comments.append(json.dumps(taxon_to_page_mapping))
+
+            # Save the tree to the cache
+            if extraction_cache_folder:
+                os.makedirs(extraction_cache_folder, exist_ok=True)
+                child_tree.write_to_path(
+                    cache_filename, "newick", suppress_item_comments=False
+                )
+                logging.info(f"Wrote to cache: {cache_filename}")
+
+        combined_taxon_to_page_mapping.update(taxon_to_page_mapping)
 
         if use_line_number_as_edge_length:
             # Go through all the nodes and set the edge lengths to be the line number.
@@ -127,9 +162,9 @@ def main():
         help="Path to the .wikiclades file",
     )
     parser.add_argument(
-        "--taxon_to_page_mapping_file",
+        "--extraction_cache_folder",
         type=str,
-        help="File where the taxon to wiki page mapping will be written",
+        help="Folder to cache wiki page extractions to, in newick format",
     )
     parser.add_argument(
         "--use_line_number_as_edge_length",
@@ -138,23 +173,23 @@ def main():
     )
     args = parse_args_and_add_logging_switch(parser)
 
-    taxon_to_page_mapping = {}
+    combined_taxon_to_page_mapping = {}
     tree = process_file(
-        args.wikiclades_file, args.use_line_number_as_edge_length, taxon_to_page_mapping
+        args.wikiclades_file,
+        args.use_line_number_as_edge_length,
+        args.extraction_cache_folder,
+        combined_taxon_to_page_mapping,
     )
 
-    # Print the combined tree
-    print(tree.as_string(schema="newick"))
+    tree.comments.append(json.dumps(combined_taxon_to_page_mapping))
 
-    # Write the taxon to page mapping
-    if args.taxon_to_page_mapping_file:
-        with open(args.taxon_to_page_mapping_file, "w") as f:
-            json.dump(taxon_to_page_mapping, f)
+    # Print the combined tree
+    print(tree.as_string(schema="newick", suppress_item_comments=False))
 
     # Check for duplicate taxons in the tree
     taxons = set()
     for node in tree.nodes():
-        taxon = node.label or node.taxon.label
+        taxon = node.label or (node.taxon and node.taxon.label)
         if not taxon:
             continue
         if taxon in taxons:

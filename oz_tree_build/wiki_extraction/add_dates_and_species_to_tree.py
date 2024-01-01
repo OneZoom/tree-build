@@ -298,15 +298,14 @@ def main():
         default=sys.stdin,
         help="The tree file in newick form",
     )
-    parser.add_argument(
-        "--taxon_to_page_mapping_file",
-        type=str,
-        help="File from which to read the taxon to wiki page mapping",
-    )
     args = parse_args_and_add_logging_switch(parser)
 
     # Parse the input tree
     tree = dendropy.Tree.get(file=args.treefile, schema="newick")
+
+    # Read the mapping from taxon to page title from the tree comments
+    if tree.comments:
+        taxon_to_page_mapping.update(json.loads(tree.comments[0]))
 
     # The taxon data cache file has the same name with a .json extension
     cache_filename = args.treefile.name + ".taxondatacache.json"
@@ -315,11 +314,6 @@ def main():
             nodes_data.update(json.load(f))
     except FileNotFoundError:
         pass
-
-    # If we have a taxon to page mapping file, read it in
-    if args.taxon_to_page_mapping_file:
-        with open(args.taxon_to_page_mapping_file) as f:
-            taxon_to_page_mapping.update(json.load(f))
 
     process_node_recursive_and_get_range(tree.seed_node)
 

@@ -162,7 +162,8 @@ def get_date_range_from_taxobox(taxobox):
         range_string = get_display_string_from_wikicode(range, favor_link_title=True)
         if not range_string:
             return None, None
-        from_date = to_date = get_range_date(range_string, use_start=True)
+        from_date = get_range_date(range_string, use_start=True)
+        to_date = get_range_date(range_string, use_start=False)
     else:
         from_date = get_range_date(
             fossil_range_template.params[0].value, use_start=True
@@ -226,7 +227,9 @@ def get_taxon_data_from_wikipedia(taxon, is_leaf):
     if not wikicode:
         return None
 
-    taxobox = get_wikicode_template(wikicode, ("automatictaxobox", "speciesbox"))
+    taxobox = get_wikicode_template(
+        wikicode, ("automatictaxobox", "speciesbox", "taxobox")
+    )
     if not taxobox:
         logging.warning(f"Could not find taxobox for {taxon}")
         return None

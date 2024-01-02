@@ -11,7 +11,9 @@ import os
 import dendropy
 from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
 
-from oz_tree_build.wiki_extraction.wiki_clade_extractor import get_taxon_tree_from_wiki_page
+from oz_tree_build.wiki_extraction.wiki_clade_extractor import (
+    get_taxon_tree_from_wiki_page,
+)
 
 
 def find_node_by_taxon(tree, taxon):
@@ -83,7 +85,9 @@ def process_file(
         if extraction_cache_folder:
             cache_filename = f"{extraction_cache_folder}/{source}.phy"
             try:
-                child_tree = dendropy.Tree.get_from_path(cache_filename, "newick")
+                child_tree = dendropy.Tree.get_from_path(
+                    cache_filename, "newick", suppress_internal_node_taxa=False
+                )
                 logging.info(f"Loaded from cache: {cache_filename}")
 
                 # Load the taxon to page mapping from the comments

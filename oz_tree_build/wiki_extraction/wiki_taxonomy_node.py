@@ -36,6 +36,7 @@ class WikiTaxonomyNode:
             wikicode,
             start_index=index,
             page_title=page_title,
+            break_on_colon_or_star=True,
             taxon_to_page_mapping=taxon_to_page_mapping,
         )
         if not taxon:

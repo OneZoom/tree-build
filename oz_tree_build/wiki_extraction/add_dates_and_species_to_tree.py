@@ -20,35 +20,56 @@ from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
 
 # Periods from https://en.wikipedia.org/wiki/Geologic_time_scale
 PERIOD_LOOKUP = {
-    "triassic": [251.902, 201.4],  # Period
-    "induan": [251.902, 251.2],
+    "permian": [298.9, 251.9],  # Period
+    "early permian": [298.9, 273.01],  # subperiod (Cisuralian)
+    "asselian": [298.9, 293.52],
+    "sakmarian": [293.52, 290.1],
+    "artinskian": [290.1, 283.5],
+    "kungurian": [283.5, 273.01],
+    "middle permian": [273.01, 259.51],  # subperiod (Guadalupian)
+    "roadian": [273.01, 266.9],
+    "wordian": [266.9, 264.28],
+    "capitanian": [264.28, 259.51],
+    "late permian": [259.51, 251.9],  # subperiod (Lopingian)
+    "wuchiapingian": [259.51, 254.14],
+    "changhsingian": [254.14, 251.9],
+    "triassic": [251.9, 201.4],  # Period
+    "early triassic": [251.9, 247.2],  # subperiod
+    "induan": [251.9, 251.2],
     "olenekian": [251.2, 247.2],
+    "middle triassic": [247.2, 237],  # subperiod
     "anisian": [247.2, 242],
     "ladinian": [242, 237],
+    "late triassic": [237, 201.4],  # subperiod
     "carnian": [237, 227],
     "norian": [227, 208.5],
     "rhaetian": [208.5, 201.4],
     "jurassic": [201.4, 145],  # Period
+    "early jurassic": [201.4, 174.7],  # subperiod
     "hettangian": [201.4, 199.5],
     "sinemurian": [199.5, 192.9],
     "pliensbachian": [192.9, 184.2],
     "toarcian": [184.2, 174.7],
+    "middle jurassic": [174.7, 161.5],  # subperiod
     "aalenian": [174.7, 170.9],
     "bajocian": [170.9, 168.2],
     "bathonian": [168.2, 165.3],
     "callovian": [165.3, 161.5],
+    "late jurassic": [161.5, 145],  # subperiod
     "oxfordian": [161.5, 154.8],
     "kimmeridgian": [154.8, 149.2],
     "tithonian": [149.2, 145],
     "cretaceous": [145, 66],  # Period
     "early cretaceous": [145, 100.5],
-    "late cretaceous": [100.5, 66],
+    "lower cretaceous": [145, 100.5],
     "berriasian": [145, 139.8],
     "valanginian": [139.8, 132.6],
     "hauterivian": [132.6, 125.77],
     "barremian": [125.77, 121.4],
     "aptian": [121.4, 113],
     "albian": [113, 100.5],
+    "late cretaceous": [100.5, 66],
+    "upper cretaceous": [100.5, 66],
     "cenomanian": [100.5, 93.9],
     "turonian": [93.9, 89.8],
     "coniacian": [89.8, 86.3],
@@ -56,6 +77,37 @@ PERIOD_LOOKUP = {
     "campanian": [83.6, 72.1],
     "maastrichtian": [72.1, 66],
     "paleogene": [66, 23.03],
+    "paleocene": [66, 56],
+    "danian": [66, 61.6],
+    "selandian": [61.6, 59.2],
+    "thanetian": [59.2, 56],
+    "eocene": [56, 33.9],
+    "ypresian": [56, 47.8],
+    "lutetian": [47.8, 41.2],
+    "bartonian": [41.2, 37.71],
+    "priabonian": [37.71, 33.9],
+    "oligocene": [33.9, 23.03],
+    "rupelian": [33.9, 27.82],
+    "chattian": [27.82, 23.03],
+    "neogene": [23.03, 2.588],
+    "miocene": [23.03, 5.333],
+    "aquitanian": [23.03, 20.44],
+    "burdigalian": [20.44, 15.97],
+    "langhian": [15.97, 13.82],
+    "serravallian": [13.82, 11.63],
+    "tortonian": [11.63, 7.246],
+    "messinian": [7.246, 5.333],
+    "pliocene": [5.333, 2.58],
+    "zanclean": [5.333, 3.6],
+    "piacenzian": [3.6, 2.58],
+    "quaternary": [2.58, 0],
+    "pleistocene": [2.58, 0.0117],
+    "gelasian": [2.58, 1.8],
+    "calabrian": [1.8, 0.774],
+    "chibanian": [0.774, 0.129],
+    "late pleistocene": [0.129, 0.0117],
+    "holocene": [0.0117, 0],
+    "recent": [0, 0],
 }
 
 
@@ -95,6 +147,9 @@ def get_range_date(fossilrange_value, use_start):
 
 
 def get_date_range_from_taxobox(taxobox):
+    if not taxobox.has_param("fossil_range"):
+        return None, None
+
     range = taxobox.get("fossil_range").value
     # Template name can randomly be be "fossil range" or "geological range", with or without space/underscores
     fossil_range_template = get_wikicode_template(
@@ -102,7 +157,11 @@ def get_date_range_from_taxobox(taxobox):
     )
 
     if not fossil_range_template:
-        range_string = get_display_string_from_wikicode(range)
+        # If there is no template, just try to treat it as a string to get a range
+        # We favor the link title, as in "Middle Permian" in [[Middle Permian|Middle]]
+        range_string = get_display_string_from_wikicode(range, favor_link_title=True)
+        if not range_string:
+            return None, None
         from_date = to_date = get_range_date(range_string, use_start=True)
     else:
         from_date = get_range_date(
@@ -118,7 +177,8 @@ def get_date_range_from_taxobox(taxobox):
     return from_date, to_date
 
 
-def get_species_from_taxobox(taxobox):
+def get_species_from_taxobox(taxon, taxobox):
+    species_name = None
     if taxobox.has_param("type_species"):
         type_species = taxobox.get("type_species").value
         species_name = get_taxon_name(type_species)
@@ -126,10 +186,14 @@ def get_species_from_taxobox(taxobox):
         genus = taxobox.get("genus").value
         species = taxobox.get("species").value
         species_name = get_taxon_name(genus) + " " + get_taxon_name(species)
+    elif taxobox.has_param("subdivision"):
+        subdivision = taxobox.get("subdivision").value
+        species_name = get_taxon_name(subdivision, allow_shortened_binomial=True)
     elif taxobox.has_param("taxon"):
-        taxon = taxobox.get("taxon").value
-        species_name = get_taxon_name(taxon)
-    else:
+        taxon_prop_value = taxobox.get("taxon").value
+        species_name = get_taxon_name(taxon_prop_value)
+
+    if not species_name:
         logging.warning(f"Could not find species name for {taxon}")
         return None
 
@@ -180,8 +244,12 @@ def get_taxon_data_from_wikipedia(taxon, is_leaf):
         # If the taxon in the newick is not a binomial species name
         if " " not in taxon:
             # Try to get the species name from the taxobox
-            species_name = get_species_from_taxobox(taxobox)
+            species_name = get_species_from_taxobox(taxon, taxobox)
             if species_name:
+                # If it starts with an uppercase letter followed by a period, replace
+                # that with the taxon (which is the genus name). e.g. "P. Leo" -> "Panthera leo"
+                if species_name[0].isupper() and species_name[1] == ".":
+                    species_name = taxon + species_name[2:]
                 node_data["species_name"] = species_name
             else:
                 logging.warning(f"Could not find binomial species name for {taxon}")
@@ -211,10 +279,13 @@ def process_leaf_node_and_get_extinction_date(node):
     taxon = node.taxon.label
     node_data = get_taxon_data_from_wikipedia_with_caching(taxon, is_leaf=True)
 
-    if node_data and "to_date" in node_data:
-        extinction_date = node_data["to_date"] or 0
-    else:
-        extinction_date = 0
+    extinction_date = 0
+    if node_data:
+        if "to_date" in node_data:
+            extinction_date = node_data["to_date"] or 0
+
+        if "species_name" in node_data:
+            node.taxon.label = node_data["species_name"]
 
     # If it's an extinct leaf, add a nameless prop-up node with the date
     if extinction_date:
@@ -287,8 +358,6 @@ def main():
     parser.add_argument(
         "treefile",
         type=argparse.FileType("r"),
-        nargs="?",
-        default=sys.stdin,
         help="The tree file in newick form",
     )
     args = parse_args_and_add_logging_switch(parser)

@@ -71,7 +71,7 @@ def get_wikicode_template(wikicode, possible_names) -> mwparserfromhell.nodes.Te
     return templates[0]
 
 
-def validate_clean_taxon(taxon):
+def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     # Remove any heading/trailing punctuation
     taxon = taxon.strip().strip("[]()'†?\"")
 
@@ -79,8 +79,12 @@ def validate_clean_taxon(taxon):
     # e.g. '"Nanshiungosaurus" bohlini'
     taxon = taxon.replace('"', "")
 
-    # If the string contains anything other than letters/numbers, we can't use it
-    if not taxon.replace(" ", "").isalnum():
+    if allow_shortened_binomial:
+        # If we allow th shortened "P. Leo" form, allow periods and spaces
+        if not re.match("^[a-zA-Z0-9. ]*$", taxon):
+            return None
+    elif not taxon.replace(" ", "").isalnum():
+        # For the mainline case, don't allow periods
         return None
 
     # Some show up as e.g. "Unnamed species", which we ignore
@@ -103,6 +107,8 @@ def get_taxon_name(
     wikicode,
     start_index=0,
     link_only=False,
+    break_on_colon_or_star=False,  # Only true for taxonomy trees with bullet lists
+    allow_shortened_binomial=False,  # True to allow shortened binomial names, e.g. "P. Leo"
     page_title=None,
     taxon_to_page_mapping=None,
 ):
@@ -124,9 +130,7 @@ def get_taxon_name(
             using_text_node = True
             taxon = node.value
         elif isinstance(node, mwparserfromhell.nodes.tag.Tag):
-            # Never go past a colon or asterisk, which start a new taxonomy item
-            # (not relevant for clade diagrams, but harmless)
-            if node.wiki_markup in [":", "*"]:
+            if break_on_colon_or_star and node.wiki_markup in [":", "*"]:
                 break
             continue
         else:
@@ -134,7 +138,7 @@ def get_taxon_name(
             continue
 
         # This may return None if the taxon name is not usable
-        taxon = validate_clean_taxon(taxon)
+        taxon = validate_clean_taxon(taxon, allow_shortened_binomial)
 
         if taxon:
             # Ignore text nodes if we're only looking for links. However, if the text
@@ -156,12 +160,15 @@ def get_taxon_name(
 
 
 # Look for a display string in a wikicode
-def get_display_string_from_wikicode(wikicode):
+def get_display_string_from_wikicode(wikicode, favor_link_title=False):
     for node in wikicode.nodes:
         if isinstance(
             node, mwparserfromhell.nodes.Wikilink
         ) and not node.title.startswith("File:"):
-            display_string = str(node.text) if node.text else str(node.title)
+            if favor_link_title:
+                display_string = str(node.title) if node.title else str(node.text)
+            else:
+                display_string = str(node.text) if node.text else str(node.title)
         elif isinstance(node, mwparserfromhell.nodes.Text):
             display_string = node.value
         else:

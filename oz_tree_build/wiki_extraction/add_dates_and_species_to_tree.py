@@ -185,8 +185,13 @@ def get_species_from_taxobox(taxon, taxobox):
         species_name = get_taxon_name(type_species)
     elif taxobox.has_param("genus") and taxobox.has_param("species"):
         genus = taxobox.get("genus").value
+        # Species can be either the full binomial name, or just the specific name
         species = taxobox.get("species").value
-        species_name = get_taxon_name(genus) + " " + get_taxon_name(species)
+        species_name = get_taxon_name(species, allow_shortened_binomial=True)
+
+        # If it's already binomial, we're done
+        if species_name and not " " in species_name:
+            species_name = get_taxon_name(genus) + " " + species_name
     elif taxobox.has_param("subdivision"):
         subdivision = taxobox.get("subdivision").value
         species_name = get_taxon_name(subdivision, allow_shortened_binomial=True)

@@ -79,12 +79,17 @@ def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     # e.g. '"Nanshiungosaurus" bohlini'
     taxon = taxon.replace('"', "")
 
-    if allow_shortened_binomial:
-        # If we allow th shortened "P. Leo" form, allow periods and spaces
-        if not re.match("^[a-zA-Z0-9. ]*$", taxon):
-            return None
-    elif not taxon.replace(" ", "").isalnum():
-        # For the mainline case, don't allow periods
+    taxon_for_alphanum_check = taxon.replace(" ", "").replace("-", "")
+    if (
+        allow_shortened_binomial
+        and len(taxon_for_alphanum_check) > 1
+        and taxon_for_alphanum_check[1] == "."
+    ):
+        # If we allow shortened binomial names (e.g. "P. Leo"), remove the period if any
+        taxon_for_alphanum_check = (
+            taxon_for_alphanum_check[0] + taxon_for_alphanum_check[2:]
+        )
+    if not taxon_for_alphanum_check.replace(" ", "").isalnum():
         return None
 
     # Some show up as e.g. "Unnamed species", which we ignore

@@ -147,8 +147,9 @@ def get_taxon_name(
 
         if taxon:
             # Ignore text nodes if we're only looking for links. However, if the text
-            # is the same as the page title, we'll use it, since it's intrinsically a valid link
-            if using_text_node and link_only and taxon != page_title:
+            # is the same as the page title (ar at least starts with it),
+            # we'll use it, since it's intrinsically a valid link
+            if using_text_node and link_only and not taxon.startswith(page_title):
                 return None
 
             # Ignore it if it contains 2 uppercase letters in a row, e.g. "AZ"

@@ -19,7 +19,7 @@ dependencies = [
     "pillow==10.3.0",
     "pydal>=20240601.1",
     "cryptography>=42.0",
-    "mwparserfromhell>=0.6.5",
+    "mwparserfromhell>=0.6.6",
 ]
 
 [project.optional-dependencies]

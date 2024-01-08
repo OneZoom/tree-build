@@ -26,10 +26,12 @@ from oz_tree_build.wiki_extraction.wiki_clade_node import WikiCladeNode
 from oz_tree_build.wiki_extraction.wiki_taxonomy_node import WikiTaxonomyNode
 
 
-def process_node(node, taxon_to_page_mapping):
+def process_node(node, taxon_to_page_mapping) -> dendropy.Node:
     tree_node = dendropy.Node()
     tree_node.taxon = dendropy.Taxon(label=node.taxon)
-    for child in node.enumerate_children(taxon_to_page_mapping):
+    for child in node.enumerate_children():
+        if taxon_to_page_mapping and child.taxon_page_title:
+            taxon_to_page_mapping[child.taxon_page_title] = child.taxon
         tree_node.add_child(process_node(child, taxon_to_page_mapping))
     return tree_node
 
@@ -45,7 +47,7 @@ def get_taxon_tree_from_wikicode(
         )
     else:
         node = WikiTaxonomyNode.create_root_node(
-            page_title, wikicode, taxon_tree_location, taxon_to_page_mapping
+            page_title, wikicode, taxon_tree_location
         )
 
     tree = dendropy.Tree()

@@ -2,7 +2,9 @@
 https://en.wikipedia.org/wiki/Template:Clade documents the clade template design
 """
 
-from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import get_taxon_name
+from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
+    get_taxon_and_page_title,
+)
 
 
 def is_clade_template_name(name):
@@ -11,7 +13,7 @@ def is_clade_template_name(name):
 
 class WikiCladeNode:
     @classmethod
-    def create_root_node(cls, page_title, wikicode, cladogram_index):
+    def create_root_node(cls, containing_page_title, wikicode, cladogram_index):
         templates = wikicode.filter_templates(
             recursive=False, matches=lambda n: is_clade_template_name(n.name)
         )
@@ -26,14 +28,26 @@ class WikiCladeNode:
                 0
             ]
 
-        return WikiCladeNode(page_title, None, template)
+        return WikiCladeNode(containing_page_title, None, None, template)
 
-    def __init__(self, page_title, taxon, template=None, subclades=None):
+    def __init__(
+        self,
+        containing_page_title,
+        taxon,
+        taxon_page_title,
+        template=None,
+        subclades=None,
+    ):
+        self.containing_page_title = containing_page_title
         self.taxon = taxon
+        self.taxon_page_title = taxon_page_title
+        self.template = template
 
         # Get the subclades if not passed in, which happens at the root node
+        # See https://en.wikipedia.org/wiki/Template:Clade#Using_subtrees
         if template and not subclades:
             subclades = {}
+            # Look for targets, e.g. |targetA=, |targetB=, ...
             for i in range(65, 91):
                 if template.has_param(f"target{chr(i)}"):
                     subclade_token_name = str(
@@ -45,11 +59,9 @@ class WikiCladeNode:
                 else:
                     break
 
-        self.page_title = page_title
-        self.template = template
         self.subclades = subclades
 
-    def enumerate_children(self, taxon_to_page_mapping):
+    def enumerate_children(self):
         if not self.template:
             return
 
@@ -70,32 +82,32 @@ class WikiCladeNode:
             )
             child_is_leaf = len(sub_templates) == 0
 
-            taxon = ""
+            taxon = taxon_page_title = ""
 
             # If there is a label parameter, use that
             if self.template.has_param(f"label{param_name}"):
-                taxon = (
-                    get_taxon_name(
-                        self.template.get(f"label{param_name}").value,
-                        link_only=child_is_leaf,
-                        taxon_to_page_mapping=taxon_to_page_mapping,
-                    )
-                    or ""
+                taxon, taxon_page_title = get_taxon_and_page_title(
+                    self.template.get(f"label{param_name}").value,
+                    link_only=child_is_leaf,
                 )
 
             if child_is_leaf:
                 # Leaf node case (no sub-template)
-                taxon = taxon or get_taxon_name(
-                    sub,
-                    link_only=True,
-                    page_title=self.page_title,
-                    taxon_to_page_mapping=taxon_to_page_mapping,
-                )
+                if not taxon:
+                    taxon, taxon_page_title = get_taxon_and_page_title(
+                        sub,
+                        link_only=True,
+                        containing_page_title=self.containing_page_title,
+                    )
                 if not taxon:
                     continue
-                yield WikiCladeNode(self.page_title, taxon)
+                yield WikiCladeNode(self.containing_page_title, taxon, taxon_page_title)
             else:
                 assert len(sub_templates) == 1, "Only one sub-template allowed"
                 yield WikiCladeNode(
-                    self.page_title, taxon, sub_templates[0], self.subclades
+                    self.containing_page_title,
+                    taxon,
+                    taxon_page_title,
+                    sub_templates[0],
+                    self.subclades,
                 )

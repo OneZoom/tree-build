@@ -108,29 +108,26 @@ def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     return taxon
 
 
-def get_taxon_name(
+def get_taxon_and_page_title(
     wikicode,
     start_index=0,
     link_only=False,
     break_on_colon_or_star=False,  # Only true for taxonomy trees with bullet lists
     allow_shortened_binomial=False,  # True to allow shortened binomial names, e.g. "P. Leo"
-    page_title=None,
-    taxon_to_page_mapping=None,
+    containing_page_title=None,  # Title of the page containing the wikicode
 ):
     for node in wikicode.nodes[start_index:]:
-        add_taxon_to_page_mapping = False
+        taxon_page_title = None
         using_text_node = False
         if isinstance(
             node, mwparserfromhell.nodes.Wikilink
         ) and not node.title.startswith("File:"):
             if node.text:
-                # If the link has a display string, use that, but also save the page name
-                # if it's different from the taxon name
+                # If the link has a display string, use that
                 taxon = str(node.text)
-                if node.text != node.title and taxon_to_page_mapping is not None:
-                    add_taxon_to_page_mapping = True
             else:
                 taxon = str(node.title)
+            taxon_page_title = str(node.title)
         elif isinstance(node, mwparserfromhell.nodes.Text):
             using_text_node = True
             taxon = node.value
@@ -149,20 +146,32 @@ def get_taxon_name(
             # Ignore text nodes if we're only looking for links. However, if the text
             # is the same as the page title (ar at least starts with it),
             # we'll use it, since it's intrinsically a valid link
-            if using_text_node and link_only and not taxon.startswith(page_title):
-                return None
+            if (
+                using_text_node
+                and link_only
+                and not taxon.startswith(containing_page_title)
+            ):
+                return None, None
 
             # Ignore it if it contains 2 uppercase letters in a row, e.g. "AZ"
             # This is a hack to skip non-species things like "SAM-PK-K8516 (from Cistecephalus AZ)"
             if re.search("[_A-Z]{2}", taxon):
-                return None
+                return None, None
 
-            if add_taxon_to_page_mapping:
-                taxon_to_page_mapping[taxon] = str(node.title)
+            return taxon, taxon_page_title
 
-            return taxon
+    return None, None
 
-    return None
+
+def get_taxon_name(
+    wikicode,
+    allow_shortened_binomial=False,  # True to allow shortened binomial names, e.g. "P. Leo"
+):
+    taxon, _ = get_taxon_and_page_title(
+        wikicode,
+        allow_shortened_binomial=allow_shortened_binomial,
+    )
+    return taxon
 
 
 # Look for a display string in a wikicode

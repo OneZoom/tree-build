@@ -14,35 +14,28 @@ from oz_tree_build.wiki_extraction.wiki_taxon_page_data import (
 )
 
 
-taxon_to_page_mapping = {}
-
-
-def get_taxon_data_from_wikipedia(taxon, is_leaf):
-    logging.info(f"Processing taxon '{taxon}'")
-
-    # If we have a mapping from taxon to page title, use that. This is
-    # the case where the link display didn't match the link target
-    if taxon in taxon_to_page_mapping:
-        page_title = taxon_to_page_mapping[taxon]
-    else:
-        page_title = taxon
-
-    return get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf)
-
-
 nodes_data = {}
 
 
-def get_taxon_data_from_wikipedia_with_caching(taxon, is_leaf):
+def get_taxon_data_from_wikipedia_with_caching(taxon, page_title, is_leaf):
     if taxon in nodes_data:
         logging.info(f"Found cached data for {taxon}: '{nodes_data[taxon]}'")
         return nodes_data[taxon]
 
-    nodes_data[taxon] = get_taxon_data_from_wikipedia(taxon, is_leaf)
+    nodes_data[taxon] = get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf)
 
     logging.info(f"{taxon}: '{nodes_data[taxon]}'")
 
     return nodes_data[taxon]
+
+
+# If the node has a comment, use that as the page title instead of the taxon
+# This is the case where the link display didn't match the link target
+def get_wiki_page_title(taxon, node):
+    if len(node.comments) > 0:
+        return node.comments[0]
+
+    return taxon
 
 
 def process_leaf_node_and_get_extinction_date(node):
@@ -53,7 +46,10 @@ def process_leaf_node_and_get_extinction_date(node):
         return 0
 
     taxon = node.taxon.label
-    node_data = get_taxon_data_from_wikipedia_with_caching(taxon, is_leaf=True)
+
+    node_data = get_taxon_data_from_wikipedia_with_caching(
+        taxon, get_wiki_page_title(taxon, node), is_leaf=True
+    )
 
     extinction_date = 0
     if node_data:
@@ -93,7 +89,9 @@ def process_interior_node_recursive_and_get_range(node):
     # If we have a taxon name, get data from Wikipedia
     node_data = None
     if taxon:
-        node_data = get_taxon_data_from_wikipedia_with_caching(taxon, node.is_leaf())
+        node_data = get_taxon_data_from_wikipedia_with_caching(
+            taxon, get_wiki_page_title(taxon, node), node.is_leaf()
+        )
 
     if not node_data:
         node_data = {}
@@ -142,10 +140,6 @@ def main():
     tree = dendropy.Tree.get(
         file=args.treefile, schema="newick", suppress_internal_node_taxa=False
     )
-
-    # Read the mapping from taxon to page title from the tree comments
-    if tree.comments:
-        taxon_to_page_mapping.update(json.loads(tree.comments[0]))
 
     # The taxon data cache file has the same name with a .json extension
     cache_filename = args.treefile.name + ".taxondatacache.json"

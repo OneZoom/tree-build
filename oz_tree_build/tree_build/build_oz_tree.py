@@ -19,12 +19,13 @@ __author__ = "David Ebbo"
 
 
 def trim_tree(tree, strip_semicolon=True):
-    # Skip the comment block at the start of the file, if any
-    if "[" in tree:
-        tree = tree[tree.index("]") + 1 :]
-
     # Trim any whitespace
     tree = tree.strip()
+
+    # Skip the comment block at the start of the file, if any
+    if tree[0] == "[":
+        tree = tree[tree.index("]") + 1 :]
+        tree = tree.lstrip()
 
     # Strip the trailing semicolon
     if strip_semicolon and tree[-1] == ";":

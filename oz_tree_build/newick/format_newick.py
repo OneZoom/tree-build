@@ -27,7 +27,7 @@ from oz_tree_build.tree_build.build_oz_tree import trim_tree
 __author__ = "David Ebbo"
 
 # Token may be quoted or not
-whole_token_regex = re.compile("'[^']*'|[^(),;]+")
+whole_token_regex = re.compile("'[^']*'|[^(),;[]+")
 
 
 def format_nwk(newick_tree, output_stream, indent_spaces=2):
@@ -62,6 +62,13 @@ def format_nwk(newick_tree, output_stream, indent_spaces=2):
             if not closed_brace:
                 output_stream.write(indent_string * depth)
             output_stream.write(match_full_name.group())
+
+            # If the token is followed by a comment, write it out
+            # Note that we only support comments at the end of a token
+            if newick_tree[index] == "[":
+                end_comment_index = newick_tree.index("]", index)
+                output_stream.write(newick_tree[index : end_comment_index + 1])
+                index = end_comment_index + 1
 
         # If we've reached a comma, write it out and start a new line
         if newick_tree[index] == ",":

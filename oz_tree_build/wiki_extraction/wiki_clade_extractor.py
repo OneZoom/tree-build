@@ -26,18 +26,20 @@ from oz_tree_build.wiki_extraction.wiki_clade_node import WikiCladeNode
 from oz_tree_build.wiki_extraction.wiki_taxonomy_node import WikiTaxonomyNode
 
 
-def process_node(node, taxon_to_page_mapping) -> dendropy.Node:
+def process_node(node) -> dendropy.Node:
     tree_node = dendropy.Node()
     tree_node.taxon = dendropy.Taxon(label=node.taxon)
     for child in node.enumerate_children():
-        if taxon_to_page_mapping and child.taxon_page_title:
-            taxon_to_page_mapping[child.taxon_page_title] = child.taxon
-        tree_node.add_child(process_node(child, taxon_to_page_mapping))
+        tree_node.add_child(process_node(child))
+
+    # Add the page title as a comment if it's different from the taxon
+    if node.taxon_page_title and node.taxon_page_title != node.taxon:
+        tree_node.comments.append(node.taxon_page_title)
     return tree_node
 
 
 def get_taxon_tree_from_wikicode(
-    page_title, wikicode, taxon_tree_location, taxon_to_page_mapping=None
+    page_title, wikicode, taxon_tree_location
 ) -> dendropy.Tree:
     # If location string is a number, it's a cladogram index
     # If it's a string, it's the wiki header that precedes a taxonomy tree (bullet list)
@@ -51,17 +53,13 @@ def get_taxon_tree_from_wikicode(
         )
 
     tree = dendropy.Tree()
-    tree.seed_node = process_node(node, taxon_to_page_mapping)
+    tree.seed_node = process_node(node)
     return tree
 
 
-def get_taxon_tree_from_wiki_page(
-    wiki_title, taxon_tree_location, taxon_to_page_mapping
-) -> dendropy.Tree:
+def get_taxon_tree_from_wiki_page(wiki_title, taxon_tree_location) -> dendropy.Tree:
     wikicode = get_wikicode_for_page(wiki_title)
-    return get_taxon_tree_from_wikicode(
-        wiki_title, wikicode, taxon_tree_location, taxon_to_page_mapping
-    )
+    return get_taxon_tree_from_wikicode(wiki_title, wikicode, taxon_tree_location)
 
 
 def main():

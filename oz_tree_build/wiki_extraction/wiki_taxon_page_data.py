@@ -62,13 +62,20 @@ def get_date_range_from_taxobox(taxobox):
         from_date = get_range_date(range_string, use_start=True)
         to_date = get_range_date(range_string, use_start=False)
     else:
+        # If the first param is "earliest", we skip it.
+        # e.g. Stegosauria has {{fossilrange|earliest=174|169|100|latest=66}}
+        param_index = 0
+        if fossil_range_template.params[0].name == "earliest":
+            param_index = 1
         from_date = get_range_date(
-            fossil_range_template.params[0].value, use_start=True
+            fossil_range_template.params[param_index].value, use_start=True
         )
         # If there is no end date, we fall back to the start date
         to_date = (
-            get_range_date(fossil_range_template.params[1].value, use_start=False)
-            if len(fossil_range_template.params) >= 2
+            get_range_date(
+                fossil_range_template.params[param_index + 1].value, use_start=False
+            )
+            if len(fossil_range_template.params) >= param_index + 2
             else from_date
         )
 

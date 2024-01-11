@@ -116,7 +116,8 @@ def get_taxon_and_page_title(
     allow_shortened_binomial=False,  # True to allow shortened binomial names, e.g. "P. Leo"
     containing_page_title=None,  # Title of the page containing the wikicode
 ):
-    for node in wikicode.nodes[start_index:]:
+    for index, node in enumerate(wikicode.nodes[start_index:]):
+        # Use the index variable here
         taxon_page_title = None
         using_text_node = False
         if isinstance(
@@ -128,6 +129,16 @@ def get_taxon_and_page_title(
             else:
                 taxon = str(node.title)
             taxon_page_title = str(node.title)
+
+            # If it's not already binomial, and the next node is text,
+            # try to include that in the taxon name. This covers cases like
+            # ''[[Mosasaurus]] hoffmannii'' (from https://en.wikipedia.org/wiki/Mosasaurinae)
+            if not " " in taxon and index + 1 < len(wikicode.nodes):
+                node = wikicode.nodes[index + 1]
+                if isinstance(node, mwparserfromhell.nodes.Text):
+                    taxon2 = validate_clean_taxon(node.value)
+                    if taxon2:
+                        taxon = taxon + " " + taxon2
         elif isinstance(node, mwparserfromhell.nodes.Text):
             using_text_node = True
             taxon = node.value
@@ -144,12 +155,15 @@ def get_taxon_and_page_title(
 
         if taxon:
             # Ignore text nodes if we're only looking for links. However, if the text
-            # is the same as the page title (ar at least starts with it),
+            # is the same as the page title (or at least starts with it),
             # we'll use it, since it's intrinsically a valid link
             if (
                 using_text_node
                 and link_only
-                and not taxon.startswith(containing_page_title)
+                and (
+                    not containing_page_title
+                    or not taxon.startswith(containing_page_title)
+                )
             ):
                 return None, None
 

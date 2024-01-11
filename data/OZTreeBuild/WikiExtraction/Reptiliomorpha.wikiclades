@@ -1,0 +1,61 @@
+Reptiliomorpha FROM Amniota@2
+    Seymouriamorpha FROM Seymouriamorpha@2
+    Captorhinidae FROM Captorhinidae@2
+    # Add Synapsida here
+    # Sauropsida
+        Lanthanosuchoidea=>Acleistorhinidae FROM Lanthanosuchoidea@2 # They seem mostly the same?
+        Millerettidae FROM Millerettidae@1
+        Mesosauridae->Mesosauria FROM Stereosternum@1
+        Procolophonia FROM Procolophonia@1
+            Pareiasauria FROM Pareiasauria@1
+            Procolophonidae FROM Procolophonidae@1
+        Younginiformes FROM Younginiformes@1
+        # Sauria
+            #Lepidosauria
+                Rhynchocephalia->Lepidosauria FROM Rhynchocephalia@1
+                #Squamata. TODO: we need to get a Squamata node here! And probably missing lots of good stuff under here
+                    Mosasaurinae->Lepidosauria FROM Mosasaurinae@1
+                    Scincogekkonomorpha->Lepidosauria FROM Liushusaurus@1
+                    Ophidia->Lepidosauria FROM Ophidia@2
+            Drepanosauridae->Drepanosauromorpha FROM Drepanosaur@1
+            # Archelosauria
+                # TODO: uncomment once Pan-testudines is kicked out of cache
+                #Pantestudines FROM Pantestudines@1
+                Thalattosauria FROM Thalattosauria@1
+                Hupehsuchia FROM Hupehsuchia@1
+                Ichthyopterygia->Ichthyosauriformes FROM Ichthyopterygia@1
+                Sauropterygia FROM Sauropterygia@1
+                Tanystropheidae FROM Tanystropheidae@1
+                Prolacertidae FROM Prolacertidae@1
+                Allokotosauria FROM Allokotosauria@2
+                Rhynchosauria FROM Rhynchosauria@1
+                Archosauriformes FROM Archosauriformes@2
+                    Proterosuchidae FROM Proterosuchidae@1
+                    Erythrosuchidae FROM Erythrosuchidae@2
+                    Proterochampsia FROM Proterochampsia@2
+                    Pseudosuchia FROM Pseudosuchia@1
+                        Ornithosuchidae FROM Dynamosuchus@1
+                        Aetosauria FROM Aetosaur@2
+                        Poposauroidea FROM Poposauroidea@1
+                        Crocodylomorpha FROM Crocodylomorpha@1
+                            # TODO: Deal with Protosuchia, which looks paraphyletic
+                            Notosuchia FROM Notosuchia@1
+                            Neosuchia FROM Neosuchia@2
+                    Avemetatarsalia FROM Avemetatarsalia@2
+                        Aphanosauria FROM Aphanosauria@1
+                        Lagerpetidae FROM Lagerpetidae@1
+                        Pterosauria FROM Pterosaur@1
+                            Eopterosauria FROM Eopterosauria@1
+                            Rhamphorhynchidae FROM Rhamphorhynchidae@1
+                            Darwinoptera FROM Kunpengopterus@1
+                            Anurognathidae FROM Anurognathus@1
+                            Germanodactylidae FROM Germanodactylidae@1
+                            Ctenochasmatoidea FROM Ctenochasmatoidea@2
+                            Azhdarchoidea FROM Azhdarchoidea@3
+                            Pteranodontoidea-Ornithocheiridae-Cearadactylus-Ludodactylus-Guidraco FROM Ornithocheiromorpha@1 # Removed things come from Anhangueridae below
+                                Pteranodontia FROM Pteranodontia@3
+                                Istiodactylidae FROM Istiodactylidae@1
+                                Boreopteridae FROM Boreopteridae@2
+                                Anhangueridae FROM Anhangueridae@3
+                        Silesauridae FROM Silesauridae@1
+                        # Add Dinosauria here

@@ -2,6 +2,7 @@
 https://en.wikipedia.org/wiki/Template:Clade documents the clade template design
 """
 
+import logging
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
     get_taxon_and_page_title,
 )
@@ -17,6 +18,19 @@ class WikiCladeNode:
         templates = wikicode.filter_templates(
             recursive=False, matches=lambda n: is_clade_template_name(n.name)
         )
+
+        # We may not find it with recursive=False, e.g. if it's nested in a <div></div>
+        # Passing recursive=True is probamatic, as it will find all nested clade templates,
+        # so we can only do this if we're looking for the very first cladogram
+        # TODO: solve the general case
+        if len(templates) == 0 and cladogram_index == 1:
+            templates = wikicode.filter_templates(
+                recursive=True, matches=lambda n: is_clade_template_name(n.name)
+            )
+            if len(templates) > 0:
+                logging.warning(
+                    f"Found cladogram with recursive=True, but it was nested"
+                )
 
         # We subtract one since the argument is 1-based
         template = templates[cladogram_index - 1]

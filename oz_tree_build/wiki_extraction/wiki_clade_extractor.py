@@ -15,6 +15,7 @@ The output is a Newick tree, which is printed to stdout.
 """
 
 import argparse
+import logging
 import dendropy
 from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
@@ -26,11 +27,21 @@ from oz_tree_build.wiki_extraction.wiki_clade_node import WikiCladeNode
 from oz_tree_build.wiki_extraction.wiki_taxonomy_node import WikiTaxonomyNode
 
 
-def process_node(node) -> dendropy.Node:
+def process_node(node, taxon_set) -> dendropy.Node:
     tree_node = dendropy.Node()
-    tree_node.taxon = dendropy.Taxon(label=node.taxon)
+    if node.taxon:
+        if node.taxon not in taxon_set:
+            tree_node.taxon = dendropy.Taxon(label=node.taxon)
+            taxon_set.add(node.taxon)
+        else:
+            # In rare cases, the same taxon appears twice in the same tree.
+            # e.g. this occurs in the Amniota tree, which has both 'Amniota (total group)'
+            # and 'Amniota (crown group)'. To avoid issues, we just ignore the second instance.
+            logging.warning(
+                f"Ignoring taxon {node.taxon}, as it already exists in the same tree"
+            )
     for child in node.enumerate_children():
-        tree_node.add_child(process_node(child))
+        tree_node.add_child(process_node(child, taxon_set))
 
     # Add the page title as a comment if it's different from the taxon
     if node.taxon_page_title and node.taxon_page_title != node.taxon:
@@ -53,7 +64,8 @@ def get_taxon_tree_from_wikicode(
         )
 
     tree = dendropy.Tree()
-    tree.seed_node = process_node(node)
+    taxon_set = set()
+    tree.seed_node = process_node(node, taxon_set)
     return tree
 
 

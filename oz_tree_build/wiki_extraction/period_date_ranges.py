@@ -6,8 +6,21 @@ Ranges come from https://en.wikipedia.org/wiki/Geologic_time_scale
 import logging
 
 PERIOD_LOOKUP = {
+    "carboniferous": [358.9, 298.9],  # Period
+    "early carboniferous": [358.9, 330.9],  # subperiod (==Mississippian)
+    "mississippian": [358.9, 323.2],  # subperiod (==Early Carboniferous)
+    "tournaisian": [358.9, 346.7],
+    "viséan": [346.7, 330.9],
+    "serpukhovian": [330.9, 323.2],
+    "late carboniferous": [323.2, 298.9],  # subperiod (==Pennsylvanian)
+    "pennsylvanian": [323.2, 298.9],  # subperiod (==Late Carboniferous)
+    "bashkirian": [323.2, 315.2],
+    "moscovian": [315.2, 307],
+    "kasimovian": [307, 303.7],
+    "gzhelian": [303.7, 298.9],
     "permian": [298.9, 251.9],  # Period
-    "early permian": [298.9, 273.01],  # subperiod (Cisuralian)
+    "early permian": [298.9, 273.01],  # subperiod (==Cisuralian)
+    "cisuralian": [298.9, 273.01],  # subperiod (==Early Permian)
     "asselian": [298.9, 293.52],
     "sakmarian": [293.52, 290.1],
     "artinskian": [290.1, 283.5],

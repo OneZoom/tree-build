@@ -50,7 +50,8 @@ def get_date_range_from_taxobox(taxobox):
     range = taxobox.get("fossil_range").value
     # Template name can randomly be be "fossil range" or "geological range", with or without space/underscores
     fossil_range_template = get_wikicode_template(
-        range, ("fossilrange", "geologicalrange")
+        range,
+        ("fossilrange", "geologicalrange", "geologicalrange/linked", "geologicalage"),
     )
 
     if not fossil_range_template:
@@ -112,6 +113,11 @@ def get_species_from_taxobox(taxon, taxobox):
         logging.warning(
             f"For {taxon}, found '{species_name}' in taxobox, but it's not binomial"
         )
+        return None
+
+    # Ignore some bogus values that can appear (e.g. see https://en.wikipedia.org/wiki/Protosuchia)
+    if species_name == "See text":
+        logging.warning(f"Ignoring bogus species name '{species_name}' for {taxon}")
         return None
 
     return species_name

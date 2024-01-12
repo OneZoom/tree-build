@@ -25,11 +25,13 @@ PERIOD_LOOKUP = {
     "sakmarian": [293.52, 290.1],
     "artinskian": [290.1, 283.5],
     "kungurian": [283.5, 273.01],
-    "middle permian": [273.01, 259.51],  # subperiod (Guadalupian)
+    "middle permian": [273.01, 259.51],  # subperiod (==Guadalupian)
+    "guadalupian": [273.01, 259.51],  # subperiod (==Middle Permian)
     "roadian": [273.01, 266.9],
     "wordian": [266.9, 264.28],
     "capitanian": [264.28, 259.51],
-    "late permian": [259.51, 251.9],  # subperiod (Lopingian)
+    "late permian": [259.51, 251.9],  # subperiod (==Lopingian)
+    "lopingian": [259.51, 251.9],  # subperiod (==Late Permian)
     "wuchiapingian": [259.51, 254.14],
     "changhsingian": [254.14, 251.9],
     "triassic": [251.9, 201.4],  # Period
@@ -107,6 +109,7 @@ PERIOD_LOOKUP = {
     "late pleistocene": [0.129, 0.0117],
     "holocene": [0.0117, 0],
     "recent": [0, 0],
+    "present": [0, 0],
 }
 
 

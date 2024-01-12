@@ -51,6 +51,13 @@ def process_leaf_node_and_get_extinction_date(node):
         taxon, get_wiki_page_title(taxon, node), is_leaf=True
     )
 
+    # If we couldn't get any data (missing page or no taxobox), delete the node,
+    # since we won't be able to show anything interesting for it
+    if node_data is None:
+        logging.warning(f"Ignoring leaf node with no data: {taxon}")
+        node.parent_node.remove_child(node)
+        return None
+
     extinction_date = 0
     if node_data:
         if "to_date" in node_data:
@@ -119,6 +126,8 @@ def process_interior_node_recursive_and_get_range(node):
 def process_node_recursive_and_get_range(node):
     if node.is_leaf():
         extinction_date = process_leaf_node_and_get_extinction_date(node)
+        if extinction_date is None:
+            return None
 
         # For a leaf, set the end date to the start date, since that's what we'll
         # want to use for the calculation of the edge length to its parent
@@ -156,7 +165,7 @@ def main():
 
     # Save the taxon data cache file
     with open(cache_filename, "w") as f:
-        json.dump(nodes_data, f)
+        json.dump(nodes_data, f, sort_keys=True, indent=2)
 
 
 if __name__ == "__main__":

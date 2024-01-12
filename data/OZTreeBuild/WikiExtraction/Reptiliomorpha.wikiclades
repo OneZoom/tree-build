@@ -1,7 +1,7 @@
 Reptiliomorpha FROM Amniota@2
     Seymouriamorpha FROM Seymouriamorpha@2
     Captorhinidae FROM Captorhinidae@2
-    # Add Synapsida here
+    Synapsida FROM Synapsida.wikiclades # Import the whole Synapsida tree
     # Sauropsida
         Lanthanosuchoidea=>Acleistorhinidae FROM Lanthanosuchoidea@2 # They seem mostly the same?
         Millerettidae FROM Millerettidae@1
@@ -58,4 +58,4 @@ Reptiliomorpha FROM Amniota@2
                                 Boreopteridae FROM Boreopteridae@2
                                 Anhangueridae FROM Anhangueridae@3
                         Silesauridae FROM Silesauridae@1
-                        # Add Dinosauria here
+                        Dinosauria FROM Dinosauria.wikiclades # Import the whole Dinosauria tree

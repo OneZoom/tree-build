@@ -48,8 +48,8 @@ def process_file(
     filename,
     use_line_number_as_edge_length,
     extraction_cache_folder,
+    main_tree=None,
 ):
-    main_tree = None
     for line_number, line in enumerate(open(filename)):
         # Ignore # comments
         if "#" in line:
@@ -73,6 +73,19 @@ def process_file(
         assert tokens[1] == "FROM"
 
         source = tokens[2]
+
+        # If the source is a .wikiclades file, recursively process it
+        if source.endswith(".wikiclades"):
+            # Make the file name relative to the current .wikiclades file
+            source = os.path.join(os.path.dirname(filename), source)
+            process_file(
+                source,
+                use_line_number_as_edge_length,
+                extraction_cache_folder,
+                main_tree,
+            )
+            continue
+
         page_name, location = source.split("@")
 
         logging.info(f"Processing wiki page '{source}'")

@@ -103,15 +103,17 @@ def process_interior_node_recursive_and_get_range(node):
     if not node_data:
         node_data = {}
 
-    if node_data and "from_date" in node_data and node_data["from_date"]:
+    if "from_date" in node_data and node_data["from_date"]:
         date_range = [node_data["from_date"], node_data["to_date"]]
         if oldest_child_from_date > date_range[0]:
             logging.warning(
                 f"Node '{taxon}' has from_date {node_data['from_date']}, but its child {child_with_oldest_from_date.taxon} has from_date {oldest_child_from_date}"
             )
-            date_range[0] = oldest_child_from_date
+            date_range[0] = round(oldest_child_from_date + 0.001, 10)
     else:
-        date_range = [oldest_child_from_date, 0]
+        # If we don't have a range for this node, use the oldest child's date,
+        # plus a small amount (1000y) to avoid making it look like a polytomy
+        date_range = [round(oldest_child_from_date + 0.001, 10), 0]
 
     # Set the edge length for all the children
     for child in node.child_nodes():

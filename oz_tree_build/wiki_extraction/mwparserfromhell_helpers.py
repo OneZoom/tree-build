@@ -137,7 +137,8 @@ def get_taxon_and_page_title(
                 node = wikicode.nodes[index + 1]
                 if isinstance(node, mwparserfromhell.nodes.Text):
                     taxon2 = validate_clean_taxon(node.value)
-                    if taxon2:
+                    # Ignore the extra part of it contains a '(', as in |2=[[Serpentes]] (modern snakes)
+                    if taxon2 and not "(" in node.value:
                         taxon = taxon + " " + taxon2
         elif isinstance(node, mwparserfromhell.nodes.Text):
             using_text_node = True

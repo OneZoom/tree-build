@@ -7,7 +7,6 @@ information is returned as a dictionary.
 
 
 import logging
-import mwparserfromhell
 
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
     get_display_string_from_wikicode,
@@ -125,19 +124,40 @@ def get_species_from_taxobox(taxon, taxobox):
 
 
 def get_image_from_page(wikicode, taxobox):
+    image_name = None
+
     # First, check if we can find a paleoart image anywhere in the page
     # "Life restoration" or "Life reconstruction" are common titles for those
     paleoart_links = wikicode.filter_wikilinks(
         matches=lambda l: "Life re" in str(l.text)
     )
     if len(paleoart_links) > 0:
-        return str(paleoart_links[0].title)
+        image_name = str(paleoart_links[0].title)
+
+        # In some cases, the link is not directly to the image, but is contained
+        # in a parent template with image properties multiple image
+        # e.g. this happens for https://en.wikipedia.org/wiki/Tyrannosaurus
+        if not "." in image_name:
+            link_parent = wikicode.get_parent(paleoart_links[0])
+            # Find the first param that starts with "image". Could be "image1" or just "image"
+            image_name = None
+            for param in link_parent.params:
+                if param.name.strip().startswith("image"):
+                    image_name = str(param.value).strip()
+                    break
 
     # Otherwise, just use the taxobox image, if any
-    if taxobox.has_param("image"):
-        return "File:" + str(taxobox.get("image").value).strip()
+    if not image_name and taxobox.has_param("image"):
+        image_name = str(taxobox.get("image").value).strip()
 
-    return None
+    if image_name and not ":" in image_name:
+        image_name = "File:" + image_name
+
+    # The '<' part is to ignore an odd case of HTML for Aves
+    if not image_name or "<" in image_name:
+        return None
+
+    return image_name
 
 
 def get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf):

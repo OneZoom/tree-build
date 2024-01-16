@@ -1,5 +1,6 @@
 Reptiliomorpha FROM Amniota@2
     Seymouriamorpha FROM Seymouriamorpha@2
+    Diadectomorpha FROM Diadectidae@1
     Captorhinidae FROM Captorhinidae@2
     Synapsida FROM Synapsida.wikiclades # Import the whole Synapsida tree
     # Sauropsida
@@ -19,8 +20,7 @@ Reptiliomorpha FROM Amniota@2
                     Ophidia->Lepidosauria FROM Ophidia@2
             Drepanosauridae->Drepanosauromorpha FROM Drepanosaur@1
             # Archelosauria
-                # TODO: uncomment once Pan-testudines is kicked out of cache
-                #Pantestudines FROM Pantestudines@1
+                Pantestudines-Eosauropterygia FROM Pantestudines@1 # Eosauropterygia comes from Sauropterygia
                 Thalattosauria FROM Thalattosauria@1
                 Hupehsuchia FROM Hupehsuchia@1
                 Ichthyopterygia->Ichthyosauriformes FROM Ichthyopterygia@1

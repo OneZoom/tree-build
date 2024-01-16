@@ -19,10 +19,21 @@ nodes_data = {}
 
 def get_taxon_data_from_wikipedia_with_caching(taxon, page_title, is_leaf):
     if taxon in nodes_data:
-        logging.info(f"Found cached data for {taxon}: '{nodes_data[taxon]}'")
-        return nodes_data[taxon]
+        data = nodes_data[taxon]
+
+        # Follow the redirect, if any
+        if data and "redirect" in data:
+            data = nodes_data[data["redirect"]]
+
+        logging.info(f"Found cached data for {taxon}: '{data}'")
+        return data
 
     nodes_data[taxon] = get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf)
+
+    # If there is species name, it means that it is different from the original taxon name
+    # Add a redirect to go from the species name to the original taxon name
+    if nodes_data[taxon] and "species_name" in nodes_data[taxon]:
+        nodes_data[nodes_data[taxon]["species_name"]] = {"redirect": taxon}
 
     logging.info(f"{taxon}: '{nodes_data[taxon]}'")
 

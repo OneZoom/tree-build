@@ -7,6 +7,7 @@ information is returned as a dictionary.
 
 
 import logging
+import mwparserfromhell
 
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
     get_display_string_from_wikicode,
@@ -123,6 +124,22 @@ def get_species_from_taxobox(taxon, taxobox):
     return species_name
 
 
+def get_image_from_page(wikicode, taxobox):
+    # First, check if we can find a paleoart image anywhere in the page
+    # "Life restoration" or "Life reconstruction" are common titles for those
+    paleoart_links = wikicode.filter_wikilinks(
+        matches=lambda l: "Life re" in str(l.text)
+    )
+    if len(paleoart_links) > 0:
+        return str(paleoart_links[0].title)
+
+    # Otherwise, just use the taxobox image, if any
+    if taxobox.has_param("image"):
+        return "File:" + str(taxobox.get("image").value).strip()
+
+    return None
+
+
 def get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf):
     logging.info(f"Processing taxon '{taxon}'")
 
@@ -160,5 +177,9 @@ def get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf):
                 node_data["species_name"] = species_name
             else:
                 logging.warning(f"Could not find binomial species name for {taxon}")
+
+        image = get_image_from_page(wikicode, taxobox)
+        if image:
+            node_data["image"] = image
 
     return node_data

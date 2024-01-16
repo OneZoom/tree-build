@@ -5,6 +5,7 @@ Synapsida FROM Synapsid@2
         Anomodontia FROM Anomodont@2 
             Dicynodontia FROM Eodicynodon@2  # But Therochelonia has a completely different tree!
                 Kannemeyeriiformes FROM Kannemeyeriiformes@1
+                    Stahleckeriidae FROM Stahleckeriidae@1
                 #Lystrosauridae is here, but there are is phylogeny on the page
         Gorgonopsia FROM Gorgonopsia@1
         Therocephalia FROM Therocephalia@2

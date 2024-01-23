@@ -24,7 +24,7 @@ def get_range_date(fossilrange_value, use_start):
     else:
         periodstart_template = get_wikicode_template(fossilrange_value, ("periodstart"))
         if not periodstart_template:
-            date = str(fossilrange_value)
+            date = str(fossilrange_value).strip()
         else:
             date = str(periodstart_template.params[0].value)
 

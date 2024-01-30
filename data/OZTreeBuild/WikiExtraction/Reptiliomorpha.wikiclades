@@ -13,7 +13,7 @@ Reptiliomorpha FROM Amniota@2
         Younginiformes FROM Younginiformes@1
         # Sauria
             #Lepidosauria
-                Rhynchocephalia->Lepidosauria FROM Rhynchocephalia@1
+                Rhynchocephalia->Lepidosauromorpha FROM Rhynchocephalia@1
                 #Squamata. TODO: we need to get a Squamata node here! And probably missing lots of good stuff under here
                     Mosasaurinae->Lepidosauria FROM Mosasaurinae@1
                     Scincogekkonomorpha->Lepidosauria FROM Liushusaurus@1

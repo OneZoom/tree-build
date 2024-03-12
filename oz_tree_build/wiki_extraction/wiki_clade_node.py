@@ -32,6 +32,12 @@ class WikiCladeNode:
                     f"Found cladogram with recursive=True, but it was nested"
                 )
 
+        # If that index is out of range, raise an error
+        if cladogram_index > len(templates):
+            raise ValueError(
+                f"Cladogram index {cladogram_index} out of range for page {containing_page_title}: only {len(templates)} found"
+            )
+
         # We subtract one since the argument is 1-based
         template = templates[cladogram_index - 1]
 

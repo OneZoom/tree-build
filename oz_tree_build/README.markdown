@@ -90,6 +90,8 @@ If you already have your own newick tree with open tree ids on it already, and d
 	(cd data && generate_filtered_files OZTreeBuild/AllLife/AllLife_full_tree.phy OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv EOL/provider_ids.csv.gz Wiki/wd_JSON/latest-all.json.bz2 Wiki/wp_SQL/enwiki-latest-page.sql.gz Wiki/wp_pagecounts/pageviews*.bz2)
 	```
 
+	Alternatively, if you downloaded the preprocessed pageviews file (per [instructions](../data/Wiki/README.markdown)), you should omit the last argument (`Wiki/wp_pagecounts/pageviews*.bz2`) from this `generate_filtered_files` command.
+
 1. (11 mins) On the basis of the `${OZ_TREE}_full_tree.phy` file, look for ID mappings between different datasets, calculate popularity measures via wikidata/pedia, refine the tree (remove subspecies, randomly break polytomies, remove unifurcations etc), and then create corresponding database tables together with `ordered_tree_XXXXX.nwk`, `ordered_tree_XXXXX.poly` (same file but with polytomies marked with curly braces), and `ordered_dates_XXXXX.js` files (where XXXXX is the version number, usually a timestamp).
 
     Additional flags can be given to override the OpenTree taxonomy in specific cases (using `--extra_source_file`), and to exclude certain taxa (e.g. dinosaurs) from the popularity calculations.

@@ -10,13 +10,11 @@ versions on external storage)
 multiple files such as `wp_pagecounts/pageviews-202403-user.bz2` etc... 
 (download from <https://dumps.wikimedia.org/other/pageview_complete/monthly/>).
 
-For `wp_pagecounts`, as a much faster alternative, you can download preprocessed pageviews files from a [release](https://github.com/OneZoom/tree-build/releases). e.g.
+For `wp_pagecounts`, as a much faster alternative, you can download preprocessed pageviews files from a [release](https://github.com/OneZoom/tree-build/releases).
 
+You can download the gz file and unpack it in one command. e.g. from `data/Wiki/wp_pagecounts`, run:
 ```bash
-cd data/Wiki/wp_pagecounts
-wget https://github.com/OneZoom/tree-build/releases/download/pageviews-202306-202403/OneZoom_pageviews-202306-202403.tar.gz
-tar xvzf OneZoom_pageviews-202306-202403.tar.gz
-rm OneZoom_pageviews-202306-202403.tar.gz
+wget https://github.com/OneZoom/tree-build/releases/download/pageviews-202306-202403/OneZoom_pageviews-202306-202403.tar.gz -O - | tar -xz
 ```
 
 You will then omit passing pageviews files when you later run `generate_filtered_files` (see [build steps](../../oz_tree_build/README.markdown)).

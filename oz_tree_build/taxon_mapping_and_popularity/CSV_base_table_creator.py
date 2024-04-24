@@ -478,9 +478,9 @@ def resolve_polytomies_add_popularity(tree, seed):
         if not hasattr(node, "data"):
             # this is a new node - it should always have 2 children
             try:
-                n = (
-                    ancestor_pop_sum
-                ) = descendant_pop_sum = n_ancestors_sum = n_descendants_sum = 0
+                n = ancestor_pop_sum = descendant_pop_sum = n_ancestors_sum = (
+                    n_descendants_sum
+                ) = 0
                 for c in node.child_node_iter():
                     n += 1
                     ancestor_pop_sum += c.ancestors_popsum
@@ -805,7 +805,9 @@ def percolate_popularity(
             node.n_ancestors,
             node.n_descendants,
         )
-        node.data["popularity"] = pop
+
+        # Round to 2 decimal places
+        node.data["popularity"] = round(pop, 2)
 
     if popularity_file:
         write_popularity_tree(tree, output_location, popularity_file, version)

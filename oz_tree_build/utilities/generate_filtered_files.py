@@ -5,6 +5,7 @@ This code can be used in two different ways:
 """
 
 import argparse
+from collections import defaultdict
 import csv
 import json
 import logging
@@ -369,23 +370,55 @@ def generate_filtered_wikipedia_sql_dump(
                                 current_output_line_entry_count = 0
 
 
+# If it's quoted, remove the quotes and unescape it
+def unquote_if_quoted(s):
+    if s.startswith("'") and s.endswith("'") or s.startswith('"') and s.endswith('"'):
+        s = s[1:-1]
+        return bytes(s, "utf-8").decode("unicode_escape")
+    return s
+
+
 def generate_filtered_pageviews_file(pageviews_file, filtered_pageviews_file, context):
-    match_project = context.wikilang + ".z "
+    match_project = context.wikilang + ".wikipedia "
 
-    with open_file_based_on_extension(filtered_pageviews_file, "wt") as filtered_bz2_f:
-        for i, line in enumerate_lines_from_file(pageviews_file):
-            if i > 0 and i % 10000000 == 0:
-                logging.info(f"Processed {i} lines")
-            if not line.startswith(match_project):
-                continue
+    pageviews = defaultdict(int)
+    simplified_line_format = False
 
-            info = line[len(match_project) :].rstrip("\n").rsplit(" ", 1)
-            title = (
-                unquote_to_bytes(info[0]).decode("UTF-8").replace(" ", "_")
-            )  # even though most titles should not have spaces, some can sneak in via uri escaping
-            # Only include it if it's one of our wikidata ids
-            if title in context.wikidata_ids:
-                filtered_bz2_f.write(line)
+    for i, line in enumerate_lines_from_file(pageviews_file):
+        # Check if it's the simplified format based on the first line.
+        # - Simplified format:
+        #   - Looks like: Chimpanzee 78033
+        #   - We process all lines
+        #   - Only one line for a given taxon
+        # - Full format (original format from wikipedia):
+        #   - Looks like: en.wikipedia Chimpanzee 7844 mobile-web 50018 A1581B168[etc...]
+        #   - We ignore lines that don't start with en.wikipedia
+        #   - There can be multiple lines for a given taxon (e.g. mobile vs desktop views)
+        if i == 0:
+            simplified_line_format = line.count(" ") == 1
+
+        if i > 0 and i % 10000000 == 0:
+            logging.info(f"Processed {i} lines")
+
+        if not simplified_line_format and not line.startswith(match_project):
+            continue
+
+        info = line.split(" ")
+        if simplified_line_format:
+            title = info[0]
+            views = info[1]
+        else:
+            title = unquote_if_quoted(info[1])
+            views = info[4]
+
+        # Only include it if it's one of our wikidata ids
+        if title in context.wikidata_ids:
+            pageviews[title] += int(views)
+
+    # Write out the filtered pageviews in the simplified format
+    with open_file_based_on_extension(filtered_pageviews_file, "wt") as filtered_f:
+        for title, views in pageviews.items():
+            filtered_f.write(title + " " + str(views) + "\n")
 
 
 def generate_all_filtered_files(

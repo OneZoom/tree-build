@@ -231,6 +231,7 @@ class WikidataItem:
         removes spikes that crosses from the end of one month to the beginning of another
 
         Currently the function is calculated by (sqrt(pagesize * trimmed_mean_pageviews))
+        The popularity is then rounded to 2 decimal places
 
         Return True if a valid raw popularity was set
         """
@@ -239,7 +240,7 @@ class WikidataItem:
             trMeanViews = mean(
                 sorted([x for x in self.pageviews if x is not None])[:-trim_highest]
             )
-            self.raw_popularity = (self.pagesize * trMeanViews) ** 0.5
+            self.raw_popularity = round((self.pagesize * trMeanViews) ** 0.5, 2)
             return True
         except (StatisticsError, ValueError, AttributeError):
             # perhaps data is absent, a number is NA or we are trying to take a mean
@@ -709,9 +710,9 @@ def identify_best_wikidata(OTT_ptrs, lang, order_to_trust):
             except KeyError:
                 pass
         if len(choose) == 0:
-            data[
-                "wd"
-            ] = {}  # for future referencing, it is helpful to have a blank array here
+            data["wd"] = (
+                {}
+            )  # for future referencing, it is helpful to have a blank array here
         else:
             OTTs_with_wd += 1
             # Sort by presence of wikipedia link in the given lang, keeping order if tied
@@ -798,11 +799,6 @@ def add_pagesize_for_titles(wiki_title_ptrs, wikipedia_SQL_filename):
     )
 
 
-def pageviews_for_titles_single_arg(params):
-    "The same as pageviews_for_titles but will all args packed into a single param"
-    return pageviews_for_titles(*params)
-
-
 def pageviews_for_titles(
     filename,
     wiki_titles,
@@ -827,9 +823,7 @@ def pageviews_for_titles(
     Hopefully this should only affect a few taxa where the page title has odd accents that have not been either uri-escaped,
     or properly encoded in utf-8.
     """
-    wikicode = wikilang + "." + wiki_suffix
     pageviews = defaultdict(int)
-    match_project = wikicode + " "
 
     with open_file_based_on_extension(filename, "rt") as PAGECOUNTfile:
         for n, line in enumerate(PAGECOUNTfile):
@@ -838,22 +832,15 @@ def pageviews_for_titles(
                     f"read {n} lines of pageviews file "
                     f"{os.path.basename(filename)}. Mem usage {mem():.1f} Mb"
                 )
-            if not line.startswith(match_project):
-                continue
 
-            try:
-                info = line[len(match_project) :].rstrip("\n").rsplit(" ", 1)
-                title = (
-                    unquote_to_bytes(info[0]).decode("UTF-8").replace(" ", "_")
-                )  # even though most titles should not have spaces, some can sneak in via uri escaping
-                if title in wiki_titles:
-                    pageviews[title] += int(
-                        info[1]
-                    )  # sometimes there are multiple encodings of the same title, with different visit numbers
-            except ValueError as e:
-                logging.warning(
-                    f"Problem converting page view to integer for {line}: {e}"
-                )
+            info = line.split(" ")
+            title = info[0]
+            views = info[1]
+            if title in wiki_titles:
+                # We should not have duplicates in the preprocessed pageviews file
+                assert title not in pageviews
+                pageviews[title] = int(views)
+
     return pageviews
 
 

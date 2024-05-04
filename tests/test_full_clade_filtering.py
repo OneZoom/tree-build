@@ -39,7 +39,7 @@ def test_full_clade_filtering():
     args.wikipedia_totals_bz2_pageviews = [
         os.path.join(input_path, f)
         for f in os.listdir(input_path)
-        if f.startswith("Felidae_pagecounts")
+        if f.startswith("Felidae_pageviews")
     ]
     # Sort the list of pagecount files so that the order is consistent
     args.wikipedia_totals_bz2_pageviews.sort()

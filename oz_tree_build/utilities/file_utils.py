@@ -27,7 +27,7 @@ def enumerate_lines_from_file(filename):
             yield line_num, line
 
 
-def check_identical_files(expected_output_path, output_location):
+def check_identical_files(output_location, expected_output_path):
     """
     Checks that the output files are the same as the expected files
     """

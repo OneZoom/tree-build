@@ -6,6 +6,9 @@ Extract one or more subtrees from a Newick tree, including support for excluded 
 Everything is processed in a single pass over the tree string, using the newick_parser module.
 As we walk through the nodes, we process both the target taxa and the excluded taxa.
 
+It also supports including a number of ancestors for each target taxon found. This can give useful
+context around the target taxon.
+
 From the command line, run for example:
 .venv/bin/extract_trees tree.tre -t Tupaia Camelidae
 """
@@ -21,7 +24,12 @@ from .newick_parser import parse_tree
 __author__ = "David Ebbo"
 
 
-def extract_trees(newick_tree, target_taxa: Set[str], excluded_taxa: Set[str] = {}):
+def extract_trees(
+    newick_tree,
+    target_taxa: Set[str],
+    excluded_taxa: Set[str] = {},
+    included_ancestor_count=0,
+):
     # We build the subtrees and exclusion lists as we find them and process them
     subtrees = []
     excluded_ranges = []
@@ -29,11 +37,23 @@ def extract_trees(newick_tree, target_taxa: Set[str], excluded_taxa: Set[str] = 
     # Clone the taxa set so we don't modify the original
     target_taxa = set(target_taxa)
 
+    # Keep track of how many ancestors we still need to find among all the subtrees
+    # This is an optimization to avoid processing the whole tree once we've found everything
+    overall_ancestor_needed = 0
+
     for node in parse_tree(newick_tree):
         taxon = node["taxon"]
         ott = node["ott"]
         node_start_index = node["start"]
         node_end_index = node["end"]
+
+        # Of any subtree that needs ancestors, add the current taxon to it if it's an ancestor
+        if overall_ancestor_needed:
+            for subtree in subtrees:
+                if subtree["ancestors_needed"] and node_start_index < subtree["start"]:
+                    subtree["tree_string"] = "(" + subtree["tree_string"] + ")" + taxon
+                    subtree["ancestors_needed"] -= 1
+                    overall_ancestor_needed -= 1
 
         # If this taxon or ott is in the excluded list, add it to the excluded ranges
         if taxon in excluded_taxa or ott in excluded_taxa:
@@ -78,10 +98,19 @@ def extract_trees(newick_tree, target_taxa: Set[str], excluded_taxa: Set[str] = 
                     prev_range = range
             tree_string += string_to_append(prev_range[1], node_end_index)
 
-            subtrees.append({"name": taxon, "ott": ott, "tree_string": tree_string})
+            subtrees.append(
+                {
+                    "name": taxon,
+                    "ott": ott,
+                    "tree_string": tree_string,
+                    "start": node_start_index,
+                    "ancestors_needed": included_ancestor_count,
+                }
+            )
+            overall_ancestor_needed += included_ancestor_count
 
-        # If we've found all the target taxa, we're done
-        if not target_taxa:
+        # If we've found all the target taxa and ancestors, we're done
+        if not target_taxa and not overall_ancestor_needed:
             break
 
     if target_taxa:
@@ -133,6 +162,13 @@ def main():
     parser.add_argument(
         "--excluded_taxa", "-x", nargs="+", help="taxa to exclude from the result"
     )
+    parser.add_argument(
+        "--included_ancestors",
+        "-a",
+        type=int,
+        default=0,
+        help="number of included ancestors for each taxon found",
+    )
     args = parser.parse_args()
 
     target_taxa = set(args.taxa)
@@ -143,7 +179,7 @@ def main():
     # This could be optimized to read by chunks, with much more complexity.
     tree = args.treefile.read()
 
-    result = extract_trees(tree, target_taxa, excluded_taxa)
+    result = extract_trees(tree, target_taxa, excluded_taxa, args.included_ancestors)
 
     if len(result) == 1:
         # If only one result, just output the tree

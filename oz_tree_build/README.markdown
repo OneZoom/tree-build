@@ -11,7 +11,7 @@ and which can be loaded into the database and for the tree viewer) are saved in 
 
 Assuming that the environment variables OT_VERSION and OT_TAXONOMY_VERSION have already
 been set as described in the [main README file](../README.markdown), and the
-appropriate data files downloaded as described [here](../data/README.markdown),
+appropriate data files downloaded as described [here](../data/README.markdown).
 the instructions below only require the following environmental variable to be
 set up:
 
@@ -22,7 +22,13 @@ OZ_DIR=../OZtree  # the path to the OneZoom/OZtree github directory (here we ass
 
 # Preliminaries
 
-Follow [these instructions](../data/README.markdown) to download all required files.
+Follow [these instructions](../data/README.markdown) to download all required files. Note that as documented in that readme,
+you will also need to create a `draftversionXXX.tre` file containing no `mrca` strings, e.g.
+via the following in the OpenTree directory
+
+```
+perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' labelled_supertree_simplified_ottnames.tre > draftversion${OT_VERSION}.tre
+```
 
 # Building a tree
 
@@ -122,7 +128,7 @@ If you already have your own newick tree with open tree ids on it already, and d
     
 1. If you are running the tree building scripts on a different computer to the one running the web server, you will need to push the `completetree_XXXXXX.js`, `completetree_XXXXXX.js.gz`, `cut_position_map_XXXXXX.js`, `cut_position_map_XXXXXX.js.gz`, `dates_XXXXXX.js`
 , `dates_XXXXXX.js.gz` files onto your server, e.g. by pushing to your local Github repo then pulling the latest github changes to the server.
-1. (15 mins) load the CSV tables into the DB, using the SQL commands printed in step 6 (the ones that start something like `TRUNCATE TABLE ordered_leaves; LOAD DATA LOCAL INFILE ...;` `TRUNCATE TABLE ordered_nodes; LOAD DATA LOCAL INFILE ...;`). Either do so via a GUI utility, or copy the `.csv.mySQL` files to a local directory on the machine running your SQL server (e.g. using `scp -C` for compression) and run your `LOAD DATA LOCAL INFILE` commands on the mysql command line (this may require you to start the command line utility using `mysql --local-infile`, e.g.:
+1. (15 mins) load the CSV tables into the DB, using the SQL commands printed in step 6 (at the end of the `data/output_files/ordered_output.log` file: the lines that start something like `TRUNCATE TABLE ordered_leaves; LOAD DATA LOCAL INFILE ...;` `TRUNCATE TABLE ordered_nodes; LOAD DATA LOCAL INFILE ...;`). Either do so via a GUI utility, or copy the `.csv.mySQL` files to a local directory on the machine running your SQL server (e.g. using `scp -C` for compression) and run your `LOAD DATA LOCAL INFILE` commands on the mysql command line (this may require you to start the command line utility using `mysql --local-infile`, e.g.:
 
    ```
    mysql --local-infile --host db.MYSERVER.net --user onezoom --password --database onezoom_dev

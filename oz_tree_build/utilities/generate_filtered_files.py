@@ -229,8 +229,6 @@ def generate_filtered_wikidata_dump(
     # an issue.
     vernacular_json_items = []
 
-    sitelinks_key = f"{context.wikilang}wiki"
-
     with open_file_based_on_extension(
         filtered_wikipedia_dump_file, "wt"
     ) as filtered_wiki_f:

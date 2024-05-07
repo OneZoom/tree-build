@@ -6,7 +6,7 @@ The position of various basal Eukaryote groups is often debated. This tree is ba
 
 The main controversy is the placement of the Eukaryotic root. The debate tends to involve the "Excavates", now comprising Discoba, Metamonada, and Malawimonada ( https://doi.org/10.1111/jeu.12691). For example, according to this preprint: https://doi.org/10.1101/2021.04.08.438903,  Discoba) may be sister to the main two eukaryoric groups Diaphoretickes+Hemimastigophora and Amorphea+CRuMs. On the other hand, Derelle (2015, EUBAC tree) follow the "Bikont" classification places Discoba as sister to Diaphoretickes+Hemimastigophora. Until this is resolved, here we simply use the OpenTree definition of Excavata (ott2927065) and roughly following Derelle, set it as sister to Diaphoretickes+Hemimastigophora, but with a branch length of 0, so that it appears as a polytomy.
 
-((Excavata,(Diaphoretickes,Hemimastigophora))Bikonta:0,(Amorphea,CRuMs)Podiata)
+((Excavata_minus_Malawimonas,(Diaphoretickes,Hemimastigophora))Bikonta:0,(((Amorphea,CRuMs)Podiata),Malawimonadea),Ancyromonadida)
 
 Note that currently Hemimastigophora (https://doi.org/10.1038/s41586-018-0708-8) is not properly represented in OpenTree, so we need to create it by hand (genera are Hemimastix, Spironema, Paramastix and Stereonema, grouped into Hemimastigida (ott5273711))
 
@@ -21,7 +21,7 @@ The basal eukaryotic divergence is set to 2150MYA from Strassert et al (2021, ht
 
 For Archaeal paraphyly, see https://doi.org/10.1093/gbe/evu031 (Fig 2b, Fig 3) and more recently, https://doi.org/10.1146/annurev-micro-040921-050212 (fig 1e). The position of the Eukaryotes within Archaea is variable. Here I place them as sister to the Asgard group, rather than nested within it.
 
-The archaeal groups are taken from OpenTree v13.4. Based on https://doi.org/10.1146/annurev-micro-040921-050212 (fig 1e) we have 4 major groups: Asgard (ott7000000), TACK, Euryarchaeota, and DPANN, with
+The archaeal groups are taken from OpenTree v14.9. Based on https://doi.org/10.1146/annurev-micro-040921-050212 (fig 1e) we have 4 major groups: Asgard (ott7000000), TACK, Euryarchaeota, and DPANN, with
 
 (((Asgard+Eukayotes,TACK),Euryarchaeota),DPANN);
 
@@ -29,7 +29,7 @@ The archaeal groups are taken from OpenTree v13.4. Based on https://doi.org/10.1
 
 (((((Thaumarchaeota_ott102415,Geothermarchaeota_ott7000084),(Aigarchaeota,Brockarchaeota)),Bathyarchaeota_ott4796259),((Crenarchaeota_ott114216,Marsarchaeota_ott7000092),(Nezhaarchaeota_ott7000110,Verstraetearchaeota_ott5991571))),Korarchaeota_ott266344)TACK;
 
-in OT13.4 Brockarchaeota is missing and Aigarchaeota is synonymised with Thaumarchaeota, so both are omitted, resulting in
+in OT14.9 Brockarchaeota is missing and Aigarchaeota is synonymised with Thaumarchaeota, so both are omitted, resulting in
 
 ((((Thaumarchaeota_ott102415@,Geothermarchaeota_ott7000084@),Bathyarchaeota_ott4796259@),((Crenarchaeota_ott114216@,Marsarchaeota_ott7000092@),(Nezhaarchaeota_ott7000110@,Verstraetearchaeota_ott5991571@))),Korarchaeota_ott266344@)TACK_group;
 
@@ -48,7 +48,7 @@ This is the trickest group, as https://doi.org/10.1093/femsle/fnz008 has not yet
 
 (Altiarchaeota_ott7000035*,(((((Woesearchaeota_ott5877666*,Pacearchaeota_ott5877655*),((Nanoarchaeota_ott678209,Parvarchaeota_ott5248234+),Huberarchaeota_ott7000089*)),(Aenigmarchaeota_ott4795972*,Nanohaloarchaeota_ott5351807+)),(Undinarchaeota,Diapherotrites_ott5205266*)),Micrarchaeota_ott5248238+))DPANN;
 
-Parvarchaeota (containing Parvarchaeum_ott4796454) in 13.4 is labelled as Deep Sea Hydrothermal Vent Gp 6 (ott5248234), and nested in Halobacteria.
+Parvarchaeota (containing Parvarchaeum_ott4796454) in 14.9 is labelled as Deep Sea Hydrothermal Vent Gp 6 (ott5248234), and nested in Halobacteria.
 
 Micrarchaeota is listed as 'Miscellaneous Euryarchaeotic Group(MEG) ott5248238', nested in Halobacteria
 Nanohaloarchaeota is simply Nanosalina (ott296712) +Haloredivivus (ott186386) + Nanosalinarum (*ott296715), the first 2 of which are nested in Halobacteria.
@@ -59,11 +59,11 @@ So we have
 
 (Altiarchaeota_ott7000035,(((((Woesearchaeota_ott5877666,Pacearchaeota_ott5877655),((Nanoarchaeota_ott678209@,Parvarchaeota_ott5248234@),Huberarchaeota_ott7000089)),(Aenigmarchaeota_ott4795972@,((Candidatus_Nanosalina_ott296712,Candidatus_Haloredivivus_ott186386,Candidatus_Nanosalinarum_ott296715))Nanohaloarchaeota_ott5351807)),Diapherotrites_ott5205266@),Micrarchaeota_ott5248238@))DPANN;
 
-Very rough dates of Archeal evolution from Betts et al (2018; https://doi.org/10.1038/s41559-018-0644-x), with  Asgardarchaeota diverging at 2700 MYA, Crenarchaeota etc at 2800, and other spaced ~ 200MYA apart
+Very rough dates of Archeal evolution from Betts et al (2018; https://doi.org/10.1038/s41559-018-0644-x), with Asgardarchaeota diverging at 2700 MYA, Crenarchaeota etc at 2800, and other spaced ~ 200MYA apart
 
 == Eubacteria ==
 
 We have little bacterial expertise, and the rooting of the Eubacteria may be problematic, so we simply take the standard OpenTree phylogeny, removing a few "bacterial" taxa such as "Apis mellifera" (ott 5900566), "Capra hircus" (ott 5251869), "Oncorhynchus mykiss" (ott 5256670), "Bombus terrestris" (ott 5901391) which are clearly misleadingly named.
 
 ]
-(((((((Excavata_ott2927065@,(DIAPHORETICKES@,(Hemimastix_ott7510361@,Spironema_ott4038752@,(Paramastix_minuta,Paramastix_conifera,Paramastix_truncata, Paramastix_lata)Paramastix_ott4801700,Stereonema_geiseri)Hemimastigophora):50):0,(AMORPHEA@,CRUMS@)Podiata:150)Eukaryota:550,Asgardarchaeota_ott7000000@)LE_clade_:100,((((Thaumarchaeota_ott102415@,Geothermarchaeota_ott7000084@),Bathyarchaeota_ott4796259@),((Crenarchaeota_ott114216@,Marsarchaeota_ott7000092@),(Nezhaarchaeota_ott7000110@,Verstraetearchaeota_ott5991571@))),Korarchaeota_ott266344@)TACK_group)TACKLE_clade_:200,(((Poseidoniia_ott7001259,Thermoplasmata_ott921398@),((Halobacteria_ott921404-5248238-296712-186386-296715-5248234@,(Methanopyri_ott1072570@,Methanococci_ott295896@)),Archaeoglobi_ott1072572@)),((Methanobacteria_ott820302@,Thermococci_ott921413@),Theionarchaea_ott7001160@,Hadesarchaea_ott5877728@))Euryarchaeota)ETACKLE_clade_:200,(Altiarchaeota_ott7000035,(((((Woesearchaeota_ott5877666,Pacearchaeota_ott5877655),((Nanoarchaeota_ott678209@,Parvarchaeota_ott5248234@),Huberarchaeota_ott7000089)),(Aenigmarchaeota_ott4795972@,((Candidatus_Nanosalina_ott296712,Candidatus_Haloredivivus_ott186386,Candidatus_Nanosalinarum_ott296715))Nanohaloarchaeota_ott5351807)),Diapherotrites_ott5205266@),Micrarchaeota_ott5248238@))DPANN_group)AllArchaeaAndEukaryotes_,Eubacteria_ott844192~-5900566-5251869-5256670-5901391@)biota_ott93302;
+(((((((Excavata_ott2927065-935422@,(DIAPHORETICKES@,(Hemimastix_ott7510361@,Spironema_ott4038752@,(Paramastix_minuta,Paramastix_conifera,Paramastix_truncata, Paramastix_lata)Paramastix_ott4801700,Stereonema_geiseri)Hemimastigophora):50):0,(((AMORPHEA@,CRUMS@)Podiata:50):50,Malawimonas_ott935422@):50,ANCYROMONADIDA@)Eukaryota:550,Asgardarchaeota_ott7000000@)LE_clade_:100,((((Thaumarchaeota_ott102415@,Geothermarchaeota_ott7000084@),Bathyarchaeota_ott4796259@),((Crenarchaeota_ott114216@,Marsarchaeota_ott7000092@),(Nezhaarchaeota_ott7000110@,Verstraetearchaeota_ott5991571@))),Korarchaeota_ott266344@)TACK_group)TACKLE_clade_:200,(((Poseidoniia_ott7001259,Thermoplasmata_ott921398@),((Halobacteria_ott921404-5248238-296712-186386-296715-5248234@,(Methanopyri_ott1072570@,Methanococci_ott295896@)),Archaeoglobi_ott1072572@)),((Methanobacteria_ott820302@,Thermococci_ott921413@),Theionarchaea_ott7001160@,Hadesarchaea_ott5877728@))Euryarchaeota)ETACKLE_clade_:200,(Altiarchaeota_ott7000035,(((((Woesearchaeota_ott5877666,Pacearchaeota_ott5877655),((Nanoarchaeota_ott678209@,Parvarchaeota_ott5248234@),Huberarchaeota_ott7000089)),(Aenigmarchaeota_ott4795972@,((Candidatus_Nanosalina_ott296712,Candidatus_Haloredivivus_ott186386,Candidatus_Nanosalinarum_ott296715))Nanohaloarchaeota_ott5351807)),Diapherotrites_ott5205266@),Micrarchaeota_ott5248238@))DPANN_group)AllArchaeaAndEukaryotes_,Eubacteria_ott844192~-5900566-5251869-5256670-5901391@)biota_ott93302;

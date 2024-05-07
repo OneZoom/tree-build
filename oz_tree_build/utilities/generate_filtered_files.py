@@ -328,7 +328,9 @@ def generate_filtered_wikipedia_sql_dump(
         current_output_line_entry_count = 0
         max_entries_per_line = 10
         with open_file_based_on_extension(wikipedia_sql_dump_file, "rt") as sql_f:
-            pagelen_file = csv.reader(sql_f, quotechar="'", doublequote=True)
+            pagelen_file = csv.reader(
+                sql_f, quotechar="'", escapechar="\\", doublequote=False
+            )
             match_line = "INSERT INTO `page` VALUES "
             for fields in filter(
                 lambda x: False if len(x) == 0 else x[0].startswith(match_line),
@@ -358,7 +360,7 @@ def generate_filtered_wikipedia_sql_dump(
                                 filtered_sql_f.write(",")
 
                             # Escape the quotes in the title
-                            title = title.replace("'", "''")
+                            title = title.replace("'", "\\'")
 
                             # We leave all the other fields empty, as we don't need them
                             # e.g. (,0,'Pan_paniscus',,,,,,,87,,)

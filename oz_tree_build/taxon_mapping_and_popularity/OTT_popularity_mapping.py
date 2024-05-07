@@ -761,7 +761,9 @@ def add_pagesize_for_titles(wiki_title_ptrs, wikipedia_SQL_filename):
     page_table_pagelen_column = 10
     # use csv reader as it copes well e.g. with escaped SQL quotes in fields etc.
     with open_file_based_on_extension(wikipedia_SQL_filename, "rt") as file:
-        pagelen_file = csv.reader(file, quotechar="'", doublequote=True)
+        pagelen_file = csv.reader(
+            file, quotechar="'", escapechar="\\", doublequote=False
+        )
         match_line = "INSERT INTO `page` VALUES"
         for fields in filter(
             lambda x: False if len(x) == 0 else x[0].startswith(match_line),

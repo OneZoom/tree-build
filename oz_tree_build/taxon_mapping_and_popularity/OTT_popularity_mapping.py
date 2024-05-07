@@ -208,7 +208,7 @@ class WikidataItem:
         except AttributeError:
             return default
 
-    def add_sitelinks(self, json_item, return_wikilang=None):
+    def add_sitelinks_and_get_title(self, json_item, return_wikilang=None):
         """
         Add an 'l' for the set of links in the form {'fr' ,'en', ...}
         If wikilang is not None, but e.g. 'en', return the sitelink name for
@@ -424,11 +424,6 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
     return source_ptrs
 
 
-def wikidata_info_single_arg(params):
-    "The same as wikidata_info but will all args packed into a single param"
-    return wikidata_info(*params)
-
-
 # numbers to search for
 # See https://en.wikipedia.org/wiki/Module:Taxonbar#L-195 for the full list
 match_taxa = {
@@ -564,7 +559,9 @@ def wikidata_info(
                         )
             if is_taxon or len(vernaculars):
                 item_instance = WikidataItem(json_item)
-                wikipedia_name = item_instance.add_sitelinks(json_item, wikilang)
+                wikipedia_name = item_instance.add_sitelinks_and_get_title(
+                    json_item, wikilang
+                )
                 if wikipedia_name:
                     WPname_to_WD[wikipedia_name] = item_instance
                 for src, id in JSON_contains_known_dbID(json_item, source_ptrs).items():
@@ -621,7 +618,7 @@ def wikidata_info(
                         )
                 for original_taxon_QID in vernaculars:
                     replace_Q[original_taxon_QID] = (item_instance.Q, label(json_item))
-            # Check for matching instances that don't seeem to be taxa
+            # Check for matching instances that don't seem to be taxa
             elif 13406463 in instance_of:
                 # this is a "Wikimedia list article" (Q13406463), which explains why a taxon Qid might be present
                 # (e.g. "List of Lepidoptera that feed on Solanum" which is a "list of" taxon)

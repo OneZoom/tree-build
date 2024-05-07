@@ -2,16 +2,17 @@
 *Cambojiida, Cryptocoda (Cydippida, 1 sp), Ctenellidae (Cydippida, 1sp), *Thalassocalycida, Bathyctenidae (Cydippida, 2 spp), *Cryptolobiferida, *Ganeshida, Haeckeliidae, Lampeidae.
 Of these "Four of these orders contain only one or two species and have rarely been observed (Cambojiida; Ganeshida; Cryptolobiferida and Thalassocalicida)" (Simion)
 
-Other studies such as https://doi.org/10.1016/j.zool.2014.06.004 and https://f1000research.com/articles/5-2881 (as yet unpublished) can help here. Both group the Beroida (monophyletic in Whelan et al) and Haeckeliidae (_ott1583) together. They also place the Lampeidae close to the Platyctenida (sometimes sister group). The Thalassocalycida are often sister to Lampocteis. Finally, the Bathyctenidae place somewehere between the Platyctenida and the Pleurobrachiidae.
+Other studies such as https://doi.org/10.1016/j.zool.2014.06.004 and https://f1000research.com/articles/5-2881 (as yet unpublished) can help here. Both group the Beroida (monophyletic in Whelan et al) and Haeckeliidae (_ott1583) together. They also place the Lampeidae close to the Platyctenida (sometimes sister group). The Thalassocalycida are often sister to Lampocteis. Finally, the Bathyctenidae place somewehere between the Platyctenida and the Pleurobrachiidae. They also place the Mertensiidae (ott1580) as the next branch after Euplokamidae, which we follow here.
 
 Combining this with the current OTOL phylogeny gives
 
-(Euplokamidae, ((Platyctenida, Lampeidae), (Bathyctenidae,EVERYTHING_ELSE)))
+(Euplokamidae,(Mertensiidae,(Platyctenida, Lampeidae),(Bathyctenidae,(((Pleurobrachia,Pukiidae),Hormiphora),EVERYTHING_ELSE))))
 
-TODO: I can't figure out how to place Thalassocalycida (sister to Lampocteis) and Haeckeliidae (sister to Beroida) properly within the EVERYTHING_ELSE clade using the markup scheme defined in get_open_trees_from_one_zoom.py, so we just leave them at the top level. Ideally we would add https://doi.org/10.1016/j.zool.2014.06.004 to the OpenTree.
+The EVERYTHING_ELSE is a rag bag, and will contain a number of wrongly-placed taxa.
+Also TODO: I can't figure out how to place Thalassocalycida (sister to Lampocteis) and Haeckeliidae (sister to Beroida) properly within the EVERYTHING_ELSE clade using the markup scheme defined in get_open_trees_from_one_zoom.py, so we just leave them at the top level. Ideally we would add https://doi.org/10.1016/j.zool.2014.06.004 to the OpenTree.
 
-(Euplokamidae_ott258177@,((Platyctenida_ott574291@,Lampeidae_ott3684114@),(Bathyctenidae_ott3684138,_otherCtenophora_ott~641212-258177-574291-3684114-3684138@)))Ctenophora_ott641212;
+(Euplokamidae_ott258177@,(Mertensiidae_ott1580((Platyctenida_ott574291@,Lampeidae_ott3684114@),(Bathyctenidae_ott3684138,(((Pleurobrachia_ott742128,Pukiidae_ott5143306),Hormiphora_ott747321),_otherCtenophora_ott~641212-258177-1580-574291-3684114-3684138-742128-5143306-747321@)))))Ctenophora_ott641212;
 
 we must take care not to mix this up with Ctenophora, the fly genus, hence we place an OTT ID on the whole group
 from https://github.com/OpenTreeOfLife/opentree/wiki/Open-Tree-of-Life-APIs#contexts to help add OTTids: context=Animals]
-(Euplokamidae_ott258177@,((Platyctenida_ott574291@,Lampeidae_ott3684114@),(Bathyctenidae_ott3684138,_otherCtenophora_ott~641212-258177-574291-3684114-3684138@)))Ctenophora_ott641212;
+(Euplokamidae_ott258177@,(Mertensiidae_ott1580@,((Platyctenida_ott574291@,Lampeidae_ott3684114@),(Bathyctenidae_ott3684138@,(((Pleurobrachia_ott742128@,Pukiidae_ott5143306@),Hormiphora_ott747321@),_otherCtenophora_ott~641212-258177-1580-574291-3684114-3684138-742128-5143306-747321@)))))Ctenophora_ott641212;

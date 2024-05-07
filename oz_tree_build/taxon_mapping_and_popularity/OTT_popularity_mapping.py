@@ -547,7 +547,7 @@ def wikidata_info(
                 elif nid in match_vernacular:
                     for alt in i.get("qualifiers", {}).get("P642", []):
                         vernaculars.add(wikidata_value(alt).get("numeric-id"))
-                    else:
+                    if not vernaculars:
                         logging.debug(
                             " Found a common name property without any qualifiers for "
                             f"Q{Qid(json_item)} ({label(json_item)}). The name may be "

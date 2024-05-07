@@ -11,7 +11,7 @@ The rough backbone of the fungal tree from this paper is
   )Fungi:100
 )Holomycota:70
 
-Here I use the term "Holomycota" (https://en.wikipedia.org/wiki/Holomycota) instead of Nucletmycea, and remove the Hemimastigophora taxa Hemimastix (ott7510361) and Spironema (ott4038752) which are currently (OT 13.4) in microsporidia
+Here I use the term "Holomycota" (https://en.wikipedia.org/wiki/Holomycota) instead of Nucletmycea, and remove the Hemimastigophora taxa Hemimastix (ott7510361) and Spironema (ott4038752) which are currently (OT 14.9) in microsporidia
 
 
 Note that Tedersoo et al suggest Rozellomycota as a preferential synonym of Cryptomycota
@@ -23,7 +23,7 @@ group consisting of
 Group 1 ((Blastocladiomycota:625,(Neocallimastigomycota, Monoblepharomycota, Chytridiomycota)Chytridiomyceta:200):200):75
 
 or to give OTT ids, (Blastocladiomycota_ott469418,(Neocallimastigomycota_ott380931,Monoblepharomycota_ott305126,Chytridiomycota)Chytridiomyceta) - note that Chytridiomycota_ott177160
-is, however, non-monophyletic in OT 11.4: we can roughly substitute (Chytridiales_ott319483+Spizellomycetales_ott383212)+(Rhizophydiales_ott967026+Gromochytriales_ott5384682), i.e.
+is, however, non-monophyletic in OT 14.9: we can roughly substitute (Chytridiales_ott319483+Spizellomycetales_ott383212)+(Rhizophydiales_ott967026+Gromochytriales_ott5384682), i.e.
 
 (Blastocladiomycota_ott469418@,(Neocallimastigomycota_ott380931@,Monoblepharomycota_ott305126@,((Chytridiales_ott319483@,Spizellomycetales_ott383212@),(Rhizophydiales_ott967026@,Gromochytriales_ott5384682@))Chytridiomycota_ott177160)Chytridiomyceta)
 
@@ -48,6 +48,11 @@ So we can put
 
 Group2b = ((Mucoromycotina_ott564951,Glomeromycota_ott385878)Mycoromyceta,(Ascomycota_ott439373,Basidiomycota_ott634628,Entorrhizomycota_ott5653719)Dikarya_ott656316)
 
+OpenTree 14.9 marks Glomeromycota as non-monophyletic, which may be a bug of sorts (see https://github.com/OpenTreeOfLife/feedback/issues/589). Here we use the resolution
+from https://doi.org/10.3389/ffunb.2021.716385, i.e.
+
+((Glomeraceae,((Acaulosporaceae,Diversisporaceae),Gigasporaceae),Claroideoglomeraceae),(Archaeosporales,Paraglomerales))
+
 #from https://github.com/OpenTreeOfLife/opentree/wiki/Open-Tree-of-Life-APIs#contexts to help add OTTids: context=Fungi]
-((Fonticulida_ott5247669@:800,Nucleariida_ott5247670@:800)Nucleariae:250,((Rozella_ott958913@:800,Microsporidia_ott16113~-7510361-4038752@:800)Rozellomycota:150,(APHELIDA@:900,((Blastocladiomycota_ott469418@:625,(Neocallimastigomycota_ott380931@:575,Monoblepharomycota_ott305126@:575,((Chytridiales_ott319483@:350,Spizellomycetales_ott383212@:350):75,(Rhizophydiales_ott967026@:350,Gromochytriales_ott5384682@:350):75)Chytridiomycota_ott177160:150)Chytridiomyceta:50):200,(((Basidiobolomycota_ott149101@:675,Olpidiomycota_ott5602140@:675):75,(Entomophthoromycota_ott887960@:700,Kickxellomycota_ott759290@:700,Zoopagomycota_ott956400@:700)Zoopagomyceta:50):25,((Mucoromycotina_ott564951@:690,Glomeromycota_ott385878@:690)Mycoromyceta:10,(Ascomycota_ott439373@:650,Basidiomycota_ott634628@:650,Entorrhizomycota_ott5653719@:650)Dikarya_ott656316:50):75):50):75):50)Fungi_ott352914:100
+((Fonticulida_ott5247669@:800,Nucleariida_ott5247670@:800)Nucleariae:250,((Rozella_ott958913@:800,Microsporidia_ott16113~-7510361-4038752@:800)Rozellomycota:150,(APHELIDA@:900,((Blastocladiomycota_ott469418@:625,(Neocallimastigomycota_ott380931@:575,Monoblepharomycota_ott305126@:575,((Chytridiales_ott319483@:350,Spizellomycetales_ott383212@:350):75,(Rhizophydiales_ott967026@:350,Gromochytriales_ott5384682@:350):75)Chytridiomycota_ott177160:150)Chytridiomyceta:50):200,(((Basidiobolomycota_ott149101@:675,Olpidiomycota_ott5602140@:675):75,(Entomophthoromycota_ott887960@:700,Kickxellomycota_ott759290@:700,Zoopagomycota_ott956400@:700)Zoopagomyceta:50):25,((Mucoromycotina_ott564951@:690,((Glomeraceae_ott157950@,((Acaulosporaceae_ott157952@,Diversisporaceae_ott1059385@),Gigasporaceae_ott4815@),Claroideoglomeraceae_ott946830@),(Archaeosporales_ott265356@,Paraglomerales_ott385883@))Glomeromycota_ott385878:690)Mycoromyceta:10,(Ascomycota_ott439373@:650,Basidiomycota_ott634628@:650,Entorrhizomycota_ott5653719@:650)Dikarya_ott656316:50):75):50):75):50)Fungi_ott352914:100
 )Holomycota_ott5246132:70;

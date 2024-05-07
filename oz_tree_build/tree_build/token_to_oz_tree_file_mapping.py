@@ -11,7 +11,7 @@ token_to_file_map = {
     "METAZOA": {"file": "Animals.PHY", "edge_length": 150, "taxon": None},
     "PORIFERA": {"file": "PoriferaOneZoom.phy", "edge_length": 50, "taxon": None},
     "CTENOPHORA": {
-        "file": "CtenophoresPoder2001.PHY",
+        "file": "CtenophoresWhelan2017.PHY",
         "edge_length": 50,
         "taxon": None,
     },
@@ -209,4 +209,5 @@ token_to_file_map = {
     "PROTOSTOMIA": {"file": "Protostomes.PHY", "edge_length": 50, "taxon": None},
     "HOLOMYCOTA": {"file": "Holomycota.PHY", "edge_length": 300, "taxon": None},
     "APHELIDA": {"file": "Aphelida_rough.PHY", "edge_length": 100, "taxon": None},
+    "ANCYROMONADIDA": {"file": "Ancyromonadida.phy", "edge_length": 50, "taxon": None}
 }

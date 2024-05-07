@@ -214,6 +214,10 @@ def generate_filtered_wikidata_dump(
             "P141": [
                 {"references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}]}
             ],  # IUCN id
+            "P1420": [
+                {"mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}}}
+            ],  # taxon synonym
+            "P18": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # image
         },
         "sitelinks": {ANY: {"title": KEEP}},
     }

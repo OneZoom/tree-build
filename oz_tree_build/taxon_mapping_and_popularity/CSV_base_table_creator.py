@@ -849,7 +849,7 @@ def percolate_popularity(
 
 
 def process_all(args):
-    random_seed_addition = 1234
+    random_seed_addition = 42
     start = time.time()
     if args.verbosity == 0:
         logging.basicConfig(stream=sys.stderr, level=logging.WARNING)

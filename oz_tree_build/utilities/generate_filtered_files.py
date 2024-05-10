@@ -201,9 +201,9 @@ def generate_filtered_wikidata_dump(
                     "mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}},
                     "qualifiers": {
                         "P642": [{"datavalue": {"value": {"numeric-id": KEEP}}}]
-                    },
+                    },  # "of" (applies within the scope of a particular item)
                 }
-            ],
+            ],  # Instance of
             "P685": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # ncbi id
             "P846": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # gbif id
             "P850": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # worms id
@@ -222,12 +222,25 @@ def generate_filtered_wikidata_dump(
         "sitelinks": {ANY: {"title": KEEP}},
     }
 
+    def trim_and_write_json_item(json_item, filtered_wiki_f):
+        # Remove everything we don't need from the json
+        apply_mask_to_object_graph(json_item, mask)
+
+        # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.
+        # This leaves out the ones that end in "wikiquote", "wikivoyage", "wikinews", "wikibooks", etc.
+        json_item["sitelinks"] = {
+            k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")
+        }
+
+        # Write out a line. We set the separators to avoid spaces
+        filtered_wiki_f.write(json.dumps(json_item, separators=(",", ":")))
+        filtered_wiki_f.write(",\n")
+
     included_qids = set()
 
-    # We want all the vernacular lines to end up at the end of the file, so we
-    # store them in a list. There are only a few hundred, so memory isn't
-    # an issue.
-    vernacular_json_items = []
+    # Keep track of vernaculars and taxon synonyms that we might want to include at the end
+    # There are only a few hundred, so memory isn't an issue.
+    potential_extra_json_items = []
 
     with open_file_based_on_extension(
         filtered_wikipedia_dump_file, "wt"
@@ -255,48 +268,47 @@ def generate_filtered_wikidata_dump(
             if not is_taxon and not len(vernaculars_matches) > 0:
                 continue
 
-            # If it's a taxon but it doesn't map to any of our source ids, ignore it
-            # We only do this if we're filtering by clade. When processing the full
-            # tree, we want to keep all the taxa, even if they don't map to anything
-            if (
-                context.clade
-                and is_taxon
-                and not len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0
-            ):
-                continue
-
-            # Remove everything we don't need from the json
-            apply_mask_to_object_graph(json_item, mask)
-
-            # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.
-            # This leaves out the ones that end in "wikiquote", "wikivoyage", "wikinews", "wikibooks", etc.
-            json_item["sitelinks"] = {
-                k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")
-            }
+            # When we do clade filtering, we only want to keep the taxon that map to source ids.
+            # In addition, when it doesn't map to any, we want to track it if it's
+            # a taxon synonym, so we may end up including it at the end.
+            if context.clade and is_taxon:
+                if not len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0:
+                    if "P1420" in json_item["claims"] and json_item["sitelinks"]:
+                        potential_extra_json_items.append(
+                            (
+                                "taxon_synonym",
+                                {
+                                    wikidata_value(i["mainsnak"])["numeric-id"]
+                                    for i in json_item["claims"]["P1420"]
+                                },
+                                json_item,
+                            )
+                        )
+                    continue
 
             if is_taxon:
-                # Write out the line. We set the separators to avoid spaces
-                filtered_wiki_f.write(json.dumps(json_item, separators=(",", ":")))
-                filtered_wiki_f.write(",\n")
+                trim_and_write_json_item(json_item, filtered_wiki_f)
 
                 included_qids.add(Qid(json_item))
 
                 preserved_lines += 1
             else:
-                # If it's vernacular, we'll write it out at the end, so save it
-                vernacular_json_items.append((vernaculars_matches, json_item))
+                # If it's vernacular, we'll potentially write it out at the end, so save it
+                potential_extra_json_items.append(
+                    ("vernacular", vernaculars_matches, json_item)
+                )
 
-        # Write out the relevant vernacular lines at the end
         logging.info(
-            f"Writing vernacular lines at the end of the file (Subset of {len(vernacular_json_items)} lines)"
+            f"Writing extra lines at the end of the file (subset of {len(potential_extra_json_items)} lines)"
         )
-        for vernaculars_matches, json_item in vernacular_json_items:
-            for qid in vernaculars_matches:
+
+        for type, linked_qids, json_item in potential_extra_json_items:
+            for qid in linked_qids:
+                # Only write it if it maps to one of the entries we included above
                 if qid in included_qids:
-                    filtered_wiki_f.write(json.dumps(json_item, separators=(",", ":")))
-                    filtered_wiki_f.write(",\n")
+                    trim_and_write_json_item(json_item, filtered_wiki_f)
                     logging.info(
-                        f"Including vernacular entry '{label(json_item)}' ({get_wikipedia_name(json_item)}), mapped to Q={qid}"
+                        f"Including {type} entry: {Qid(json_item)} ('{label(json_item)}','{get_wikipedia_name(json_item)}' => Q{qid}"
                     )
                     break
 

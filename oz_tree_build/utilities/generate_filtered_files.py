@@ -222,15 +222,27 @@ def generate_filtered_wikidata_dump(
         "sitelinks": {ANY: {"title": KEEP}},
     }
 
+    sitelinks_key = f"{context.wikilang}wiki"
+
     def trim_and_write_json_item(json_item, filtered_wiki_f):
         # Remove everything we don't need from the json
         apply_mask_to_object_graph(json_item, mask)
 
         # Only keep the sitelinks that end in "wiki", e.g. enwiki, dewiki, etc.
         # This leaves out the ones that end in "wikiquote", "wikivoyage", "wikinews", "wikibooks", etc.
-        json_item["sitelinks"] = {
-            k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")
-        }
+        if context.dont_trim_sitelinks:
+            # Keep the full sitelinks value for all languages if flag is passed
+            json_item["sitelinks"] = {
+                k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")
+            }
+        else:
+            # Otherwise only keep the original value for the language we want, since the
+            # rest is just needed to collect the language names into the bit field
+            json_item["sitelinks"] = {
+                k: v if k == sitelinks_key else {}
+                for k, v in json_item["sitelinks"].items()
+                if k.endswith("wiki")
+            }
 
         # Write out a line. We set the separators to avoid spaces
         filtered_wiki_f.write(json.dumps(json_item, separators=(",", ":")))
@@ -308,7 +320,7 @@ def generate_filtered_wikidata_dump(
                 if qid in included_qids:
                     trim_and_write_json_item(json_item, filtered_wiki_f)
                     logging.info(
-                        f"Including {type} entry: {Qid(json_item)} ('{label(json_item)}','{get_wikipedia_name(json_item)}' => Q{qid}"
+                        f"Including {type} entry: Q{Qid(json_item)} ('{label(json_item)}','{get_wikipedia_name(json_item)}' => Q{qid}"
                     )
                     break
 
@@ -494,6 +506,7 @@ def process_args(args):
             "clade": args.clade,
             "compress": args.compress,
             "force": args.force,
+            "dont_trim_sitelinks": args.dont_trim_sitelinks,
         },
     )()
 
@@ -556,6 +569,12 @@ def main():
         action=argparse.BooleanOptionalAction,
         default=False,
         help="If true, forces the regeneration of all files, ignoring caching.",
+    )
+    parser.add_argument(
+        "--dont_trim_sitelinks",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="If true, keep the full sitelinks value for all languages",
     )
     args = parser.parse_args()
 

@@ -22,6 +22,7 @@ from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
     Qid,
     label,
 )
+from oz_tree_build._OZglobals import wikiflags
 from .apply_mask_to_object_graph import *
 from .temp_helpers import *
 from .file_utils import *
@@ -238,10 +239,11 @@ def generate_filtered_wikidata_dump(
         else:
             # Otherwise only keep the original value for the language we want, since the
             # rest is just needed to collect the language names into the bit field
+            # Also, limit the sitelinks to the languages we care about for the bit field
             json_item["sitelinks"] = {
                 k: v if k == sitelinks_key else {}
                 for k, v in json_item["sitelinks"].items()
-                if k.endswith("wiki")
+                if k.endswith("wiki") and len(k) == 6 and k[:2] in wikiflags
             }
 
         # Write out a line. We set the separators to avoid spaces

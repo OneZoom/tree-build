@@ -135,6 +135,8 @@ def set_node_ages(self):
                             f"node '{node.label}' of age {node.age}, attached by a "
                             f"branch of length {l}, which sums to {node.age+l}."
                         )
+                # Round to 6 decimal places to prevent floating point errors
+                node.parent_node.age = round(node.parent_node.age, 6)
 
     # For newly fixed ages, now percolate them down the tree if we know the age of a deeper node
     for node in self.preorder_node_iter():
@@ -287,9 +289,9 @@ def write_preorder_ages(
                     join[0] + str(leaf_num) + sep + str(leaf.age)
                 )
                 if format == "json":
-                    join[
-                        0
-                    ] = ',"'  # after the first value, start putting initial commas (avoids trailing comma)
+                    join[0] = (
+                        ',"'  # after the first value, start putting initial commas (avoids trailing comma)
+                    )
                 else:
                     join[0] = "\n"
         leaf_dates_filehandle.write(end[0])
@@ -371,9 +373,11 @@ def write_preorder_to_csv(
             base_output = [
                 node.parent_node.id,
                 # negative real_parent ids if this is a polytomy
-                -node.real_parent_node.id
-                if node.edge.length == 0
-                else node.real_parent_node.id,
+                (
+                    -node.real_parent_node.id
+                    if node.edge.length == 0
+                    else node.real_parent_node.id
+                ),
                 node.label,
                 getattr(node, "extinction_date", None),
             ]
@@ -394,12 +398,14 @@ def write_preorder_to_csv(
             base_output = [
                 node.parent_node.id if node.parent_node else root_parent_id,
                 (
-                    -node.real_parent_node.id
-                    if node.edge.length == 0
-                    else node.real_parent_node.id
-                )
-                if hasattr(node, "real_parent_node")
-                else 0,
+                    (
+                        -node.real_parent_node.id
+                        if node.edge.length == 0
+                        else node.real_parent_node.id
+                    )
+                    if hasattr(node, "real_parent_node")
+                    else 0
+                ),
                 node.node_rgt,
                 leaf_count,
                 node.last_leaf,

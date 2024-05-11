@@ -47,6 +47,7 @@ def test_full_clade_filtering():
     args.clade = "Leopardus"
     args.force = True
     args.compress = False
+    args.dont_trim_sitelinks = False
 
     generate_filtered_files.process_args(args)
 

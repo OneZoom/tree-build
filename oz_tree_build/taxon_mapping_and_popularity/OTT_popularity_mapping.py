@@ -436,6 +436,9 @@ match_vernacular = {
     502895: "common name",
     55983715: "group of organisms known by one particular common name",
 }
+match_synonym = {
+    1040689: "synonym",
+}
 
 
 def wikidata_info(
@@ -532,7 +535,7 @@ def wikidata_info(
             json_item = json.loads(line.rstrip().rstrip(","))
             try:
                 is_taxon = False
-                vernaculars = set()
+                alternate_Qs = set()
                 claims = json_item["claims"]
                 instance_of = claims["P31"]
             except KeyError:
@@ -544,10 +547,10 @@ def wikidata_info(
                 assert nid == nid + 0  # Check it's an int
                 if nid in match_taxa:
                     is_taxon = True
-                elif nid in match_vernacular:
+                elif nid in match_vernacular or nid in match_synonym:
                     for alt in i.get("qualifiers", {}).get("P642", []):
-                        vernaculars.add(wikidata_value(alt).get("numeric-id"))
-                    if not vernaculars:
+                        alternate_Qs.add(wikidata_value(alt).get("numeric-id"))
+                    if not alternate_Qs:
                         logging.debug(
                             " Found a common name property without any qualifiers for "
                             f"Q{Qid(json_item)} ({label(json_item)}). The name may be "
@@ -557,7 +560,14 @@ def wikidata_info(
                             "within a larger genus, or the 2 genera of peafowl), or "
                             "something else (e.g. the 'mysterious bird of Bobairo')"
                         )
-            if is_taxon or len(vernaculars):
+
+            # Also process taxon synonyms as potential alternate Qs
+            # It's a different type of synonyms from the P642 above
+            if "P1420" in json_item["claims"]:
+                for i in json_item["claims"]["P1420"]:
+                    alternate_Qs.add(wikidata_value(i["mainsnak"])["numeric-id"])
+
+            if is_taxon or len(alternate_Qs):
                 item_instance = WikidataItem(json_item)
                 wikipedia_name = item_instance.add_sitelinks_and_get_title(
                     json_item, wikilang
@@ -616,8 +626,15 @@ def wikidata_info(
                             f" Cannot convert IPNI property {ipni} to integer"
                             f" in Q{item_instance.Q} ({label(json_item)})."
                         )
-                for original_taxon_QID in vernaculars:
-                    replace_Q[original_taxon_QID] = (item_instance.Q, label(json_item))
+                # Only map alternate Qs if current item has a main language link
+                # Otherwise, it's likely not an interesting item to map to, and it may
+                # end up overridding a better existing mapping
+                if wikilang in item_instance.l:
+                    for original_taxon_QID in alternate_Qs:
+                        replace_Q[original_taxon_QID] = (
+                            item_instance.Q,
+                            label(json_item),
+                        )
             # Check for matching instances that don't seem to be taxa
             elif 13406463 in instance_of:
                 # this is a "Wikimedia list article" (Q13406463), which explains why a taxon Qid might be present

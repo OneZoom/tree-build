@@ -284,9 +284,10 @@ def generate_filtered_wikidata_dump(
 
             # When we do clade filtering, we only want to keep the taxon that map to source ids.
             # In addition, when it doesn't map to any, we want to track it if it's
-            # a taxon synonym, so we may end up including it at the end.
+            # a synonym, so we may end up including it at the end.
             if context.clade and is_taxon:
                 if not len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0:
+                    # Case 1: it could have taxon synonyms via P1420
                     if "P1420" in json_item["claims"] and json_item["sitelinks"]:
                         potential_extra_json_items.append(
                             (
@@ -297,6 +298,13 @@ def generate_filtered_wikidata_dump(
                                 },
                                 json_item,
                             )
+                        )
+                    # Case 2: it could have synonyms via a P642 in P31
+                    # Note: since this is a taxon, we're dealing with synonyms, not vernaculars,
+                    # so the variable name is a bit misleading
+                    if vernaculars_matches:
+                        potential_extra_json_items.append(
+                            ("instance_of_synonym", vernaculars_matches, json_item)
                         )
                     continue
 

@@ -22,6 +22,7 @@ from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
     Qid,
     label,
 )
+from oz_tree_build._OZglobals import wikiflags
 from .apply_mask_to_object_graph import *
 from .temp_helpers import *
 from .file_utils import *
@@ -238,10 +239,11 @@ def generate_filtered_wikidata_dump(
         else:
             # Otherwise only keep the original value for the language we want, since the
             # rest is just needed to collect the language names into the bit field
+            # Also, limit the sitelinks to the languages we care about for the bit field
             json_item["sitelinks"] = {
                 k: v if k == sitelinks_key else {}
                 for k, v in json_item["sitelinks"].items()
-                if k.endswith("wiki")
+                if k.endswith("wiki") and len(k) == 6 and k[:2] in wikiflags
             }
 
         # Write out a line. We set the separators to avoid spaces
@@ -282,9 +284,10 @@ def generate_filtered_wikidata_dump(
 
             # When we do clade filtering, we only want to keep the taxon that map to source ids.
             # In addition, when it doesn't map to any, we want to track it if it's
-            # a taxon synonym, so we may end up including it at the end.
+            # a synonym, so we may end up including it at the end.
             if context.clade and is_taxon:
                 if not len(JSON_contains_known_dbID(json_item, context.source_ids)) > 0:
+                    # Case 1: it could have taxon synonyms via P1420
                     if "P1420" in json_item["claims"] and json_item["sitelinks"]:
                         potential_extra_json_items.append(
                             (
@@ -295,6 +298,13 @@ def generate_filtered_wikidata_dump(
                                 },
                                 json_item,
                             )
+                        )
+                    # Case 2: it could have synonyms via a P642 in P31
+                    # Note: since this is a taxon, we're dealing with synonyms, not vernaculars,
+                    # so the variable name is a bit misleading
+                    if vernaculars_matches:
+                        potential_extra_json_items.append(
+                            ("instance_of_synonym", vernaculars_matches, json_item)
                         )
                     continue
 

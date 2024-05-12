@@ -7,6 +7,7 @@ import re
 
 from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
     wikidata_value,
+    match_synonym,
     match_taxa,
     match_vernacular,
 )
@@ -26,7 +27,7 @@ def find_taxon_and_vernaculars(json_item):
 
         if nid in match_taxa:
             is_taxon = True
-        elif nid in match_vernacular:
+        elif nid in match_vernacular or nid in match_synonym:
             for alt in i.get("qualifiers", {}).get("P642", []):
                 vernaculars.add(wikidata_value(alt).get("numeric-id"))
 

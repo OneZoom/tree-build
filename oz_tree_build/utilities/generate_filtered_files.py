@@ -354,6 +354,7 @@ def generate_filtered_wikipedia_sql_dump(
     # the column numbers for each datum are specified in the SQL file, and hardcoded here.
     page_table_namespace_column = 2
     page_table_title_column = 3
+    page_is_redirect_column = 4
     page_table_pagelen_column = 10
 
     with open_file_based_on_extension(
@@ -374,10 +375,11 @@ def generate_filtered_wikipedia_sql_dump(
                 # the records are all on the same line, separated by '),(', so we need to count fields into the line.
                 for field in fields:
                     try:
-                        if field.lstrip()[0] == "(":
+                        if field and field.lstrip()[0] == "(":
                             field_num = 0
                             namespace = None
                             title = None
+                            is_redirect = "0"
                     except IndexError:
                         pass
                     field_num += 1
@@ -385,6 +387,8 @@ def generate_filtered_wikipedia_sql_dump(
                         namespace = field
                     if field_num == page_table_title_column:
                         title = field
+                    if field_num == page_is_redirect_column:
+                        is_redirect = field
                     elif field_num == page_table_pagelen_column and namespace == "0":
                         # Only include it if it's one of our wikidata ids
                         if title in context.wikidata_ids:
@@ -397,9 +401,9 @@ def generate_filtered_wikipedia_sql_dump(
                             title = title.replace("'", "\\'")
 
                             # We leave all the other fields empty, as we don't need them
-                            # e.g. (,0,'Pan_paniscus',,,,,,,87,,)
+                            # e.g. (,0,'Pan_paniscus',0,,,,,,87,,)
                             filtered_sql_f.write(
-                                f"(,{namespace},'{title}',,,,,,,{field},,)"
+                                f"(,{namespace},'{title}',{is_redirect},,,,,,{field},,)"
                             )
 
                             current_output_line_entry_count += 1

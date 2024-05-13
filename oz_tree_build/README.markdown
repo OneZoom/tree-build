@@ -91,7 +91,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 
    	Note that by default, it works incrementally and only generates new filtered files if they are missing or old versions. It does this by setting the timestamp of generated files to match their source file. So if for instance it has already filtered `latest-all.json.bz2`, but has not processed the SQL or Page Count files, you can just rerun the same command, and it will not need to reprocess `latest-all.json.bz2`. You can override this behavior and force full regeneration by passing in a `-f` flag.
 
-	From the data folder, run:
+	From the data folder, run the `generate_filtered_files` script:
 
 	```
 	(cd data && generate_filtered_files OZTreeBuild/AllLife/AllLife_full_tree.phy OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv EOL/provider_ids.csv.gz Wiki/wd_JSON/latest-all.json.bz2 Wiki/wp_SQL/enwiki-latest-page.sql.gz Wiki/wp_pagecounts/pageviews*.bz2)

@@ -218,7 +218,18 @@ def generate_filtered_wikidata_dump(
             "P1420": [
                 {"mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}}}
             ],  # taxon synonym
-            "P18": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # image
+            "P18": [
+                {
+                    "mainsnak": {"datavalue": {"value": KEEP}},
+                    "rank": KEEP,
+                }
+            ],  # image
+            "P1843": [
+                {
+                    "mainsnak": {"datavalue": {"value": KEEP}},
+                    "rank": KEEP,
+                }
+            ],  # taxon common name (aka vernaculars)
         },
         "sitelinks": {ANY: {"title": KEEP}},
     }

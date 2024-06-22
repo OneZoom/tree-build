@@ -57,3 +57,19 @@ wikiflags = cache.ram(
     },
     time_expire=None,
 )
+
+src_flags = cache.ram(
+    "src_flags",
+    lambda: {
+        "bespoke": 1,
+        "onezoom_bespoke": 2,
+        "onezoom_via_eol": 3,
+        "iucn": 4,
+        "arkive": 5,
+        "wiki": 20,
+        "eol": 30,
+        "short_imprecise_name": 50,
+        "eol_old": 99,
+    },
+    time_expire=None,
+)

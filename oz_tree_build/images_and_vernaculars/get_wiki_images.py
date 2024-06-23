@@ -325,11 +325,11 @@ def save_wiki_image_for_qid(
 
     if check_if_up_to_date:
         # If we already have an image for this taxon, and it's the same as the one we're trying to download, skip it
-        db_curs.execute(
-            "SELECT url FROM images_by_ott WHERE src={} and ott={};".format(subs, subs),
+        db_context.execute(
+            "SELECT url FROM images_by_ott WHERE src={0} and ott={0};",
             (src, ott),
         )
-        res = db_curs.fetchone()
+        res = db_context.db_curs.fetchone()
         if res:
             url = res[0]
             existing_image_name = url[len(wiki_image_url_prefix) :]
@@ -390,15 +390,13 @@ def save_wiki_image_for_qid(
         f.write(f"{crop_box.x},{crop_box.y},{crop_box.width},{crop_box.height}")
 
     # Delete any existing wiki images for this taxon from the database
-    sql = "DELETE FROM images_by_ott WHERE ott={0} and src={0};".format(subs)
-    db_curs.execute(sql, (ott, src))
+    sql = "DELETE FROM images_by_ott WHERE ott={0} and src={0};"
+    db_context.execute(sql, (ott, src))
 
     # Insert the new image into the database
     wikimedia_url = f"https://commons.wikimedia.org/wiki/File:{escaped_image_name}"
-    sql = "INSERT INTO images_by_ott (ott, src, src_id, url, rating, rating_confidence, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd, rights, licence, updated) VALUES ({0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {1});".format(
-        subs, datetime_now
-    )
-    db_curs.execute(
+    sql = "INSERT INTO images_by_ott (ott, src, src_id, url, rating, rating_confidence, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd, rights, licence, updated) VALUES ({0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {1});"
+    db_context.execute(
         sql,
         (
             ott,
@@ -419,7 +417,7 @@ def save_wiki_image_for_qid(
             license_string,
         ),
     )
-    db_connection.commit()
+    db_context.db_connection.commit()
 
 
 def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
@@ -429,8 +427,8 @@ def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
     """
 
     # Delete any existing wiki vernaculars for this taxon from the database
-    sql = "DELETE FROM vernacular_by_ott WHERE ott={0} and src={0};".format(subs)
-    db_curs.execute(sql, (ott, src_flags["wiki"]))
+    sql = "DELETE FROM vernacular_by_ott WHERE ott={0} and src={0};"
+    db_context.execute(sql, (ott, src_flags["wiki"]))
 
     for language, vernaculars in vernaculars_by_language.items():
         # The wikidata language could either be a full language code (e.g. "en-us") or just the primary code (e.g. "en")
@@ -443,10 +441,8 @@ def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
             )
 
             # Insert the new vernacular into the database
-            sql = "INSERT INTO vernacular_by_ott (ott, vernacular, lang_primary, lang_full, preferred, src, src_id, updated) VALUES ({0}, {0}, {0}, {0}, {0}, {0}, {0}, {1});".format(
-                subs, datetime_now
-            )
-            db_curs.execute(
+            sql = "INSERT INTO vernacular_by_ott (ott, vernacular, lang_primary, lang_full, preferred, src, src_id, updated) VALUES ({0}, {0}, {0}, {0}, {0}, {0}, {0}, {1});"
+            db_context.execute(
                 sql,
                 (
                     ott,
@@ -459,20 +455,20 @@ def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
                 ),
             )
 
-    db_connection.commit()
+    db_context.db_connection.commit()
 
 
 def process_leaf(ott_or_taxon, image_name, rating, skip_images):
     # If ott_or_taxon is a number, it's an ott. Otherwise, it's a taxon name.
     sql = "SELECT ott,wikidata,name FROM ordered_leaves WHERE "
     if ott_or_taxon.isnumeric():
-        sql += "ott={};".format(subs)
+        sql += "ott={0};"
     else:
-        sql += "name={};".format(subs)
+        sql += "name={0};"
 
-    db_curs.execute(sql, ott_or_taxon)
+    db_context.execute(sql, ott_or_taxon)
     try:
-        (ott, qid, name) = db_curs.fetchone()
+        (ott, qid, name) = db_context.db_curs.fetchone()
     except TypeError:
         logger.error(f"'{ott_or_taxon}' not found in ordered_leaves table")
         return
@@ -510,12 +506,12 @@ def process_clade(ott_or_taxon, dump_file, skip_images):
     sql = "SELECT ott,name,leaf_lft,leaf_rgt FROM ordered_nodes WHERE "
     # If ott_or_taxon is a number, it's an ott. If it's a string, it's a taxon name.
     if ott_or_taxon.isnumeric():
-        sql += "ott={};".format(subs)
+        sql += "ott={0};"
     else:
-        sql += "name={};".format(subs)
-    db_curs.execute(sql, ott_or_taxon)
+        sql += "name={0};"
+    db_context.execute(sql, ott_or_taxon)
     try:
-        (ott, name, leaf_left, leaf_right) = db_curs.fetchone()
+        (ott, name, leaf_left, leaf_right) = db_context.db_curs.fetchone()
     except TypeError:
         logger.error(f"'{ott_or_taxon}' not found in ordered_nodes table")
         return
@@ -524,13 +520,11 @@ def process_clade(ott_or_taxon, dump_file, skip_images):
         # Find all the leaves in the clade that don't have wiki images (ignoring images from other sources)
         sql = """
         SELECT wikidata, ordered_leaves.ott FROM ordered_leaves
-        LEFT OUTER JOIN (SELECT ott,src,url FROM images_by_ott WHERE src={}) as wiki_images_by_ott ON ordered_leaves.ott=wiki_images_by_ott.ott
-        WHERE url IS NULL AND ordered_leaves.id >= {} AND ordered_leaves.id <= {};
-        """.format(
-            subs, subs, subs
-        )
-        db_curs.execute(sql, (src_flags["wiki"], leaf_left, leaf_right))
-        leaves_without_images = dict(db_curs.fetchall())
+        LEFT OUTER JOIN (SELECT ott,src,url FROM images_by_ott WHERE src={0}) as wiki_images_by_ott ON ordered_leaves.ott=wiki_images_by_ott.ott
+        WHERE url IS NULL AND ordered_leaves.id >= {0} AND ordered_leaves.id <= {0};
+        """
+        db_context.execute(sql, (src_flags["wiki"], leaf_left, leaf_right))
+        leaves_without_images = dict(db_context.db_curs.fetchall())
         logger.info(
             f"Found {len(leaves_without_images)} taxa without an image in the database"
         )
@@ -538,13 +532,11 @@ def process_clade(ott_or_taxon, dump_file, skip_images):
     # Find all the leaves in the clade that don't have wiki vernaculars (ignoring vernaculars from other sources)
     sql = """
     SELECT wikidata, ordered_leaves.ott FROM ordered_leaves
-    LEFT OUTER JOIN (SELECT ott,src,vernacular FROM vernacular_by_ott WHERE src={}) as wiki_vernacular_by_ott ON ordered_leaves.ott=wiki_vernacular_by_ott.ott
-    WHERE vernacular IS NULL AND ordered_leaves.id >= {} AND ordered_leaves.id <= {};
-    """.format(
-        subs, subs, subs, subs
-    )
-    db_curs.execute(sql, (src_flags["wiki"], leaf_left, leaf_right))
-    leaves_without_vernaculars = dict(db_curs.fetchall())
+    LEFT OUTER JOIN (SELECT ott,src,vernacular FROM vernacular_by_ott WHERE src={0}) as wiki_vernacular_by_ott ON ordered_leaves.ott=wiki_vernacular_by_ott.ott
+    WHERE vernacular IS NULL AND ordered_leaves.id >= {0} AND ordered_leaves.id <= {0};
+    """
+    db_context.execute(sql, (src_flags["wiki"], leaf_left, leaf_right))
+    leaves_without_vernaculars = dict(db_context.db_curs.fetchall())
     logger.info(
         f"Found {len(leaves_without_vernaculars)} taxa without a vernacular in the database"
     )
@@ -570,7 +562,7 @@ def process_clade(ott_or_taxon, dump_file, skip_images):
 
 
 def process_args(args):
-    global db_connection, datetime_now, subs, db_curs, config, output_dir
+    global db_context, config, output_dir
 
     config = read_config(args.config_file)
     database = config.get("db", "uri")
@@ -589,8 +581,7 @@ def process_args(args):
         )
     output_dir = args.output_dir
 
-    db_connection, datetime_now, subs = connect_to_database(database)
-    db_curs = db_connection.cursor()
+    db_context = connect_to_database(database)
 
     if args.subcommand == "leaf":
         # Process one leaf, optionally forcing the specified image

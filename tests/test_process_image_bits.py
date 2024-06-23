@@ -1,21 +1,17 @@
 import types
 from oz_tree_build.utilities.db_helper import connect_to_database
 from oz_tree_build.images_and_vernaculars import process_image_bits
+from tests.db_test_helpers import delete_all_by_ott
 
-db_connection, datetime_now, subs = connect_to_database()
-db_curs = db_connection.cursor()
+db_context = connect_to_database()
 
 
 def test_process_image_bits():
-    args = types.SimpleNamespace()
-    args.ott = -777
-    args.config_file = None
+    args = types.SimpleNamespace(ott=-777, config_file=None)
 
     # Delete the test rows before starting the test.
     # We don't delete them at the end, because we want to see the results manually.
-    sql = "DELETE FROM images_by_ott WHERE ott={0};".format(subs)
-    db_curs.execute(sql, args.ott)
-    db_connection.commit()
+    delete_all_by_ott(db_context, "images_by_ott", args.ott)
 
     # fmt: off
     test_rows = [
@@ -53,22 +49,18 @@ def test_process_image_bits():
 
     def check_database_content():
         # Query the database and check the results
-        sql = "SELECT best_any, overall_best_any, best_verified, overall_best_verified, best_pd, overall_best_pd FROM images_by_ott WHERE ott={0} ORDER BY id;".format(
-            subs
-        )
-        db_curs.execute(sql, args.ott)
-        rows = db_curs.fetchall()
+        sql = "SELECT best_any, overall_best_any, best_verified, overall_best_verified, best_pd, overall_best_pd FROM images_by_ott WHERE ott={0} ORDER BY id;"
+        db_context.execute(sql, args.ott)
+        rows = db_context.db_curs.fetchall()
 
         for i, row in enumerate(rows):
             assert row == expected_results[i]
 
     # Insert all the test rows
     for test_row in test_rows:
-        sql = "INSERT INTO images_by_ott (ott, src, src_id, url, rating, rights, licence, updated, best_any, overall_best_any, best_verified, overall_best_verified, best_pd, overall_best_pd) VALUES ({0},{0},{0},{0},{0},{0},{0},{1},{0},{0},{0},{0},{0},{0});".format(
-            subs, datetime_now
-        )
-        db_curs.execute(sql, test_row)
-    db_connection.commit()
+        sql = "INSERT INTO images_by_ott (ott, src, src_id, url, rating, rights, licence, updated, best_any, overall_best_any, best_verified, overall_best_verified, best_pd, overall_best_pd) VALUES ({0},{0},{0},{0},{0},{0},{0},{1},{0},{0},{0},{0},{0},{0});"
+        db_context.execute(sql, test_row)
+    db_context.db_connection.commit()
 
     # Run the function and make sure it made changes
     made_changes = process_image_bits.process_args(args)

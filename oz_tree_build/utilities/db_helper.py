@@ -8,6 +8,23 @@ import sys
 logger = logging.getLogger(__name__)
 
 
+class DbContext:
+    def __init__(self, db_connection, datetime_now, subs):
+        self.db_connection = db_connection
+        self._datetime_now = datetime_now
+        self._subs = subs
+        self.db_curs = db_connection.cursor()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.db_connection.close()
+
+    def execute(self, sql, args):
+        self.db_curs.execute(sql.format(self._subs, self._datetime_now), args)
+
+
 def connect_to_database(database=None):
 
     if database is None:
@@ -37,7 +54,7 @@ def connect_to_database(database=None):
         logger.error("No recognized database specified: {}".format(database))
         sys.exit()
 
-    return db_connection, datetime_now, subs
+    return DbContext(db_connection, datetime_now, subs)
 
 
 def read_config(config_file=None):

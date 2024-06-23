@@ -11,13 +11,12 @@ def is_licence_public_domain(licence):
 
 
 def process_args(args):
-    global db_connection, datetime_now, subs, db_curs, config
+    global db_context, config
 
     config = read_config(args.config_file)
     database = config.get("db", "uri")
 
-    db_connection, datetime_now, subs = connect_to_database(database)
-    db_curs = db_connection.cursor()
+    db_context = connect_to_database(database)
 
     ott = args.ott
 
@@ -33,15 +32,13 @@ def process_args(args):
         "overall_best_verified",
         "overall_best_pd",
     ]
-    db_curs.execute(
-        "SELECT "
-        + ", ".join(columns)
-        + " FROM images_by_ott WHERE ott={};".format(subs, subs),
+    db_context.execute(
+        "SELECT " + ", ".join(columns) + " FROM images_by_ott WHERE ott={0};",
         ott,
     )
 
     # Turn each row into a dictionary, and get them all into a list
-    images = [dict(zip(columns, row)) for row in db_curs.fetchall()]
+    images = [dict(zip(columns, row)) for row in db_context.db_curs.fetchall()]
     # Sort the images by rating descending
     images.sort(key=lambda x: x["rating"], reverse=True)
 
@@ -97,10 +94,8 @@ def process_args(args):
         logger.info(f"Updating database since there are changes for ott {ott}")
 
         for row in images:
-            db_curs.execute(
-                "UPDATE images_by_ott SET best_any={}, best_verified={}, best_pd={}, overall_best_any={}, overall_best_verified={}, overall_best_pd={} WHERE id={};".format(
-                    subs, subs, subs, subs, subs, subs, subs
-                ),
+            db_context.execute(
+                "UPDATE images_by_ott SET best_any={0}, best_verified={0}, best_pd={0}, overall_best_any={0}, overall_best_verified={0}, overall_best_pd={0} WHERE id={0};",
                 (
                     row["best_any"],
                     row["best_verified"],
@@ -111,7 +106,7 @@ def process_args(args):
                     row["id"],
                 ),
             )
-        db_connection.commit()
+        db_context.db_connection.commit()
     else:
         logger.info(f"No changes to make to the database for ott {ott}")
 

@@ -1,6 +1,7 @@
 import argparse
 import logging
 from oz_tree_build.utilities.db_helper import connect_to_database, read_config
+from oz_tree_build._OZglobals import src_flags
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +76,13 @@ def process_args(args):
             "best_pd",
             candidate=lambda row: is_licence_public_domain(row["licence"]),
         )
-
-        # TODO: how do we deal with verified images, since we don't know which are verified?
+        set_bit_for_first_image_only(
+            images_for_src,
+            "best_verified",
+            # Images from onezoom_bespoke or wiki are treated as verified, while others are not
+            candidate=lambda x: src == src_flags["onezoom_bespoke"]
+            or src == src_flags["wiki"],
+        )
 
     # Set the overall_best_any and overall_best_pd bits for all images
     set_bit_for_first_image_only(images, "overall_best_any")

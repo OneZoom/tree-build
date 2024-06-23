@@ -29,18 +29,6 @@ import sys
 import urllib.request
 from oz_tree_build.utilities.db_helper import connect_to_database, read_config
 
-# to get globals from ../../../models/_OZglobals.py
-sys.path.append(
-    os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            os.path.pardir,
-            os.path.pardir,
-            os.path.pardir,
-            "models",
-        )
-    )
-)
 from oz_tree_build._OZglobals import src_flags
 import time
 
@@ -461,7 +449,7 @@ def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
 def process_leaf(ott_or_taxon, image_name, rating, skip_images):
     # If ott_or_taxon is a number, it's an ott. Otherwise, it's a taxon name.
     sql = "SELECT ott,wikidata,name FROM ordered_leaves WHERE "
-    if ott_or_taxon.isnumeric():
+    if ott_or_taxon.lstrip("-").isnumeric():
         sql += "ott={0};"
     else:
         sql += "name={0};"

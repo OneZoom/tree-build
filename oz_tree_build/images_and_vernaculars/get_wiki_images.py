@@ -25,6 +25,7 @@ import requests
 import sys
 
 import urllib.request
+from oz_tree_build.images_and_vernaculars.process_image_bits import process_image_bits
 from oz_tree_build.utilities.file_utils import enumerate_lines_from_file
 from oz_tree_build.utilities.db_helper import (
     connect_to_database,
@@ -395,6 +396,9 @@ def save_wiki_image(
         ),
     )
     db_context.db_connection.commit()
+
+    # Since we added a new image, we need to update all the image bits for that ott
+    process_image_bits(ott)
 
 
 def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):

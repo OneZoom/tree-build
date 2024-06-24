@@ -197,7 +197,7 @@ def image_test_helper(image, rating, *args):
     # Insert a dummy image to test that it gets deleted in the wiki case, and kept in the bespoke case
     src_id = get_next_src_id_for_src(db_context, src)
     db_context.execute(
-        "INSERT INTO images_by_ott (ott, src, src_id, url, rating, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd) VALUES ({0}, {0}, {0}, {0}, 1234, 0, 0, 0, 0, 0, 0);",
+        "INSERT INTO images_by_ott (ott, src, src_id, url, rating, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd) VALUES ({0}, {0}, {0}, {0}, 1234, 1, 1, 1, 1, 1, 1);",
         (ott, src, src_id, "http://example.com/dummy.jpg"),
     )
 
@@ -207,7 +207,7 @@ def image_test_helper(image, rating, *args):
     get_wiki_images.process_args(get_command_arguments("leaf", ott, image, rating))
 
     rows = db_context.fetchall(
-        "SELECT ott, src, src_id, rating FROM images_by_ott WHERE ott={0} ORDER BY id desc;",
+        "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott WHERE ott={0} ORDER BY id desc;",
         ott,
     )
 
@@ -222,7 +222,13 @@ def image_test_helper(image, rating, *args):
         src,
         src_id + 1 if src == src_flags["onezoom_bespoke"] else int(qid),
         rating if rating else 35000,
+        1,
     )
+
+    # In the bespoke case, the call to process_image_bits at the end of get_wiki_images should have
+    # set the overall_best_any bit to 0 for the dummy image (from its original 1 when we added it)
+    if src == src_flags["onezoom_bespoke"]:
+        assert rows[1][4] == 0
 
     # Check the vernacular names
     rows = db_context.fetchall(

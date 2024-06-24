@@ -15,9 +15,7 @@ It can be called in two ways:
 """
 
 import argparse
-import bz2
 import configparser
-import gzip
 import json
 import logging
 import os
@@ -27,7 +25,12 @@ import requests
 import sys
 
 import urllib.request
-from oz_tree_build.utilities.db_helper import connect_to_database, read_config
+from oz_tree_build.utilities.file_utils import enumerate_lines_from_file
+from oz_tree_build.utilities.db_helper import (
+    connect_to_database,
+    get_next_src_id_for_src,
+    read_config,
+)
 
 from oz_tree_build._OZglobals import src_flags
 import time
@@ -38,24 +41,10 @@ from azure.core.credentials import AzureKeyCredential
 
 from PIL import Image
 
+default_wiki_image_rating = 35000
+bespoke_wiki_image_rating = 40000
+
 logger = logging.getLogger(__name__)
-
-
-def open_file_based_on_extension(filename, mode):
-    # Open a file, whether it's uncompressed, bz2 or gz
-    if filename.endswith(".bz2"):
-        return bz2.open(filename, mode, encoding="utf-8")
-    elif filename.endswith(".gz"):
-        return gzip.open(filename, mode, encoding="utf-8")
-    else:
-        return open(filename, mode, encoding="utf-8")
-
-
-def enumerate_lines_from_file(filename):
-    # Enumerate the lines in a file, whether it's uncompressed, bz2 or gz
-    with open_file_based_on_extension(filename, "rt") as f:
-        for line_num, line in enumerate(f):
-            yield line_num, line
 
 
 # Copied from OZTree/OZprivate/ServerScripts/Utilities/getEOL_crops.py
@@ -298,8 +287,8 @@ def get_image_url(escaped_image_name):
     return image_url
 
 
-def save_wiki_image_for_qid(
-    ott, qid, image, src, rating, output_dir, check_if_up_to_date=True
+def save_wiki_image(
+    ott, image, src, src_id, rating, output_dir, check_if_up_to_date=True
 ):
     """
     Download a Wikimedia image for a given QID and save it to the output directory.
@@ -313,11 +302,10 @@ def save_wiki_image_for_qid(
 
     if check_if_up_to_date:
         # If we already have an image for this taxon, and it's the same as the one we're trying to download, skip it
-        db_context.execute(
+        res = db_context.fetchone(
             "SELECT url FROM images_by_ott WHERE src={0} and ott={0};",
             (src, ott),
         )
-        res = db_context.db_curs.fetchone()
         if res:
             url = res[0]
             existing_image_name = url[len(wiki_image_url_prefix) :]
@@ -325,7 +313,7 @@ def save_wiki_image_for_qid(
                 logger.info(f"Image for {ott} is already up to date: {image['name']}")
                 return
 
-    logger.info(f"Processing image for ott={ott} (qid={qid}): {image['name']}")
+    logger.info(f"Processing image for ott={ott} (qid={src_id}): {image['name']}")
 
     license_info = get_image_license_info(escaped_image_name)
     if not license_info:
@@ -345,12 +333,12 @@ def save_wiki_image_for_qid(
 
     # We use the qid as the source id. This is convenient, although it does mean
     # that we can't have two wikidata images for a given taxon.
-    image_dir = os.path.join(output_dir, str(src), subdir_name(qid))
+    image_dir = os.path.join(output_dir, str(src), subdir_name(src_id))
     if not os.path.exists(image_dir):
         os.makedirs(image_dir)
 
     # Download the uncropped image
-    uncropped_image_path = f"{image_dir}/{qid}_uncropped.jpg"
+    uncropped_image_path = f"{image_dir}/{src_id}_uncropped.jpg"
     urllib.request.urlretrieve(image_url, uncropped_image_path)
 
     # Get the crop box using the Azure Vision API
@@ -370,26 +358,27 @@ def save_wiki_image_for_qid(
             crop_box.y + crop_box.height,
         ),
     )
-    im.save(f"{image_dir}/{qid}.jpg")
+    im.save(f"{image_dir}/{src_id}.jpg")
 
     # Save the crop info in a text file next to the image
-    crop_info_path = f"{image_dir}/{qid}_cropinfo.txt"
+    crop_info_path = f"{image_dir}/{src_id}_cropinfo.txt"
     with open(crop_info_path, "w") as f:
         f.write(f"{crop_box.x},{crop_box.y},{crop_box.width},{crop_box.height}")
 
     # Delete any existing wiki images for this taxon from the database
-    sql = "DELETE FROM images_by_ott WHERE ott={0} and src={0};"
-    db_context.execute(sql, (ott, src))
+    # Note that we don't do this for bespoke images, as there can be multiple for a given taxon
+    if src == src_flags["wiki"]:
+        sql = "DELETE FROM images_by_ott WHERE ott={0} and src={0};"
+        db_context.execute(sql, (ott, src))
 
     # Insert the new image into the database
     wikimedia_url = f"https://commons.wikimedia.org/wiki/File:{escaped_image_name}"
-    sql = "INSERT INTO images_by_ott (ott, src, src_id, url, rating, rating_confidence, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd, rights, licence, updated) VALUES ({0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {1});"
     db_context.execute(
-        sql,
+        "INSERT INTO images_by_ott (ott, src, src_id, url, rating, rating_confidence, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd, rights, licence, updated) VALUES ({0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {1});",
         (
             ott,
             src,
-            qid,
+            src_id,
             wikimedia_url,
             rating,
             None,
@@ -448,15 +437,15 @@ def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
 
 def process_leaf(ott_or_taxon, image_name, rating, skip_images):
     # If ott_or_taxon is a number, it's an ott. Otherwise, it's a taxon name.
+    # Real otts are never negative, but we abuse them in our tests, so account for that.
     sql = "SELECT ott,wikidata,name FROM ordered_leaves WHERE "
     if ott_or_taxon.lstrip("-").isnumeric():
         sql += "ott={0};"
     else:
         sql += "name={0};"
 
-    db_context.execute(sql, ott_or_taxon)
     try:
-        (ott, qid, name) = db_context.db_curs.fetchone()
+        (ott, qid, name) = db_context.fetchone(sql, ott_or_taxon)
     except TypeError:
         logger.error(f"'{ott_or_taxon}' not found in ordered_leaves table")
         return
@@ -468,7 +457,7 @@ def process_leaf(ott_or_taxon, image_name, rating, skip_images):
     # - If it's not passed in for a bespoke image, use 40000
     # - for non-bespoke images, use 35000
     if not rating:
-        rating = 40000 if image_name else 35000
+        rating = bespoke_wiki_image_rating if image_name else default_wiki_image_rating
 
     json_item = get_wikidata_json_for_qid(qid)
 
@@ -478,11 +467,15 @@ def process_leaf(ott_or_taxon, image_name, rating, skip_images):
         if image_name:
             image = {"name": image_name}
             src = src_flags["onezoom_bespoke"]
+
+            # Get the highest bespoke src_id, and add 1 to it for the new image src_id
+            src_id = get_next_src_id_for_src(db_context, src)
         else:
             image = get_preferred_or_first_image_from_json_item(json_item)
             src = src_flags["wiki"]
+            src_id = qid
         if image:
-            save_wiki_image_for_qid(ott, qid, image, src, rating, output_dir)
+            save_wiki_image(ott, image, src, src_id, rating, output_dir)
 
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
     save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language)
@@ -491,15 +484,14 @@ def process_leaf(ott_or_taxon, image_name, rating, skip_images):
 def process_clade(ott_or_taxon, dump_file, skip_images):
 
     # Get the left and right leaf ids for the passed in taxon
-    sql = "SELECT ott,name,leaf_lft,leaf_rgt FROM ordered_nodes WHERE "
+    sql = "SELECT leaf_lft,leaf_rgt FROM ordered_nodes WHERE "
     # If ott_or_taxon is a number, it's an ott. If it's a string, it's a taxon name.
     if ott_or_taxon.isnumeric():
         sql += "ott={0};"
     else:
         sql += "name={0};"
-    db_context.execute(sql, ott_or_taxon)
     try:
-        (ott, name, leaf_left, leaf_right) = db_context.db_curs.fetchone()
+        (leaf_left, leaf_right) = db_context.fetchone(sql, ott_or_taxon)
     except TypeError:
         logger.error(f"'{ott_or_taxon}' not found in ordered_nodes table")
         return
@@ -533,20 +525,19 @@ def process_clade(ott_or_taxon, dump_file, skip_images):
         dump_file
     ):
         if not skip_images and image and qid in leaves_without_images:
-            ott = leaves_without_images[qid]
-            save_wiki_image_for_qid(
-                ott,
-                qid,
+            save_wiki_image(
+                leaves_without_images[qid],
                 image,
                 src_flags["wiki"],
-                35000,
+                qid,
+                default_wiki_image_rating,
                 output_dir,
                 check_if_up_to_date=False,
             )
         if vernaculars and qid in leaves_without_vernaculars:
-            ott = leaves_without_vernaculars[qid]
-
-            save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars)
+            save_all_wiki_vernaculars_for_qid(
+                leaves_without_vernaculars[qid], qid, vernaculars
+            )
 
 
 def process_args(args):

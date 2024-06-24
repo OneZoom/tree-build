@@ -4,12 +4,17 @@ import types
 import urllib.request
 from unittest import mock
 from oz_tree_build._OZglobals import src_flags
-from oz_tree_build.utilities.db_helper import connect_to_database
+from oz_tree_build.utilities.db_helper import (
+    connect_to_database,
+    delete_all_by_ott,
+    get_next_src_id_for_src,
+)
 from oz_tree_build.images_and_vernaculars import get_wiki_images
-from tests.db_test_helpers import delete_all_by_ott
 
 
 db_context = connect_to_database()
+
+# Maps URLs to the JSON responses that should be returned
 mocked_requests = {}
 
 
@@ -96,14 +101,14 @@ def build_wikidata_entities(qid, images, vernaculars):
     return entities
 
 
-def get_command_arguments(subcommand, ott_or_taxon, image):
+def get_command_arguments(subcommand, ott_or_taxon, image, rating):
     return types.SimpleNamespace(
         config_file=None,
         output_dir=None,
         subcommand=subcommand,
         ott_or_taxon=ott_or_taxon,
         image=image,
-        rating=None,
+        rating=rating,
         skip_images=None,
     )
 
@@ -173,41 +178,70 @@ mocked_requests[
 
 
 @patch_all
-def image_test_helper(image, *args):
+def image_test_helper(image, rating, *args):
     # Delete the test rows before starting the test.
     # We don't delete them at the end, because we want to see the results manually.
     delete_all_by_ott(db_context, "ordered_leaves", ott)
     delete_all_by_ott(db_context, "images_by_ott", ott)
     delete_all_by_ott(db_context, "vernacular_by_ott", ott)
 
-    # Insert this ott into the ordered_leaves table
+    # Insert a leaf to set up the mapping between the ott and the wikidata id
     db_context.execute(
-        "INSERT INTO OneZoom.ordered_leaves (parent, real_parent, name, ott, wikidata) VALUES (0, 0, {0}, {0}, {0});",
-        ("qqq", ott, qid),
+        "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) VALUES (0, 0, {0}, {0}, {0});",
+        ("Panthera leo", ott, qid),
     )
+
+    # Note that the image src should be onezoom_bespoke if a bespoke image is used
+    src = src_flags["onezoom_bespoke"] if image else src_flags["wiki"]
+
+    # Insert a dummy image to test that it gets deleted in the wiki case, and kept in the bespoke case
+    src_id = get_next_src_id_for_src(db_context, src)
+    db_context.execute(
+        "INSERT INTO images_by_ott (ott, src, src_id, url, rating, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd) VALUES ({0}, {0}, {0}, {0}, 1234, 0, 0, 0, 0, 0, 0);",
+        (ott, src, src_id, "http://example.com/dummy.jpg"),
+    )
+
     db_context.db_connection.commit()
 
-    get_wiki_images.process_args(get_command_arguments("leaf", ott, image))
+    # Call the method that we want to test
+    get_wiki_images.process_args(get_command_arguments("leaf", ott, image, rating))
 
-    sql = "SELECT ott, src, src_id FROM images_by_ott WHERE ott={0} ORDER BY id;"
-    db_context.execute(sql, ott)
-    rows = db_context.db_curs.fetchall()
+    rows = db_context.fetchall(
+        "SELECT ott, src, src_id, rating FROM images_by_ott WHERE ott={0} ORDER BY id desc;",
+        ott,
+    )
 
-    # There should only be one image in the database
-    assert len(rows) == 1
+    # There should only be one image in the database in wiki mode (since we delete first),
+    # and two in bespoke mode
+    assert len(rows) == 1 if src == src_flags["wiki"] else 2
 
     # Check the image details
-    # Note that the src_id should be onezoom_bespoke if there is an image
+    # src_id should be one more than the test row in the bespoke case, and the qid in the wiki case
     assert rows[0] == (
         int(ott),
-        src_flags["onezoom_bespoke"] if image else src_flags["wiki"],
-        int(qid),
+        src,
+        src_id + 1 if src == src_flags["onezoom_bespoke"] else int(qid),
+        rating if rating else 35000,
+    )
+
+    # Check the vernacular names
+    rows = db_context.fetchall(
+        "SELECT ott, vernacular, lang_primary FROM vernacular_by_ott WHERE ott={0} ORDER BY id;",
+        ott,
+    )
+
+    assert len(rows) == 4
+    assert rows == (
+        (int(ott), "Lion", "en"),
+        (int(ott), "African Lion", "en"),
+        (int(ott), "Lion", "fr"),
+        (int(ott), "Lion d'Afrique", "fr"),
     )
 
 
-def test_get_leaf_default_image(*args):
-    image_test_helper(None)
+def test_get_leaf_default_image():
+    image_test_helper(None, None)
 
 
-def test_get_leaf_bespoke_image(*args):
-    image_test_helper("SecondLionImage.jpg")
+def test_get_leaf_bespoke_image():
+    image_test_helper("SecondLionImage.jpg", 42000)

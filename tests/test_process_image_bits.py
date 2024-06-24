@@ -1,7 +1,6 @@
 import types
-from oz_tree_build.utilities.db_helper import connect_to_database
+from oz_tree_build.utilities.db_helper import connect_to_database, delete_all_by_ott
 from oz_tree_build.images_and_vernaculars import process_image_bits
-from tests.db_test_helpers import delete_all_by_ott
 
 db_context = connect_to_database()
 
@@ -50,8 +49,7 @@ def test_process_image_bits():
     def check_database_content():
         # Query the database and check the results
         sql = "SELECT best_any, overall_best_any, best_verified, overall_best_verified, best_pd, overall_best_pd FROM images_by_ott WHERE ott={0} ORDER BY id;"
-        db_context.execute(sql, args.ott)
-        rows = db_context.db_curs.fetchall()
+        rows = db_context.fetchall(sql, args.ott)
 
         for i, row in enumerate(rows):
             assert row == expected_results[i]

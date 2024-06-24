@@ -24,6 +24,14 @@ class DbContext:
     def execute(self, sql, args):
         self.db_curs.execute(sql.format(self._subs, self._datetime_now), args)
 
+    def fetchall(self, sql, args):
+        self.execute(sql, args)
+        return self.db_curs.fetchall()
+
+    def fetchone(self, sql, args):
+        self.execute(sql, args)
+        return self.db_curs.fetchone()
+
 
 def connect_to_database(database=None):
 
@@ -55,6 +63,23 @@ def connect_to_database(database=None):
         sys.exit()
 
     return DbContext(db_connection, datetime_now, subs)
+
+
+# Delete all rows in a table for a given ott.
+# It's usable for any table that has an ott column.
+def delete_all_by_ott(db_context, table, ott):
+    sql = f"DELETE FROM {table} WHERE ott={{0}};"
+    db_context.execute(sql, ott)
+    db_context.db_connection.commit()
+
+
+def get_next_src_id_for_src(db_context, src):
+    # Get the highest bespoke src_id, and add 1 to it for the new image src_id
+    max_src_id = db_context.fetchone(
+        "SELECT MAX(src_id) AS max_src_id FROM OneZoom.images_by_ott WHERE src={0};",
+        src,
+    )
+    return max_src_id[0] + 1 if max_src_id[0] else 1
 
 
 def read_config(config_file=None):

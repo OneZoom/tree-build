@@ -230,22 +230,33 @@ def get_image_license_info(escaped_image_name):
     image_metadata_url = f"https://api.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=extmetadata&titles=File%3a{escaped_image_name}&format=json&iiextmetadatafilter=License|LicenseUrl|Artist"
 
     r = make_http_request_with_retries(image_metadata_url)
+    extmetadata = r.json()["query"]["pages"]["-1"]["imageinfo"][0]["extmetadata"]
 
     license_info = {}
-    try:
-        image_metadata = r.json()
-        extmetadata = image_metadata["query"]["pages"]["-1"]["imageinfo"][0][
-            "extmetadata"
-        ]
 
-        if "artist" in extmetadata:
+    try:
+        license_info["license_url"] = extmetadata["LicenseUrl"]["value"]
+    except KeyError:
+        # Public domain images typically don't have a license URL
+        license_info["license_url"] = None
+
+    try:
+        if "Artist" in extmetadata:
             license_info["artist"] = extmetadata["Artist"]["value"]
             # Strip the html tags from the artist
             license_info["artist"] = re.sub(r"<[^>]*>", "", license_info["artist"])
         else:
             license_info["artist"] = "Unknown artist"
 
-        license_info["license"] = extmetadata["License"]["value"]
+        # Some images have a flicker common license URL but not License field (e.g. Potos_flavus_(22985770100).jpg)
+        # We treat these as public domain, because the flicker common license is basically that.
+        if (
+            not "License" in extmetadata
+            and license_info["license_url"] == "https://www.flickr.com/commons/usage/"
+        ):
+            license_info["license"] = "pd"
+        else:
+            license_info["license"] = extmetadata["License"]["value"]
 
         # If the license doesn't start with "cc" or "pd", we can't use it
         if not license_info["license"].startswith("cc") and not license_info[
@@ -257,12 +268,6 @@ def get_image_license_info(escaped_image_name):
             return None
     except KeyError:
         return None
-
-    try:
-        license_info["license_url"] = extmetadata["LicenseUrl"]["value"]
-    except KeyError:
-        # Public domain images typically don't have a license URL
-        license_info["license_url"] = None
 
     return license_info
 

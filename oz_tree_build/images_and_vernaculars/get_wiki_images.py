@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 This utility retrieves images and vernacular names from Wikidata for a given taxon or clade.
 """
@@ -19,6 +17,7 @@ import configparser
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import time
 import requests
@@ -45,7 +44,7 @@ from PIL import Image
 default_wiki_image_rating = 35000
 bespoke_wiki_image_rating = 40000
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(Path(__file__).name)
 
 
 # Copied from OZTree/OZprivate/ServerScripts/Utilities/getEOL_crops.py
@@ -110,7 +109,6 @@ def get_image_crop_box(image_url):
             credential=AzureKeyCredential(azure_vision_key),
         )
 
-    logger.info(f"Getting crop box for '{image_url}'")
     result = image_analysis_client.analyze_from_url(
         image_url,
         visual_features=[VisualFeatures.SMART_CROPS],
@@ -321,7 +319,7 @@ def save_wiki_image(
         logger.warning(
             f"Couldn't get license or artist for '{escaped_image_name};. Ignoring it."
         )
-        return
+        return False
 
     is_public_domain = license_info["license"] in {"pd", "cc0"}
     license_string = (
@@ -399,6 +397,8 @@ def save_wiki_image(
 
     # Since we added a new image, we need to update all the image bits for that ott
     process_image_bits(ott)
+
+    return True
 
 
 def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
@@ -525,11 +525,12 @@ def process_clade(ott_or_taxon, dump_file, skip_images):
         f"Found {len(leaves_without_vernaculars)} taxa without a vernacular in the database"
     )
 
+    leaves_that_got_images = set()
     for qid, image, vernaculars in enumerate_dump_items_with_images_or_vernaculars(
         dump_file
     ):
         if not skip_images and image and qid in leaves_without_images:
-            save_wiki_image(
+            if save_wiki_image(
                 leaves_without_images[qid],
                 image,
                 src_flags["wiki"],
@@ -537,11 +538,18 @@ def process_clade(ott_or_taxon, dump_file, skip_images):
                 default_wiki_image_rating,
                 output_dir,
                 check_if_up_to_date=False,
-            )
+            ):
+                leaves_that_got_images.add(qid)
         if vernaculars and qid in leaves_without_vernaculars:
             save_all_wiki_vernaculars_for_qid(
                 leaves_without_vernaculars[qid], qid, vernaculars
             )
+
+    # Log the leaves for which we couldn't find images
+    logger.info("Taxa for which we couldn't find a proper image:")
+    for qid, ott in leaves_without_images.items():
+        if qid not in leaves_that_got_images:
+            logger.info(f"  ott={ott} qid={qid}")
 
 
 def process_args(args):

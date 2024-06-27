@@ -113,7 +113,7 @@ def get_command_arguments(subcommand, ott_or_taxon, image, rating):
     )
 
 
-def patch_all(f):
+def patch_all_web_request_methods(f):
     @mock.patch("requests.get", side_effect=mocked_requests_get)
     @mock.patch("urllib.request.urlretrieve", side_effect=mocked_urlretrieve)
     @mock.patch(
@@ -126,6 +126,7 @@ def patch_all(f):
     return functor
 
 
+# We use a negative ott to avoid conflicts with real OTTs
 ott = "-777"
 qid = "7777777"
 
@@ -172,13 +173,16 @@ mocked_requests[
     "https://api.wikimedia.org/core/v1/commons/file/SecondLionImage.jpg"
 ] = {
     "preferred": {
+        # This is the preferred image size, not the preferred image itself
         "url": "https://upload.wikimedia.org/wikipedia/commons/7/73/SecondLionImage.jpg"
     }
 }
 
 
-@patch_all
-def image_test_helper(image, rating, *args):
+@patch_all_web_request_methods
+def verify_image_behavior(image, rating, *args):
+    assert int(ott) < 0
+
     # Delete the test rows before starting the test.
     # We don't delete them at the end, because we want to see the results manually.
     delete_all_by_ott(db_context, "ordered_leaves", ott)
@@ -246,8 +250,8 @@ def image_test_helper(image, rating, *args):
 
 
 def test_get_leaf_default_image():
-    image_test_helper(None, None)
+    verify_image_behavior(None, None)
 
 
 def test_get_leaf_bespoke_image():
-    image_test_helper("SecondLionImage.jpg", 42000)
+    verify_image_behavior("SecondLionImage.jpg", 42000)

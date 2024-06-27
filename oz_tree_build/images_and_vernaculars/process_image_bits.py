@@ -31,7 +31,9 @@ def process_image_bits(ott, config_file=None):
         "overall_best_pd",
     ]
     db_context.execute(
-        "SELECT " + ", ".join(columns) + " FROM images_by_ott WHERE ott={0};",
+        "SELECT "
+        + ", ".join(columns)
+        + " FROM images_by_ott WHERE ott={0} ORDER BY id;",
         ott,
     )
 

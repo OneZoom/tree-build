@@ -33,10 +33,10 @@ class DbContext:
         return self.db_curs.fetchone()
 
 
-def connect_to_database(database=None):
+def connect_to_database(database=None, appconfig=None):
 
     if database is None:
-        database = read_config().get("db", "uri")
+        database = read_config(appconfig).get("db", "uri")
 
     if database.startswith(
         "mysql://"
@@ -92,8 +92,8 @@ def read_config(config_file=None):
             os.path.dirname(os.path.abspath(__file__)),
             "../../../OZtree/private/appconfig.ini",
         )
-
+    if not os.path.exists(config_file):
+        raise ValueError(f"Appconfig file {config_file} cannot be found.")
     config = configparser.ConfigParser()
-
     config.read(config_file)
     return config

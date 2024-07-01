@@ -20,6 +20,7 @@ class TestDBHelper:
         assert len(db.executesql("SELECT id from ordered_leaves LIMIT 1")) > 0
         db.close()
 
+
 class BaseDB:
     get_sql = (
         "SELECT best_any, overall_best_any, best_verified, overall_best_verified, best_pd, overall_best_pd FROM images_by_ott "
@@ -34,31 +35,42 @@ class BaseDB:
 
 
 class TestAPI(BaseDB):
-    ott = -111
+    """
+    Test calling the .resolve() function directly.
+    """
     def test_empty(self, db):
-        # Delete the test rows before starting the test.
-        # We don't delete them at the end, because we want to see the results manually.
-        delete_all_by_ott(db, "images_by_ott", self.ott)
-        process_image_bits.resolve(db, self.ott)
-
-    def test_single(self, db):
         ott = -111
+        # Delete the test rows before starting the test.
+        delete_all_by_ott(db, "images_by_ott", ott)
+        process_image_bits.resolve(db, ott)
+
+
+    def test_single(self, db, keep_rows):
+        ott = -112
         ph = placeholder(db)
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
-        delete_all_by_ott(db, "images_by_ott", self.ott)
-        test_row = [self.ott, 20, -3, "foo.jpg", 24000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0]
+        delete_all_by_ott(db, "images_by_ott", ott)
+        test_row = [ott, 20, -3, "foo.jpg", 24000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0]
         sql = self.set_sql.format(ph)
         db.executesql(sql, test_row + [datetime.datetime.now()])
         made_changes = process_image_bits.resolve(db, ott)
         assert made_changes
         sql = self.get_sql.format(ph)
-        rows = db.executesql(sql, (self.ott, ))
+        rows = db.executesql(sql, (ott, ))
         assert len(rows) == 1
         assert tuple(rows[0]) == (1, 1, 1, 1, 1, 1)
+        if not keep_rows:
+            delete_all_by_ott(db, "images_by_ott", ott)
+            rows = db.executesql(sql, (ott, ))
+            assert len(rows) == 0
+            
 
 
 class TestCLI(BaseDB):
+    """
+    Test calling process_args() as would be done using the command-line.
+    """
     def check_database_content(self, args, expected_results, db):
         # Query the database and check the results
         rows = db.executesql(self.get_sql.format(placeholder(db)), (args.ott, ))
@@ -66,7 +78,7 @@ class TestCLI(BaseDB):
             assert row == expected_results[i]
 
     @pytest.mark.parametrize("init_value", [0, 1])
-    def test_process_image_bits(self, db, appconfig, init_value):
+    def test_process_image_bits(self, db, appconfig, keep_rows, init_value):
         args = types.SimpleNamespace(ott=-777, config_file=appconfig)
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
@@ -129,3 +141,5 @@ class TestCLI(BaseDB):
         # Make sure the database content is still as expected
         self.check_database_content(args, expected_results, db)
 
+        if not keep_rows:
+            delete_all_by_ott(db, "images_by_ott", args.ott)

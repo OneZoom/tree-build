@@ -10,14 +10,20 @@ def is_licence_public_domain(licence):
     return licence.startswith("pd") or licence.startswith("cc0")
 
 
-def process_image_bits(ott, config_file=None):
-    global db_context, config
-
+def process_image_bits_from_config(ott, config_file):
+    """
+    Process image bits for the given ott, getting a new db_context from a config file.
+    """
     config = read_config(config_file)
     database = config.get("db", "uri")
 
     db_context = connect_to_database(database)
+    return process_image_bits(ott, db_context)
 
+def process_image_bits(ott, db_context):
+    """
+    Process image bits for the given ott, using an existing db_context.
+    """
     columns = [
         "id",
         "src",
@@ -114,7 +120,7 @@ def process_image_bits(ott, config_file=None):
 
 
 def process_args(args):
-    return process_image_bits(args.ott, args.config_file)
+    return process_image_bits_from_config(args.ott, args.config_file)
 
 
 def main():

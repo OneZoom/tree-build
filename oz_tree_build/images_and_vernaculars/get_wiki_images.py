@@ -405,7 +405,7 @@ def save_wiki_image(
     db_context.db_connection.commit()
 
     # Since we added a new image, we need to update all the image bits for that ott
-    process_image_bits(ott)
+    process_image_bits(ott, db_context)
 
     return True
 

@@ -9,6 +9,22 @@ logger = logging.getLogger(__name__)
 def is_licence_public_domain(licence):
     return licence.startswith("pd") or licence.startswith("cc0")
 
+def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
+    """
+    Set the first row that meets the condition to 1, and all others to 0.
+    Returns True if any changes were made.
+    """
+    # Keep track of whether any changes are made, so we know whether to commit them
+    made_changes = False
+    first = True
+    for image in images:
+        new_value = 1 if first and candidate(image) else 0
+        if image[column_name] != new_value:
+            image[column_name] = new_value
+            made_changes = True
+        if new_value:
+            first = False
+    return made_changes
 
 def process_image_bits_from_config(ott, config_file):
     """
@@ -53,33 +69,16 @@ def process_image_bits(ott, db_context):
     for row in images:
         images_by_src.setdefault(row["src"], []).append(row)
 
-    # Keep track of whether any changes are made, so we know whether to commit them
     made_changes = False
-
-    def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
-        """
-        Set the first row that meets the condition to 1, and all others to 0.
-        Returns True if any changes were made.
-        """
-        nonlocal made_changes
-        first = True
-        for image in images:
-            new_value = 1 if first and candidate(image) else 0
-            if image[column_name] != new_value:
-                image[column_name] = new_value
-                made_changes = True
-            if new_value:
-                first = False
-
     # Set the best_any and best_pd bits for each source
     for src, images_for_src in images_by_src.items():
-        set_bit_for_first_image_only(images_for_src, "best_any")
-        set_bit_for_first_image_only(
+        made_changes |= set_bit_for_first_image_only(images_for_src, "best_any")
+        made_changes |= set_bit_for_first_image_only(
             images_for_src,
             "best_pd",
             candidate=lambda row: is_licence_public_domain(row["licence"]),
         )
-        set_bit_for_first_image_only(
+        made_changes |= set_bit_for_first_image_only(
             images_for_src,
             "best_verified",
             # Images from onezoom_bespoke or wiki are treated as verified, while others are not
@@ -88,11 +87,11 @@ def process_image_bits(ott, db_context):
         )
 
     # Set the overall_best_any and overall_best_pd bits for all images
-    set_bit_for_first_image_only(images, "overall_best_any")
-    set_bit_for_first_image_only(
+    made_changes |= set_bit_for_first_image_only(images, "overall_best_any")
+    made_changes |= set_bit_for_first_image_only(
         images, "overall_best_verified", candidate=lambda row: row["best_verified"]
     )
-    set_bit_for_first_image_only(
+    made_changes |= set_bit_for_first_image_only(
         images, "overall_best_pd", candidate=lambda row: row["best_pd"]
     )
 

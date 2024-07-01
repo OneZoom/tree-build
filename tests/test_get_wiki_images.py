@@ -182,16 +182,21 @@ mocked_requests[
 class TestCLI:
 
     @pytest.fixture(autouse=True)
-    def setup_database(self, appconfig):
-        self.appconfig = appconfig
-        self.db_context = connect_to_database(appconfig=appconfig)
+    def db_context(self, appconfig):
+        db_context = connect_to_database(appconfig=appconfig)
+        yield db_context
+        db_context.db_connection.close()
         
 
-    def test_get_leaf_default_image(self):
+    def test_get_leaf_default_image(self, db_context, appconfig):
+        self.db_context = db_context
+        self.appconfig = appconfig
         self.verify_image_behavior(None, None)
 
 
-    def test_get_leaf_bespoke_image(self, setup_database):
+    def test_get_leaf_bespoke_image(self, db_context, appconfig):
+        self.db_context = db_context
+        self.appconfig = appconfig
         self.verify_image_behavior("SecondLionImage.jpg", 42000)
 
     @patch_all_web_request_methods

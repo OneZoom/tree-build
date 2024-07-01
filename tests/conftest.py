@@ -8,6 +8,6 @@ def pytest_addoption(parser):
         default=None
     )
 
-@fixture()
+@fixture(scope='session')
 def appconfig(request):
     return request.config.getoption("--appconfig")

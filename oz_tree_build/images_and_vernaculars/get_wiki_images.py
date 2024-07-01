@@ -15,6 +15,7 @@ It can be called in two ways:
 import argparse
 import configparser
 import json
+from io import BytesIO
 import logging
 import os
 from pathlib import Path
@@ -86,37 +87,57 @@ def make_http_request_with_retries(url):
     raise Exception(f"Failed to get {url} after {retries} attempts")
 
 
-image_analysis_client = None
-
-
-def get_image_crop_box(image_url):
+def get_image_analysis_client(config):
     """
-    Get the crop box for an image using the Azure Vision API.
+    Given a config object, return an Azure Image Analysis client.
     """
-    global image_analysis_client
+    try:
+        azure_vision_endpoint = config.get("azure_vision", "endpoint")
+        azure_vision_key = config.get("azure_vision", "key")
+    except configparser.NoOptionError:
+        logger.error("Azure Vision API key not found in config file")
+        sys.exit()
 
-    # On the first call, create the image analysis client
-    if not image_analysis_client:
-        try:
-            azure_vision_endpoint = config.get("azure_vision", "endpoint")
-            azure_vision_key = config.get("azure_vision", "key")
-        except configparser.NoOptionError:
-            logger.error("Azure Vision API key not found in config file")
-            sys.exit()
-
-        image_analysis_client = ImageAnalysisClient(
-            endpoint=azure_vision_endpoint,
-            credential=AzureKeyCredential(azure_vision_key),
-        )
-
-    result = image_analysis_client.analyze_from_url(
-        image_url,
-        visual_features=[VisualFeatures.SMART_CROPS],
-        smart_crops_aspect_ratios=[1.0],
+    return ImageAnalysisClient(
+        endpoint=azure_vision_endpoint,
+        credential=AzureKeyCredential(azure_vision_key),
     )
 
-    return result.smart_crops.list[0].bounding_box
 
+def get_image_crop_box(image, crop=None):
+    """
+    `image` can be a URL or a local file path.
+    Get the crop box for an image. If `crop` is an ImageAnalysisClient
+    use the Azure Vision API.
+    """
+    if hasattr(crop, "analyze_from_url"):
+        if image.startswith("http"):
+            image_analysis_client = crop
+            result = image_analysis_client.analyze_from_url(
+                image,
+                visual_features=[VisualFeatures.SMART_CROPS],
+                smart_crops_aspect_ratios=[1.0],
+            )
+            return result.smart_crops.list[0].bounding_box
+        else:
+            raise ValueError("Azure Vision API can only be used with URLs")
+    elif len(crop) == 4:
+        return types.SimpleNamespace(x=crop[0], y=crop[1], width=crop[2], height=crop[3])
+    else:
+        # Default to centering the crop
+        if image.startswith("http"):
+            response = requests.get(image)
+            img = Image.open(BytesIO(response.content))
+        else:
+            img = Image.open(image)
+        width, height = im.size
+        crop_size = min(width, height)
+        return types.SimpleNamespace(
+            x=(width - crop_size) // 2,
+            y=(height - crop_size) // 2,
+            width=crop_size,
+            height=crop_size,
+        )
 
 def get_preferred_or_first_image_from_json_item(json_item):
     """
@@ -296,11 +317,13 @@ def get_image_url(escaped_image_name):
 
 
 def save_wiki_image(
-    ott, image, src, src_id, rating, output_dir, check_if_up_to_date=True
+    db_context, ott, image, src, src_id, rating, output_dir, crop=None, check_if_up_to_date=True
 ):
     """
     Download a Wikimedia image for a given QID and save it to the output directory.
     We keep both the uncropped and cropped versions of the image, along with the crop info.
+    `crop` can be an Azure ImageAnalysisClient, a crop location in the image (x, y, width, height),
+    or None to carry out a default (centered) crop.
     """
 
     wiki_image_url_prefix = "https://commons.wikimedia.org/wiki/File:"
@@ -350,7 +373,7 @@ def save_wiki_image(
     urllib.request.urlretrieve(image_url, uncropped_image_path)
 
     # Get the crop box using the Azure Vision API
-    crop_box = get_image_crop_box(image_url)
+    crop_box = get_image_crop_box(image_url, crop)
 
     # Crop and resize the image using PIL
     im = Image.open(uncropped_image_path)
@@ -405,7 +428,7 @@ def save_wiki_image(
     db_context.db_connection.commit()
 
     # Since we added a new image, we need to update all the image bits for that ott
-    process_image_bits(ott, db_context)
+    process_image_bits(db_context, ott)
 
     return True
 
@@ -448,8 +471,12 @@ def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
     db_context.db_connection.commit()
 
 
-def process_leaf(ott_or_taxon, image_name, rating, skip_images):
-    # If ott_or_taxon is a number, it's an ott. Otherwise, it's a taxon name.
+def process_leaf(db_context, ott_or_taxon, image_name, rating, skip_images, crop=None):
+    """
+    If ott_or_taxon is a number, it's an ott. Otherwise, it's a taxon name.
+    `crop` can be an Azure ImageAnalysisClient, a crop location in the image (x, y, width, height),
+    or None to carry out a default (centered) crop.
+    """
     # Real otts are never negative, but we abuse them in our tests, so account for that.
     sql = "SELECT ott,wikidata,name FROM ordered_leaves WHERE "
     if ott_or_taxon.lstrip("-").isnumeric():
@@ -488,13 +515,17 @@ def process_leaf(ott_or_taxon, image_name, rating, skip_images):
             src = src_flags["wiki"]
             src_id = qid
         if image:
-            save_wiki_image(ott, image, src, src_id, rating, output_dir)
+            save_wiki_image(db_context, ott, image, src, src_id, rating, output_dir, crop)
 
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
     save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language)
 
 
-def process_clade(ott_or_taxon, dump_file, skip_images):
+def process_clade(db_context, ott_or_taxon, dump_file, skip_images, crop=None):
+    """
+    `crop` can be an ImageAnalysisClient, a crop location in the image (x, y, width, height),
+    or None to carry out a default (centered) crop.
+    """
 
     # Get the left and right leaf ids for the passed in taxon
     sql = "SELECT leaf_lft,leaf_rgt FROM ordered_nodes WHERE "
@@ -540,12 +571,14 @@ def process_clade(ott_or_taxon, dump_file, skip_images):
     ):
         if not skip_images and image and qid in leaves_without_images:
             if save_wiki_image(
+                db_context,
                 leaves_without_images[qid],
                 image,
                 src_flags["wiki"],
                 qid,
                 default_wiki_image_rating,
                 output_dir,
+                crop,
                 check_if_up_to_date=False,
             ):
                 leaves_that_got_images.add(qid)
@@ -582,13 +615,14 @@ def process_args(args):
     output_dir = args.output_dir
 
     db_context = connect_to_database(database)
+    azure = get_image_analysis_client(config)
 
     if args.subcommand == "leaf":
         # Process one leaf, optionally forcing the specified image
-        process_leaf(args.ott_or_taxon, args.image, args.rating, args.skip_images)
+        process_leaf(db_context, args.ott_or_taxon, args.image, args.rating, args.skip_images, crop=azure)
     elif args.subcommand == "clade":
         # Process all the images in the passed in clade
-        process_clade(args.ott_or_taxon, args.dump_file, args.skip_images)
+        process_clade(db_context, args.ott_or_taxon, args.dump_file, args.skip_images, crop=azure)
 
 
 def main():

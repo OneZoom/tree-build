@@ -34,9 +34,9 @@ def process_image_bits_from_config(ott, config_file):
     database = config.get("db", "uri")
 
     db_context = connect_to_database(database)
-    return process_image_bits(ott, db_context)
+    return process_image_bits(db_context, ott)
 
-def process_image_bits(ott, db_context):
+def process_image_bits(db_context, ott):
     """
     Process image bits for the given ott, using an existing db_context.
     """

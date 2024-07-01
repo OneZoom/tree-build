@@ -14,6 +14,7 @@ It can be called in two ways:
 
 import argparse
 import configparser
+import datetime
 import json
 from io import BytesIO
 import logging
@@ -130,7 +131,7 @@ def get_image_crop_box(image, crop=None):
             img = Image.open(BytesIO(response.content))
         else:
             img = Image.open(image)
-        width, height = im.size
+        width, height = img.size
         crop_size = min(width, height)
         return types.SimpleNamespace(
             x=(width - crop_size) // 2,
@@ -317,7 +318,7 @@ def get_image_url(escaped_image_name):
 
 
 def save_wiki_image(
-    db_context, ott, image, src, src_id, rating, output_dir, crop=None, check_if_up_to_date=True
+    db, ott, image, src, src_id, rating, output_dir, crop=None, check_if_up_to_date=True
 ):
     """
     Download a Wikimedia image for a given QID and save it to the output directory.
@@ -333,12 +334,9 @@ def save_wiki_image(
 
     if check_if_up_to_date:
         # If we already have an image for this taxon, and it's the same as the one we're trying to download, skip it
-        res = db_context.fetchone(
-            "SELECT url FROM images_by_ott WHERE src={0} and ott={0};",
-            (src, ott),
-        )
-        if res:
-            url = res[0]
+        row = db.executesql("SELECT url FROM images_by_ott WHERE src=%s and ott=%s;", (src, ott))
+        if len(row) > 0:
+            url = row[0][0]
             existing_image_name = url[len(wiki_image_url_prefix) :]
             if existing_image_name == escaped_image_name:
                 logger.info(f"Image for {ott} is already up to date: {image['name']}")
@@ -399,13 +397,15 @@ def save_wiki_image(
     # Delete any existing wiki images for this taxon from the database
     # Note that we don't do this for bespoke images, as there can be multiple for a given taxon
     if src == src_flags["wiki"]:
-        sql = "DELETE FROM images_by_ott WHERE ott={0} and src={0};"
-        db_context.execute(sql, (ott, src))
+        sql = "DELETE FROM images_by_ott WHERE ott=%s and src=%s;"
+        db.executesql(sql, (ott, src))
 
     # Insert the new image into the database
     wikimedia_url = f"https://commons.wikimedia.org/wiki/File:{escaped_image_name}"
-    db_context.execute(
-        "INSERT INTO images_by_ott (ott, src, src_id, url, rating, rating_confidence, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd, rights, licence, updated) VALUES ({0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {1});",
+    db.executesql(
+        "INSERT INTO images_by_ott "
+        "(ott, src, src_id, url, rating, rating_confidence, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd, rights, licence, updated) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);",
         (
             ott,
             src,
@@ -423,25 +423,25 @@ def save_wiki_image(
             1,  # These will need to be adjusted based on all images for the taxon
             license_info["artist"],
             license_string,
+            datetime.datetime.now(),
         ),
     )
-    db_context.db_connection.commit()
 
     # Since we added a new image, we need to update all the image bits for that ott
-    process_image_bits(db_context, ott)
+    process_image_bits(db, ott)
 
     return True
 
 
-def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
+def save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
     """
     Save all vernacular names for a given QID to the database.
     Note that there can be multiple vernaculars for one language (e.g. "Lion" and "Africa Lion")
     """
 
     # Delete any existing wiki vernaculars for this taxon from the database
-    sql = "DELETE FROM vernacular_by_ott WHERE ott={0} and src={0};"
-    db_context.execute(sql, (ott, src_flags["wiki"]))
+    sql = "DELETE FROM vernacular_by_ott WHERE ott=%s and src=%s;"
+    db.executesql(sql, (ott, src_flags["wiki"]))
 
     for language, vernaculars in vernaculars_by_language.items():
         # The wikidata language could either be a full language code (e.g. "en-us") or just the primary code (e.g. "en")
@@ -454,8 +454,8 @@ def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
             )
 
             # Insert the new vernacular into the database
-            sql = "INSERT INTO vernacular_by_ott (ott, vernacular, lang_primary, lang_full, preferred, src, src_id, updated) VALUES ({0}, {0}, {0}, {0}, {0}, {0}, {0}, {1});"
-            db_context.execute(
+            sql = "INSERT INTO vernacular_by_ott (ott, vernacular, lang_primary, lang_full, preferred, src, src_id, updated) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"
+            db._adapter.execute(  # alternative to executesql that doesn't commit
                 sql,
                 (
                     ott,
@@ -465,13 +465,14 @@ def save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language):
                     vernacular["preferred"],
                     src_flags["wiki"],
                     qid,
+                    datetime.datetime.now()
                 ),
             )
 
-    db_context.db_connection.commit()
+    db.commit()
 
 
-def process_leaf(db_context, ott_or_taxon, image_name, rating, skip_images, crop=None):
+def process_leaf(db, ott_or_taxon, image_name, rating, skip_images, crop=None):
     """
     If ott_or_taxon is a number, it's an ott. Otherwise, it's a taxon name.
     `crop` can be an Azure ImageAnalysisClient, a crop location in the image (x, y, width, height),
@@ -480,12 +481,15 @@ def process_leaf(db_context, ott_or_taxon, image_name, rating, skip_images, crop
     # Real otts are never negative, but we abuse them in our tests, so account for that.
     sql = "SELECT ott,wikidata,name FROM ordered_leaves WHERE "
     if ott_or_taxon.lstrip("-").isnumeric():
-        sql += "ott={0};"
+        sql += "ott=%s;"
     else:
-        sql += "name={0};"
+        sql += "name=%s;"
 
     try:
-        (ott, qid, name) = db_context.fetchone(sql, ott_or_taxon)
+        result = db.executesql(sql, ott_or_taxon)
+        if len(result) > 1:
+            raise ValueError(f"Multiple results for '{ott_or_taxon}'")
+        (ott, qid, name) = result[0]
     except TypeError:
         logger.error(f"'{ott_or_taxon}' not found in ordered_leaves table")
         return
@@ -509,7 +513,7 @@ def process_leaf(db_context, ott_or_taxon, image_name, rating, skip_images, crop
             src = src_flags["onezoom_bespoke"]
 
             # Get the highest bespoke src_id, and add 1 to it for the new image src_id
-            src_id = get_next_src_id_for_src(db_context, src)
+            src_id = get_next_src_id_for_src(db, src)
         else:
             image = get_preferred_or_first_image_from_json_item(json_item)
             src = src_flags["wiki"]
@@ -518,7 +522,7 @@ def process_leaf(db_context, ott_or_taxon, image_name, rating, skip_images, crop
             save_wiki_image(db_context, ott, image, src, src_id, rating, output_dir, crop)
 
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
-    save_all_wiki_vernaculars_for_qid(ott, qid, vernaculars_by_language)
+    save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
 
 
 def process_clade(db_context, ott_or_taxon, dump_file, skip_images, crop=None):

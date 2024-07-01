@@ -182,20 +182,20 @@ mocked_requests[
 class TestCLI:
 
     @pytest.fixture(autouse=True)
-    def db_context(self, appconfig):
-        db_context = connect_to_database(appconfig=appconfig)
-        yield db_context
-        db_context.db_connection.close()
+    def db(self, appconfig):
+        db = connect_to_database(appconfig=appconfig)
+        yield db
+        db.close()
         
 
-    def test_get_leaf_default_image(self, db_context, appconfig):
-        self.db_context = db_context
+    def test_get_leaf_default_image(self, db, appconfig):
+        self.db = db
         self.appconfig = appconfig
         self.verify_image_behavior(None, None)
 
 
-    def test_get_leaf_bespoke_image(self, db_context, appconfig):
-        self.db_context = db_context
+    def test_get_leaf_bespoke_image(self, db, appconfig):
+        self.db = db
         self.appconfig = appconfig
         self.verify_image_behavior("SecondLionImage.jpg", 42000)
 
@@ -205,13 +205,13 @@ class TestCLI:
 
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
-        delete_all_by_ott(self.db_context, "ordered_leaves", ott)
-        delete_all_by_ott(self.db_context, "images_by_ott", ott)
-        delete_all_by_ott(self.db_context, "vernacular_by_ott", ott)
+        delete_all_by_ott(self.db, "ordered_leaves", ott)
+        delete_all_by_ott(self.db, "images_by_ott", ott)
+        delete_all_by_ott(self.db, "vernacular_by_ott", ott)
 
         # Insert a leaf to set up the mapping between the ott and the wikidata id
-        self.db_context.execute(
-            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) VALUES (0, 0, {0}, {0}, {0});",
+        self.db._adapter.execute(
+            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) VALUES (0, 0, %s, %s, %s);",
             ("Panthera leo", ott, qid),
         )
 
@@ -219,19 +219,21 @@ class TestCLI:
         src = src_flags["onezoom_bespoke"] if image else src_flags["wiki"]
 
         # Insert a dummy image to test that it gets deleted in the wiki case, and kept in the bespoke case
-        src_id = get_next_src_id_for_src(self.db_context, src)
-        self.db_context.execute(
-            "INSERT INTO images_by_ott (ott, src, src_id, url, rating, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd) VALUES ({0}, {0}, {0}, {0}, 1234, 1, 1, 1, 1, 1, 1);",
+        src_id = get_next_src_id_for_src(self.db, src)
+        self.db._adapter.execute(
+            "INSERT INTO images_by_ott "
+            "(ott, src, src_id, url, rating, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd) "
+            "VALUES (%s, %s, %s, %s, 1234, 1, 1, 1, 1, 1, 1);",
             (ott, src, src_id, "http://example.com/dummy.jpg"),
         )
 
-        self.db_context.db_connection.commit()
+        self.db.commit()
 
         # Call the method that we want to test
         get_wiki_images.process_args(get_command_arguments("leaf", ott, image, rating, self.appconfig))
 
-        rows = self.db_context.fetchall(
-            "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott WHERE ott={0} ORDER BY id desc;",
+        rows = self.db.executesql(
+            "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott WHERE ott=%s ORDER BY id desc;",
             ott,
         )
 
@@ -255,8 +257,8 @@ class TestCLI:
             assert rows[1][4] == 0
 
         # Check the vernacular names
-        rows = self.db_context.fetchall(
-            "SELECT ott, vernacular, lang_primary FROM vernacular_by_ott WHERE ott={0} ORDER BY id;",
+        rows = self.db.executesql(
+            "SELECT ott, vernacular, lang_primary FROM vernacular_by_ott WHERE ott=%s ORDER BY id;",
             ott,
         )
 

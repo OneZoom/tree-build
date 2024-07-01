@@ -36,7 +36,7 @@ def process_image_bits_from_config(ott, config_file):
     db_context = connect_to_database(database)
     return process_image_bits(db_context, ott)
 
-def process_image_bits(db_context, ott):
+def process_image_bits(db, ott):
     """
     Process image bits for the given ott, using an existing db_context.
     """
@@ -52,15 +52,15 @@ def process_image_bits(db_context, ott):
         "overall_best_verified",
         "overall_best_pd",
     ]
-    db_context.execute(
+    rows = db.executesql(
         "SELECT "
         + ", ".join(columns)
-        + " FROM images_by_ott WHERE ott={0} ORDER BY id;",
+        + " FROM images_by_ott WHERE ott=%s ORDER BY id;",
         ott,
     )
 
     # Turn each row into a dictionary, and get them all into a list
-    images = [dict(zip(columns, row)) for row in db_context.db_curs.fetchall()]
+    images = [dict(zip(columns, row)) for row in rows]
     # Sort the images by rating descending
     images.sort(key=lambda x: x["rating"], reverse=True)
 
@@ -99,8 +99,14 @@ def process_image_bits(db_context, ott):
         logger.info(f"Updating database since there are changes for ott {ott}")
 
         for row in images:
-            db_context.execute(
-                "UPDATE images_by_ott SET best_any={0}, best_verified={0}, best_pd={0}, overall_best_any={0}, overall_best_verified={0}, overall_best_pd={0} WHERE id={0};",
+            db._adapter.execute(
+                "UPDATE images_by_ott SET best_any=%s, "
+                "best_verified=%s, "
+                "best_pd=%s, "
+                "overall_best_any=%s, "
+                "overall_best_verified=%s, "
+                "overall_best_pd=%s "
+                "WHERE id=%s;",
                 (
                     row["best_any"],
                     row["best_verified"],
@@ -111,7 +117,7 @@ def process_image_bits(db_context, ott):
                     row["id"],
                 ),
             )
-        db_context.db_connection.commit()
+        db.commit()
     else:
         logger.info(f"No changes to make to the database for ott {ott}")
 

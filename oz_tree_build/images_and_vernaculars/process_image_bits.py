@@ -1,6 +1,6 @@
 import argparse
 import logging
-from oz_tree_build.utilities.db_helper import connect_to_database, read_config
+from oz_tree_build.utilities.db_helper import connect_to_database, read_config, placeholder
 from oz_tree_build._OZglobals import src_flags
 
 logger = logging.getLogger(__name__)
@@ -55,8 +55,8 @@ def process_image_bits(db, ott):
     rows = db.executesql(
         "SELECT "
         + ", ".join(columns)
-        + " FROM images_by_ott WHERE ott=%s ORDER BY id;",
-        ott,
+        + " FROM images_by_ott WHERE ott={0} ORDER BY id;".format(placeholder(db)),
+        (ott, ),
     )
 
     # Turn each row into a dictionary, and get them all into a list
@@ -100,13 +100,14 @@ def process_image_bits(db, ott):
 
         for row in images:
             db._adapter.execute(
-                "UPDATE images_by_ott SET best_any=%s, "
-                "best_verified=%s, "
-                "best_pd=%s, "
-                "overall_best_any=%s, "
-                "overall_best_verified=%s, "
-                "overall_best_pd=%s "
-                "WHERE id=%s;",
+                (
+                    "UPDATE images_by_ott SET best_any={0}, "
+                    "best_verified={0}, "
+                    "best_pd={0}, "
+                    "overall_best_any={0}, "
+                    "overall_best_verified={0}, "
+                    "overall_best_pd={0} "
+                    "WHERE id={0};").format(placeholder(db)),
                 (
                     row["best_any"],
                     row["best_verified"],

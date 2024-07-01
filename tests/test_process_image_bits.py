@@ -1,7 +1,7 @@
 import datetime
 import pytest
 import types
-from oz_tree_build.utilities.db_helper import connect_to_database, delete_all_by_ott
+from oz_tree_build.utilities.db_helper import connect_to_database, delete_all_by_ott, placeholder
 from oz_tree_build.images_and_vernaculars import process_image_bits
 
 
@@ -23,17 +23,17 @@ class TestCLI:
         # Query the database and check the results
         sql = (
             "SELECT best_any, overall_best_any, best_verified, overall_best_verified, best_pd, overall_best_pd FROM images_by_ott "
-            "WHERE ott=%s ORDER BY id;"
+            "WHERE ott={0} ORDER BY id;".format(placeholder(db))
         )
-        rows = db.executesql(sql, args.ott)
+        rows = db.executesql(sql, (args.ott, ))
         for i, row in enumerate(rows):
             assert row == expected_results[i]
 
     def test_process_image_bits(self, db, appconfig):
         args = types.SimpleNamespace(ott=-777, config_file=appconfig)
-
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
+
         delete_all_by_ott(db, "images_by_ott", args.ott)
 
         # fmt: off
@@ -72,11 +72,13 @@ class TestCLI:
 
 
         # Insert all the test rows
+        ph = placeholder(db)
         for test_row in test_rows:
             sql = (
                 "INSERT INTO images_by_ott "
-                "(ott, src, src_id, url, rating, rights, licence, best_any, overall_best_any, best_verified, overall_best_verified, best_pd, overall_best_pd, updated) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
+                "(ott,src,src_id,url,rating,rights,licence,best_any,overall_best_any,"
+                "best_verified,overall_best_verified,best_pd,overall_best_pd,updated) "
+                "VALUES ({0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0});".format(ph)
             )
             db._adapter.execute(sql, test_row + [datetime.datetime.now()])
         db.commit()

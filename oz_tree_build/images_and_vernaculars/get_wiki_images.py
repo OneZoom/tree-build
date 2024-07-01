@@ -32,6 +32,7 @@ from oz_tree_build.utilities.db_helper import (
     connect_to_database,
     get_next_src_id_for_src,
     read_config,
+    placeholder,
 )
 
 from oz_tree_build._OZglobals import src_flags
@@ -328,13 +329,17 @@ def save_wiki_image(
     """
 
     wiki_image_url_prefix = "https://commons.wikimedia.org/wiki/File:"
+    ph = placeholder(db)
 
     # Wikimedia uses underscores instead of spaces in URLs
     escaped_image_name = image["name"].replace(" ", "_")
 
     if check_if_up_to_date:
         # If we already have an image for this taxon, and it's the same as the one we're trying to download, skip it
-        row = db.executesql("SELECT url FROM images_by_ott WHERE src=%s and ott=%s;", (src, ott))
+        row = db.executesql(
+            "SELECT url FROM images_by_ott WHERE src={0} and ott={0};".format(ph),
+            (src, ott),
+        )
         if len(row) > 0:
             url = row[0][0]
             existing_image_name = url[len(wiki_image_url_prefix) :]
@@ -397,15 +402,16 @@ def save_wiki_image(
     # Delete any existing wiki images for this taxon from the database
     # Note that we don't do this for bespoke images, as there can be multiple for a given taxon
     if src == src_flags["wiki"]:
-        sql = "DELETE FROM images_by_ott WHERE ott=%s and src=%s;"
+        sql = "DELETE FROM images_by_ott WHERE ott={0} and src={0};".format(ph)
         db.executesql(sql, (ott, src))
 
     # Insert the new image into the database
     wikimedia_url = f"https://commons.wikimedia.org/wiki/File:{escaped_image_name}"
     db.executesql(
         "INSERT INTO images_by_ott "
-        "(ott, src, src_id, url, rating, rating_confidence, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd, rights, licence, updated) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);",
+        "(ott,src,src_id,url,rating,rating_confidence,best_any,best_verified,best_pd,"
+        "overall_best_any,overall_best_verified,overall_best_pd,rights,licence,updated) "
+        "VALUES ({0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0});".format(ph),
         (
             ott,
             src,
@@ -438,9 +444,9 @@ def save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
     Save all vernacular names for a given QID to the database.
     Note that there can be multiple vernaculars for one language (e.g. "Lion" and "Africa Lion")
     """
-
+    ph = placeholder(db)
     # Delete any existing wiki vernaculars for this taxon from the database
-    sql = "DELETE FROM vernacular_by_ott WHERE ott=%s and src=%s;"
+    sql = "DELETE FROM vernacular_by_ott WHERE ott={0} and src={0};".format(ph)
     db.executesql(sql, (ott, src_flags["wiki"]))
 
     for language, vernaculars in vernaculars_by_language.items():
@@ -454,7 +460,11 @@ def save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
             )
 
             # Insert the new vernacular into the database
-            sql = "INSERT INTO vernacular_by_ott (ott, vernacular, lang_primary, lang_full, preferred, src, src_id, updated) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"
+            sql = (
+                "INSERT INTO vernacular_by_ott "
+                "(ott, vernacular, lang_primary, lang_full, preferred, src, src_id, updated)"
+                " VALUES ({0},{0},{0},{0},{0},{0},{0},{0});".format(ph)
+            )
             db._adapter.execute(  # alternative to executesql that doesn't commit
                 sql,
                 (
@@ -479,14 +489,15 @@ def process_leaf(db, ott_or_taxon, image_name, rating, skip_images, crop=None):
     or None to carry out a default (centered) crop.
     """
     # Real otts are never negative, but we abuse them in our tests, so account for that.
+    ph = placeholder(db)
     sql = "SELECT ott,wikidata,name FROM ordered_leaves WHERE "
     if ott_or_taxon.lstrip("-").isnumeric():
-        sql += "ott=%s;"
+        sql += f"ott={ph};"
     else:
-        sql += "name=%s;"
+        sql += f"name={ph};"
 
     try:
-        result = db.executesql(sql, ott_or_taxon)
+        result = db.executesql(sql, (ott_or_taxon, ))
         if len(result) > 1:
             raise ValueError(f"Multiple results for '{ott_or_taxon}'")
         (ott, qid, name) = result[0]

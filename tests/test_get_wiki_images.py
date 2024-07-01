@@ -9,6 +9,7 @@ from oz_tree_build.utilities.db_helper import (
     connect_to_database,
     delete_all_by_ott,
     get_next_src_id_for_src,
+    placeholder,
 )
 from oz_tree_build.images_and_vernaculars import get_wiki_images
 
@@ -202,6 +203,7 @@ class TestCLI:
     @patch_all_web_request_methods
     def verify_image_behavior(self, image, rating, *args):
         assert int(ott) < 0
+        ph = placeholder(self.db)
 
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
@@ -211,7 +213,8 @@ class TestCLI:
 
         # Insert a leaf to set up the mapping between the ott and the wikidata id
         self.db._adapter.execute(
-            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) VALUES (0, 0, %s, %s, %s);",
+            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
+            "VALUES (0, 0, {0}, {0}, {0});".format(ph),
             ("Panthera leo", ott, qid),
         )
 
@@ -222,8 +225,9 @@ class TestCLI:
         src_id = get_next_src_id_for_src(self.db, src)
         self.db._adapter.execute(
             "INSERT INTO images_by_ott "
-            "(ott, src, src_id, url, rating, best_any, best_verified, best_pd, overall_best_any, overall_best_verified, overall_best_pd) "
-            "VALUES (%s, %s, %s, %s, 1234, 1, 1, 1, 1, 1, 1);",
+            "(ott, src, src_id, url, rating, best_any, best_verified, best_pd, overall_best_any, "
+            "overall_best_verified, overall_best_pd) "
+            "VALUES ({0}, {0}, {0}, {0}, 1234, 1, 1, 1, 1, 1, 1);".format(ph),
             (ott, src, src_id, "http://example.com/dummy.jpg"),
         )
 
@@ -233,8 +237,8 @@ class TestCLI:
         get_wiki_images.process_args(get_command_arguments("leaf", ott, image, rating, self.appconfig))
 
         rows = self.db.executesql(
-            "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott WHERE ott=%s ORDER BY id desc;",
-            ott,
+            f"SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott WHERE ott={ph} ORDER BY id desc;",
+            (ott, ),
         )
 
         # There should only be one image in the database in wiki mode (since we delete first),
@@ -258,12 +262,12 @@ class TestCLI:
 
         # Check the vernacular names
         rows = self.db.executesql(
-            "SELECT ott, vernacular, lang_primary FROM vernacular_by_ott WHERE ott=%s ORDER BY id;",
-            ott,
+            f"SELECT ott, vernacular, lang_primary FROM vernacular_by_ott WHERE ott={ph} ORDER BY id;",
+            (ott, ),
         )
 
         assert len(rows) == 4
-        assert rows == (
+        assert tuple(rows) == (
             (int(ott), "Lion", "en"),
             (int(ott), "African Lion", "en"),
             (int(ott), "Lion", "fr"),

@@ -12,7 +12,7 @@ def is_licence_public_domain(licence):
 def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
     """
     Set the first row that meets the condition to 1, and all others to 0.
-    Returns True if any changes were made.
+    Returns `True` if any changes were made.
     """
     # Keep track of whether any changes are made, so we know whether to commit them
     made_changes = False
@@ -26,19 +26,22 @@ def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
             first = False
     return made_changes
 
-def process_image_bits_from_config(ott, config_file):
+def resolve_from_config(ott, config_file):
     """
     Process image bits for the given ott, getting a new db_context from a config file.
+    Returns `True` if any changes were made.
     """
     config = read_config(config_file)
     database = config.get("db", "uri")
 
-    db_context = connect_to_database(database)
-    return process_image_bits(db_context, ott)
+    db = connect_to_database(database)
+    return resolve(db, ott)
 
-def process_image_bits(db, ott):
+def resolve(db, ott):
     """
-    Process image bits for the given ott, using an existing db_context.
+    Resolve image bits for the given ott, making sure that only one image is
+    marked as the best for each source, and that only one image is marked as
+    overall_best for all sources. Returns `True` if any changes were made.
     """
     columns = [
         "id",
@@ -126,7 +129,7 @@ def process_image_bits(db, ott):
 
 
 def process_args(args):
-    return process_image_bits_from_config(args.ott, args.config_file)
+    return resolve_from_config(args.ott, args.config_file)
 
 
 def main():

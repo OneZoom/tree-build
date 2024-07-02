@@ -257,7 +257,14 @@ def get_image_license_info(escaped_image_name):
         if "Artist" in extmetadata:
             license_info["artist"] = extmetadata["Artist"]["value"]
             # Strip the html tags from the artist
-            license_info["artist"] = re.sub(r"<[^>]*>", "", license_info["artist"])
+            license_info["artist"] = re.sub(r"<[^>]*>", "", license_info["artist"]).strip()
+            # add a copyright symbol
+            if license_info["artist"].startswith("©"):
+                pass
+            elif license_info["artist"].startswith("No machine-readable"):
+                pass
+            else:
+                license_info["artist"] = "© " + license_info["artist"]
         else:
             license_info["artist"] = "Unknown artist"
 
@@ -549,20 +556,22 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
     """
     ph = placeholder(db)
     # Get the left and right leaf ids for the passed in taxon
-    sql = "SELECT leaf_lft,leaf_rgt FROM ordered_nodes WHERE "
+    sql = "SELECT leaf_lft,leaf_rgt,ott FROM ordered_nodes WHERE "
     # If ott_or_taxon is a number, it's an ott. If it's a string, it's a taxon name.
     if ott_or_taxon.isnumeric():
         sql += "ott={0};"
     else:
         sql += "name={0};"
     try:
-        rows = db.executesql(sql, (ott_or_taxon,))
+        rows = db.executesql(sql.format(ph), (ott_or_taxon,))
     except TypeError:
-        logger.error(f"'{ott_or_taxon}' not found in ordered_nodes table")
-        if len(rows) > 1:
-            logger.error(f"Multiple results for '{ott_or_taxon}'")
-            return
-        (leaf_left, leaf_right) = rows[0]
+        raise ValueError(f"'{ott_or_taxon}' not found in ordered_nodes table")
+    if len(rows) > 1:
+        logger.error(
+            f"Multiple results for '{ott_or_taxon}', "
+            f"choose out of these OTTs: {[r[2] for r in rows]}")
+        return
+    (leaf_left, leaf_right) = rows[0]
 
     if not skip_images:
         # Find all the leaves in the clade that don't have wiki images (ignoring images from other sources)
@@ -572,7 +581,7 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
         WHERE url IS NULL AND ordered_leaves.id >= {0} AND ordered_leaves.id <= {0};
         """.format(ph)
         leaves_without_images = dict(
-            db.execute_sql(sql, (src_flags["wiki"], leaf_left, leaf_right))
+            db.executesql(sql, (src_flags["wiki"], leaf_left, leaf_right))
         )
         logger.info(
             f"Found {len(leaves_without_images)} taxa without an image in the database"
@@ -609,14 +618,15 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
                 leaves_that_got_images.add(qid)
         if vernaculars and qid in leaves_without_vernaculars:
             save_all_wiki_vernaculars_for_qid(
-                leaves_without_vernaculars[qid], qid, vernaculars
+                db, leaves_without_vernaculars[qid], qid, vernaculars
             )
 
     # Log the leaves for which we couldn't find images
-    logger.info("Taxa for which we couldn't find a proper image:")
-    for qid, ott in leaves_without_images.items():
-        if qid not in leaves_that_got_images:
-            logger.info(f"  ott={ott} qid={qid}")
+    if len(leaves_without_images) > 0:
+        logger.info("Taxa for which we couldn't find a proper image:")
+        for qid, ott in leaves_without_images.items():
+            if qid not in leaves_that_got_images:
+                logger.info(f"  ott={ott} qid={qid}")
 
 
 def process_args(args):
@@ -650,7 +660,7 @@ def process_args(args):
             )
     elif args.subcommand == "clade":
         # Process all the taxa in the passed in clades
-        for ott_or_taxon in args.ott_or_taxa:
+        for name in args.ott_or_taxa:
             process_clade(db, name, args.wd_dump, args.skip_images, outdir, crop=azure)
 
 
@@ -700,12 +710,12 @@ def main():
 
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(
-        "ott_or_taxa", type=str, help="The ott or taxa of the root of the clade(s)"
-    )
-    parser_clade.add_argument(
         "wd_dump",
         type=str,
-        help="The wikidata JSON dump file from which to get the images",
+        help="The wikidata JSON dump file from which to get the image URLs and vernaculars",
+    )
+    parser_clade.add_argument(
+        "ott_or_taxa", nargs="+", type=str, help="The ott or taxa of the root of the clade(s)"
     )
     add_common_args(parser_clade)
 

@@ -107,7 +107,7 @@ def get_image_analysis_client(config):
     )
 
 
-def get_image_crop_box(image, crop=None):
+def get_image_crop_box(image, crop):
     """
     `image` can be a URL or a local file path.
     Get the crop box for an image. If `crop` is an ImageAnalysisClient
@@ -124,21 +124,6 @@ def get_image_crop_box(image, crop=None):
             return result.smart_crops.list[0].bounding_box
         else:
             raise ValueError("Azure Vision API can only be used with URLs")
-    elif crop is None:
-        # Default to centering the crop
-        if image.startswith("http"):
-            response = requests.get(image)
-            img = Image.open(BytesIO(response.content))
-        else:
-            img = Image.open(image)
-        width, height = img.size
-        crop_size = min(width, height)
-        return types.SimpleNamespace(
-            x=(width - crop_size) // 2,
-            y=(height - crop_size) // 2,
-            width=crop_size,
-            height=crop_size,
-        )
     else:
         if len(crop) != 4:
             raise ValueError("If given, `crop` must be an ImageAnalysisClient or a tuple of 4 integers")
@@ -378,7 +363,13 @@ def save_wiki_image(
     uncropped_image_path = f"{image_dir}/{src_id}_uncropped.jpg"
     urllib.request.urlretrieve(image_url, uncropped_image_path)
 
-    # Get the crop box using the Azure Vision API
+    if crop is None:
+        # Default to centering the crop
+        img = Image.open(uncropped_image_path)
+        w, h = img.size
+        square_dim = min(w, h)
+        crop = ((w - square_dim) // 2, (h - square_dim) // 2, square_dim, square_dim)
+    # Get the crop box e.g. using the Azure Vision API
     crop_box = get_image_crop_box(image_url, crop)
 
     # Crop and resize the image using PIL
@@ -664,9 +655,9 @@ def main():
 
     def add_common_args(parser):
         parser.add_argument(
-            "--config-file",
-            default=None,
-            help="The configuration file to use. If not given, defaults to private/appconfig.ini",
+            "--skip-images",
+            action="store_true",
+            help="Only process vernaculars, not images",
         )
         parser.add_argument(
             "--output-dir",
@@ -675,9 +666,9 @@ def main():
             help="The location to save the cropped pictures (e.g. 'FinalOutputs/img'). If not given, defaults to ../../../static/FinalOutputs/img (relative to the script location). Files will be saved under output_dir/{src_flag}/{3-digits}/fn.jpg",
         )
         parser.add_argument(
-            "--skip-images",
-            action="store_true",
-            help="Only process vernaculars, not images",
+            "--config-file",
+            default=None,
+            help="The configuration file to use. If not given, defaults to private/appconfig.ini",
         )
 
     parser_leaf = subparsers.add_parser("leaf", help="Process a single ott")

@@ -1,9 +1,9 @@
 import os
 import pytest
 import shutil
-import types
 import urllib.request
 from unittest import mock
+from types import SimpleNamespace
 
 from PIL import Image
 
@@ -15,99 +15,162 @@ from oz_tree_build.utilities.db_helper import (
 )
 from oz_tree_build.images_and_vernaculars import get_wiki_images
 
-# Maps URLs to the JSON responses that should be returned
-mocked_requests = {}
+class MockResponse:
+    def __init__(self, status_code, json_data=None, content=None):
+        self.status_code = status_code
+        self.json_data = json_data
+        self.text = ""
+        self.content = content
 
-# Download an arbitrary test image in the tmp folder to use in the tests
-temp_image_path = "/tmp/mocked_urlretrieve_image.jpg"
-if not os.path.exists(temp_image_path):
-    image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Lion_waiting_in_Namibia.jpg/500px-Lion_waiting_in_Namibia.jpg"
-    urllib.request.urlretrieve(image_url, temp_image_path)
-
-# Mock the requests.get function
-def mocked_requests_get(*args, **kwargs):
-    class MockResponse:
-        def __init__(self, json_data, status_code):
-            self.json_data = json_data
-            self.status_code = status_code
-            self.text = ""
-
-        def json(self):
-            return self.json_data
-        
-        @property
-        def content(self):
-            with open(temp_image_path, "rb") as f:
-                return f.read()
-
-    if args[0] in mocked_requests:
-        return MockResponse(mocked_requests[args[0]], 200)
-
-    return MockResponse(None, 404)
+    def json(self):
+        return self.json_data
+    
+    
 
 
+class MockAPIs:
+    cc0_url = "https://creativecommons.org/publicdomain/zero/1.0/"
+    def add_mocked_request(self, url, querystring=None, *, response):
+        if querystring is not None:
+            url += "?" + querystring
+        self.mocked_requests[url] = response
 
-def mocked_urlretrieve(*args, **kwargs):
-    # Instead of actually downloading the image, we just copy our test image to the destination
-    shutil.copyfile(temp_image_path, args[1])
+    def __init__(self, qid):
+        self.qid = qid
+        self.mocked_requests = {} # Maps URLs to the JSON responses that should be returned
 
 
-# Mock the Azure Vision API smart crop response
-def mocked_analyze_from_url(*args, **kwargs):
-    return types.SimpleNamespace(
-        smart_crops=types.SimpleNamespace(
-            list=[
-                types.SimpleNamespace(
-                    bounding_box=types.SimpleNamespace(
-                        x=50, y=75, width=300, height=300
+        # Download an arbitrary test image in the tmp folder to use in the tests
+        self.temp_image_path = "/tmp/mocked_urlretrieve_image.jpg"
+        if not os.path.exists(self.temp_image_path):
+            image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Lion_waiting_in_Namibia.jpg/500px-Lion_waiting_in_Namibia.jpg"
+            urllib.request.urlretrieve(image_url, self.temp_image_path)
+        with open(self.temp_image_path, "rb") as f:
+            self.temp_image_content = f.read()
+
+        self.add_mocked_request(
+            "https://www.wikidata.org/w/api.php",
+            f"action=wbgetentities&ids=Q{self.qid}&format=json",
+            response = self.build_wikidata_entities(
+                image_data=[
+                    {"name": "FirstLionImage.jpg", "rank": "normal"},
+                    {"name": "SecondLionImage.jpg", "rank": "preferred"},
+                ],
+                vernacular_data=[
+                    {"name": "Lion", "language": "en", "rank": "normal"},
+                    {"name": "Lion", "language": "fr", "rank": "normal"},
+                    {"name": "African Lion", "language": "en", "rank": "preferred"},
+                    {"name": "Lion d'Afrique", "language": "fr", "rank": "normal"},
+                ],
+            ),
+        )
+        self.add_mocked_request(
+            "https://api.wikimedia.org/w/api.php",
+            "action=query&prop=imageinfo&iiprop=extmetadata&titles=File%3aSecondLionImage.jpg"
+            "&format=json&iiextmetadatafilter=License|LicenseUrl|Artist",
+            response={
+                "query": {
+                    "pages": {
+                        "-1": {
+                            "title": "File:Blah.jpg",
+                            "imageinfo": [
+                                {
+                                    "extmetadata": {
+                                        "License": {"value": "cc0"},
+                                        "LicenseUrl": {"value": self.cc0_url},
+                                        "Artist": {"value": "John Doe"},
+                                    }
+                                }
+                            ],
+                        }
+                    }
+                }
+            }
+        )
+        self.add_mocked_request(
+            "https://api.wikimedia.org/core/v1/commons/file/SecondLionImage.jpg",
+            response={
+                "preferred": {  # NB: means preferred size of image, not which image is preferred
+                    "url": "https://upload.wikimedia.org/wikipedia/commons/7/73/SecondLionImage.jpg"
+                }
+            }
+        )
+
+    # Mock the requests.get function
+    def mocked_requests_get(self, *args, **kwargs):
+        if args[0] in self.mocked_requests:
+            content = self.temp_image_content if args[0].endswith(".jpg") else None
+            if args[0].endswith(".jpg"):
+                print(args[0], len(content))
+            return MockResponse(200, self.mocked_requests[args[0]], content)
+        return MockResponse(404)
+
+    def mocked_urlretrieve(self, *args, **kwargs):
+        # Instead of actually downloading the image, we just copy our test image to the destination
+        shutil.copyfile(self.temp_image_path, args[1])
+
+    # Mock the Azure Vision API smart crop response
+    def mocked_analyze_from_url(self, *args, **kwargs):
+        return SimpleNamespace(
+            smart_crops=SimpleNamespace(
+                list=[
+                    SimpleNamespace(
+                        bounding_box=SimpleNamespace(x=50, y=75, width=300, height=300)
                     )
-                )
-            ]
+                ]
+            )
         )
-    )
 
-
-def build_wikidata_entities(qid, images, vernaculars):
-    entities = {
-        "entities": {
-            qid: {
-                "claims": {"P18": [], "P1843": []},
-            }
-        }
-    }
-
-    for image in images:
-        entities["entities"][qid]["claims"]["P18"].append(
-            {
+    def build_wikidata_entities(self, image_data, vernacular_data):
+        qid = f"Q{self.qid}"
+        ret_val = {}
+        images = []
+        vernaculars = []
+        for img in image_data:
+            images.append({
                 "mainsnak": {
                     "datavalue": {
-                        "value": image["name"],
+                        "value": img["name"],
                     },
                 },
-                "rank": image["rank"],
-            }
-        )
-
-    for vernacular in vernaculars:
-        entities["entities"][qid]["claims"]["P1843"].append(
-            {
+                "rank": img["rank"],
+            })
+        for vn in vernacular_data:
+            vernaculars.append({
                 "mainsnak": {
                     "datavalue": {
-                        "value": {
-                            "language": vernacular["language"],
-                            "text": vernacular["name"],
-                        },
+                        "value": {"language": vn["language"], "text": vn["name"]},
                     },
                 },
-                "rank": vernacular["rank"],
-            }
+                "rank": vn["rank"],
+            })
+
+        ret_val["entities"] = {qid: {"claims": {"P18": images, "P1843": vernaculars}}}
+        return ret_val
+
+
+    def patch_all_web_request_methods(self, f):
+        @mock.patch("requests.get", side_effect=self.mocked_requests_get)
+        @mock.patch("urllib.request.urlretrieve", side_effect=self.mocked_urlretrieve)
+        @mock.patch(
+            "azure.ai.vision.imageanalysis.ImageAnalysisClient.analyze_from_url",
+            side_effect=self.mocked_analyze_from_url,
         )
+        def functor(*args, **kwargs):
+            return f(*args, **kwargs)
 
-    return entities
+        return functor
 
+
+def delete_rows(db, ott):
+    delete_all_by_ott(db, "images_by_ott", ott)
+    delete_all_by_ott(db, "vernacular_by_ott", ott)
+    # The negative OTT should have been added to the end of the ordered_leaves table
+    # and so adding and removing it shouldn't mess up the nested set structure, we hope
+    delete_all_by_ott(db, "ordered_leaves", ott)
 
 def get_command_arguments(subcommand, ott_or_taxon, image, rating, output_dir, config_file):
-    return types.SimpleNamespace(
+    return SimpleNamespace(
         subcommand=subcommand,
         ott_or_taxon=ott_or_taxon,
         image=image,
@@ -116,77 +179,6 @@ def get_command_arguments(subcommand, ott_or_taxon, image, rating, output_dir, c
         output_dir=output_dir,
         config_file=config_file,
     )
-
-
-def patch_all_web_request_methods(f):
-    @mock.patch("requests.get", side_effect=mocked_requests_get)
-    @mock.patch("urllib.request.urlretrieve", side_effect=mocked_urlretrieve)
-    @mock.patch(
-        "azure.ai.vision.imageanalysis.ImageAnalysisClient.analyze_from_url",
-        side_effect=mocked_analyze_from_url,
-    )
-    def functor(*args, **kwargs):
-        return f(*args, **kwargs)
-
-    return functor
-
-
-qid = 7777777
-
-mocked_requests[
-    f"https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q{qid}&format=json"
-] = build_wikidata_entities(
-    f"Q{qid}",
-    [
-        {"name": "FirstLionImage.jpg", "rank": "normal"},
-        {"name": "SecondLionImage.jpg", "rank": "preferred"},
-    ],
-    [
-        {"name": "Lion", "language": "en", "rank": "normal"},
-        {"name": "Lion", "language": "fr", "rank": "normal"},
-        {"name": "African Lion", "language": "en", "rank": "preferred"},
-        {"name": "Lion d'Afrique", "language": "fr", "rank": "normal"},
-    ],
-)
-
-mocked_requests[
-    "https://api.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=extmetadata&titles=File%3aSecondLionImage.jpg&format=json&iiextmetadatafilter=License|LicenseUrl|Artist"
-] = {
-    "query": {
-        "pages": {
-            "-1": {
-                "title": "File:Blah.jpg",
-                "imageinfo": [
-                    {
-                        "extmetadata": {
-                            "License": {"value": "cc0"},
-                            "LicenseUrl": {
-                                "value": "https://creativecommons.org/publicdomain/zero/1.0/"
-                            },
-                            "Artist": {"value": "John Doe"},
-                        }
-                    }
-                ],
-            }
-        }
-    }
-}
-
-mocked_requests[
-    "https://api.wikimedia.org/core/v1/commons/file/SecondLionImage.jpg"
-] = {
-    "preferred": {
-        # This is the preferred image size, not the preferred image itself
-        "url": "https://upload.wikimedia.org/wikipedia/commons/7/73/SecondLionImage.jpg"
-    }
-}
-
-def delete_rows(db, ott):
-    delete_all_by_ott(db, "images_by_ott", ott)
-    delete_all_by_ott(db, "vernacular_by_ott", ott)
-    # The negative OTT should have been added to the end of the ordered_leaves table
-    # and so adding and removing it shouldn't mess up the nested set structure, we hope
-    delete_all_by_ott(db, "ordered_leaves", ott)
 
 class TestFunctions:
     """
@@ -203,17 +195,25 @@ class TestFunctions:
 
 
 class TestAPI:
-    @patch_all_web_request_methods
+    mocked_requests = MockAPIs(qid=7777777)
+
+    @mocked_requests.patch_all_web_request_methods
     def verify_process_leaf(self, image, rating, *args):
         db = self.db
         ph = placeholder(db)
+        qid = self.mocked_requests.qid
         sql = "SELECT src_id, rating FROM images_by_ott WHERE ott={0};"
         get_wiki_images.process_leaf(
             self.db, self.ott, output_dir=self.tmp_dir, skip_images=True
         )
+        # Check on vernaculars
+
+
         # Images skipped, so should have no row
         rows = self.db.executesql(sql.format(ph), (self.ott,))
         assert len(rows) == 0
+
+        # Check on images
         get_wiki_images.process_leaf(
             self.db, self.ott, rating=rating, output_dir=self.tmp_dir, skip_images=False
         )
@@ -222,7 +222,7 @@ class TestAPI:
         uncropped = os.path.join(dir, f"{qid}_uncropped.jpg")
         assert os.path.exists(uncropped)
         w, h = Image.open(uncropped).size
-        assert (w, h) == Image.open(temp_image_path).size
+        assert (w, h) == Image.open(self.mocked_requests.temp_image_path).size
         cropped = os.path.join(dir, f"{qid}.jpg")
         assert os.path.exists(cropped)
         assert Image.open(cropped).size == (300, 300)
@@ -243,6 +243,7 @@ class TestAPI:
         self.ott = "-551"
         self.db = db
         self.tmp_dir = tmp_path
+        qid = self.mocked_requests.qid
         delete_rows(db, self.ott)
         db.executesql(
             "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
@@ -259,6 +260,8 @@ class TestAPI:
 
 
 class TestCLI:
+    mocked_requests = MockAPIs(qid=7777777)
+
     def test_get_leaf_default_image(self, tmp_path, db, appconfig, keep_rows):
         self.db = db
         self.appconfig = appconfig
@@ -279,10 +282,11 @@ class TestCLI:
         if not keep_rows:
             delete_rows(db, self.ott)
 
-    @patch_all_web_request_methods
+    @mocked_requests.patch_all_web_request_methods
     def verify_image_behavior(self, image, rating, *args):
         assert int(self.ott) < 0
         ph = placeholder(self.db)
+        qid = self.mocked_requests.qid
 
         # Insert a leaf to set up the mapping between the ott and the wikidata id
         self.db._adapter.execute(

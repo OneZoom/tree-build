@@ -191,13 +191,11 @@ def get_vernaculars_by_language_from_json_item(json_item):
     # For each language:
     # - We keep all the vernaculars
     # - If none are marked as preferred, the first non-referred will be marked as preferred
-    for _, vernaculars in vernaculars_by_language.items():
-        preferred_vernacular = next(
-            (vernacular for vernacular in vernaculars if vernacular["preferred"]), None
-        )
-        if not preferred_vernacular:
-            vernaculars[0]["preferred"] = 1
-
+    # - If multiple are marked as preferred, the first one will be kept as preferred
+    for vernaculars in vernaculars_by_language.values():
+        vernaculars.sort(reverse = True, key = lambda v: v["preferred"])
+        for i, v in enumerate(vernaculars):
+            v["preferred"] = 1 if i == 0 else 0
     return vernaculars_by_language
 
 
@@ -449,6 +447,7 @@ def save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
         lang_primary = language.split("-")[0]
 
         for vernacular in vernaculars:
+            # We only want to flag the first preferred vernacular for this source as preferred
             logger.info(
                 f"Setting '{language}' vernacular for ott={ott} (qid={qid}, preferred={vernacular['preferred']}): {vernacular['name']}"
             )

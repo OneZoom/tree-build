@@ -57,13 +57,23 @@ class MockAPIs:
                     {"name": "SecondLionImage.jpg", "rank": "preferred"},
                 ],
                 vernacular_data=[
+                    {"name": "Löwe", "language": "de", "rank": "normal"},  # -> preferred
                     {"name": "Lion", "language": "en", "rank": "normal"},
-                    {"name": "Lion", "language": "fr", "rank": "normal"},
+                    {"name": "Lion", "language": "fr", "rank": "preferred"},
                     {"name": "African Lion", "language": "en", "rank": "preferred"},
-                    {"name": "Lion d'Afrique", "language": "fr", "rank": "normal"},
+                    # Next should save as not preferred, as there are 2 fr preferred
+                    {"name": "Lion d'Afrique", "language": "fr", "rank": "preferred"},
                 ],
             ),
         )
+        self.expected_vn_order = (  # by preferred and then lang
+            ("Löwe", "de"),  # test with accents
+            ("African Lion", "en"),
+            ("Lion", "en"),
+            ("Lion", "fr"),
+            ("Lion d'Afrique", "fr"),
+        )
+
         self.add_mocked_request(
             "https://api.wikimedia.org/w/api.php",
             "action=query&prop=imageinfo&iiprop=extmetadata&titles=File%3aSecondLionImage.jpg"
@@ -100,8 +110,6 @@ class MockAPIs:
     def mocked_requests_get(self, *args, **kwargs):
         if args[0] in self.mocked_requests:
             content = self.temp_image_content if args[0].endswith(".jpg") else None
-            if args[0].endswith(".jpg"):
-                print(args[0], len(content))
             return MockResponse(200, self.mocked_requests[args[0]], content)
         return MockResponse(404)
 
@@ -197,45 +205,57 @@ class TestFunctions:
 class TestAPI:
     mocked_requests = MockAPIs(qid=7777777)
 
+    def check_downloaded_wiki_image(self, crop=None):
+        qid = self.mocked_requests.qid
+        img_dir = os.path.join(self.tmp_dir, str(src_flags["wiki"]), str(qid)[-3:])
+        if os.path.exists(os.path.join(img_dir, f"{qid}.jpg")):
+            uncropped = os.path.join(img_dir, f"{qid}_uncropped.jpg")
+            assert os.path.exists(uncropped)
+            w, h = Image.open(uncropped).size
+            assert (w, h) == Image.open(self.mocked_requests.temp_image_path).size
+            cropped = os.path.join(img_dir, f"{qid}.jpg")
+            assert os.path.exists(cropped)
+            assert Image.open(cropped).size == (300, 300)
+            cropinfo = os.path.join(img_dir, f"{qid}_cropinfo.txt")
+            assert os.path.exists(cropinfo)
+            if crop is None:
+                # No Azure, so should have taken the default size
+                with open(cropinfo) as f:
+                    s = f.read()
+                    if h > w:
+                        assert s.startswith(f"0,")
+                        assert s.endswith(f",{w},{w}")
+                    else:    
+                        assert s.endswith(f",0,{h},{h}")
+            return True
+        return False
+
     @mocked_requests.patch_all_web_request_methods
     def verify_process_leaf(self, image, rating, *args):
         db = self.db
+        ott = self.ott
         ph = placeholder(db)
         qid = self.mocked_requests.qid
-        sql = "SELECT src_id, rating FROM images_by_ott WHERE ott={0};"
-        get_wiki_images.process_leaf(
-            self.db, self.ott, output_dir=self.tmp_dir, skip_images=True
-        )
-        # Check on vernaculars
+        crp = None
+        img_sql = "SELECT src_id, rating FROM images_by_ott WHERE ott={0};"
+        vn_sql = "SELECT vernacular FROM vernacular_by_ott WHERE ott={0};"
 
+        get_wiki_images.process_leaf(db, ott, output_dir=self.tmp_dir, skip_images=True)
+        # Quick check on vernaculars - should work even with the real wiki API
+        names = {r[0] for r in self.db.executesql(vn_sql.format(ph), (self.ott,))}
+        assert "Lion" in names
 
         # Images skipped, so should have no row
-        rows = self.db.executesql(sql.format(ph), (self.ott,))
+        rows = self.db.executesql(img_sql.format(ph), (self.ott,))
         assert len(rows) == 0
+        assert not self.check_downloaded_wiki_image()
 
-        # Check on images
+        # Now get images
         get_wiki_images.process_leaf(
-            self.db, self.ott, rating=rating, output_dir=self.tmp_dir, skip_images=False
+            db, ott, rating=rating, output_dir=self.tmp_dir, skip_images=False, crop=crp
         )
-        dir = os.path.join(self.tmp_dir, str(src_flags["wiki"]), str(qid)[-3:])
-        # No crop, so should have taken the default size
-        uncropped = os.path.join(dir, f"{qid}_uncropped.jpg")
-        assert os.path.exists(uncropped)
-        w, h = Image.open(uncropped).size
-        assert (w, h) == Image.open(self.mocked_requests.temp_image_path).size
-        cropped = os.path.join(dir, f"{qid}.jpg")
-        assert os.path.exists(cropped)
-        assert Image.open(cropped).size == (300, 300)
-        cropinfo = os.path.join(dir, f"{qid}_cropinfo.txt")
-        assert os.path.exists(cropinfo)
-        with open(cropinfo) as f:
-            s = f.read()
-            if h > w:
-                assert s.startswith(f"0,")
-                assert s.endswith(f",{w},{w}")
-            else:    
-                assert s.endswith(f",0,{h},{h}")
-        rows = self.db.executesql(sql.format(ph), (self.ott,))
+        assert self.check_downloaded_wiki_image(crp)
+        rows = self.db.executesql(img_sql.format(ph), (self.ott,))
         assert len(rows) == 1
         assert rows[0] == (qid, 40123)
 
@@ -340,14 +360,20 @@ class TestCLI:
 
         # Check the vernacular names
         rows = self.db.executesql(
-            f"SELECT ott, vernacular, lang_primary FROM vernacular_by_ott WHERE ott={ph} ORDER BY id;",
+            "SELECT ott, vernacular, lang_primary, lang_full, preferred FROM vernacular_by_ott "
+            f"WHERE ott={ph} ORDER BY lang_full, preferred DESC",
             (self.ott, ),
         )
+        count_preferred = {}
+        for r in rows:
+            full_lang = r[3]
+            assert full_lang.startswith(r[2])
+            if full_lang not in count_preferred:
+                count_preferred[full_lang] = 0
+            count_preferred[full_lang] += int(r[4])
+        assert all([v == 1 for v in count_preferred.values()])
 
-        assert len(rows) == 4
-        assert tuple(rows) == (
-            (int(self.ott), "Lion", "en"),
-            (int(self.ott), "African Lion", "en"),
-            (int(self.ott), "Lion", "fr"),
-            (int(self.ott), "Lion d'Afrique", "fr"),
-        )
+        # Check the expected values
+        names = tuple((r[1], r[2]) for r in rows)
+        print(rows)
+        assert names == self.mocked_requests.expected_vn_order

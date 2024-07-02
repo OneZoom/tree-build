@@ -562,9 +562,8 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
         sql += "ott={0};"
     else:
         sql += "name={0};"
-    try:
-        rows = db.executesql(sql.format(ph), (ott_or_taxon,))
-    except TypeError:
+    rows = db.executesql(sql.format(ph), (ott_or_taxon,))
+    if len(rows) == 0:
         raise ValueError(f"'{ott_or_taxon}' not found in ordered_nodes table")
     if len(rows) > 1:
         logger.error(

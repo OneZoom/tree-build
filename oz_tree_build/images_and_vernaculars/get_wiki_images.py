@@ -571,7 +571,7 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
             f"Multiple results for '{ott_or_taxon}', "
             f"choose out of these OTTs: {[r[2] for r in rows]}")
         return
-    (leaf_left, leaf_right) = rows[0]
+    (leaf_left, leaf_right, ott) = rows[0]
 
     if not skip_images:
         # Find all the leaves in the clade that don't have wiki images (ignoring images from other sources)
@@ -646,6 +646,8 @@ def process_args(args):
             "FinalOutputs",
             "img",
         )
+    if not os.path.exists(outdir):
+        raise ValueError(f"Output directory '{outdir}' does not exist")
 
     db = connect_to_database(database)
     azure = get_image_analysis_client(config)

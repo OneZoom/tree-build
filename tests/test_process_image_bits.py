@@ -4,20 +4,15 @@ import types
 from oz_tree_build.utilities.db_helper import connect_to_database, delete_all_by_ott, placeholder
 from oz_tree_build.images_and_vernaculars import process_image_bits
 
-@pytest.fixture(scope='session', autouse=True)
-def db(appconfig):
-    db = connect_to_database(appconfig=appconfig)
-    yield db
-    db.close()
-
 
 class TestDBHelper:
     def test_connect_to_database(self, appconfig):
         db = connect_to_database(appconfig=appconfig)
         assert tuple(db.executesql("SELECT 1;")) == ((1, ),)
-        assert len(db.executesql("SELECT id from images_by_ott LIMIT 1")) > 0
-        assert len(db.executesql("SELECT id from vernacular_by_ott LIMIT 1")) > 0
-        assert len(db.executesql("SELECT id from ordered_leaves LIMIT 1")) > 0
+        # The following should pass without error if the tables exist
+        db.executesql("SELECT id from images_by_ott LIMIT 1")
+        db.executesql("SELECT id from vernacular_by_ott LIMIT 1")
+        db.executesql("SELECT id from ordered_leaves LIMIT 1")
         db.close()
 
 

@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 import re
 import time
+import types
 import requests
 import sys
 
@@ -123,9 +124,7 @@ def get_image_crop_box(image, crop=None):
             return result.smart_crops.list[0].bounding_box
         else:
             raise ValueError("Azure Vision API can only be used with URLs")
-    elif len(crop) == 4:
-        return types.SimpleNamespace(x=crop[0], y=crop[1], width=crop[2], height=crop[3])
-    else:
+    elif crop is None:
         # Default to centering the crop
         if image.startswith("http"):
             response = requests.get(image)
@@ -140,6 +139,10 @@ def get_image_crop_box(image, crop=None):
             width=crop_size,
             height=crop_size,
         )
+    else:
+        if len(crop) != 4:
+            raise ValueError("If given, `crop` must be an ImageAnalysisClient or a tuple of 4 integers")
+        return types.SimpleNamespace(x=crop[0], y=crop[1], width=crop[2], height=crop[3])
 
 def get_preferred_or_first_image_from_json_item(json_item):
     """
@@ -482,7 +485,15 @@ def save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
     db.commit()
 
 
-def process_leaf(db, ott_or_taxon, image_name, rating, skip_images, crop=None):
+def process_leaf(
+    db,
+    ott_or_taxon,
+    image_name=None,
+    rating=None,
+    skip_images=None,
+    output_dir=None,
+    crop=None
+):
     """
     If ott_or_taxon is a number, it's an ott. Otherwise, it's a taxon name.
     `crop` can be an Azure ImageAnalysisClient, a crop location in the image (x, y, width, height),
@@ -511,7 +522,7 @@ def process_leaf(db, ott_or_taxon, image_name, rating, skip_images, crop=None):
     # - If it's passed in for a bespoke image, use it
     # - If it's not passed in for a bespoke image, use 40000
     # - for non-bespoke images, use 35000
-    if not rating:
+    if rating is None:
         rating = bespoke_wiki_image_rating if image_name else default_wiki_image_rating
 
     json_item = get_wikidata_json_for_qid(qid)
@@ -530,18 +541,18 @@ def process_leaf(db, ott_or_taxon, image_name, rating, skip_images, crop=None):
             src = src_flags["wiki"]
             src_id = qid
         if image:
-            save_wiki_image(db_context, ott, image, src, src_id, rating, output_dir, crop)
+            save_wiki_image(db, ott, image, src, src_id, rating, output_dir, crop)
 
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
     save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
 
 
-def process_clade(db_context, ott_or_taxon, dump_file, skip_images, crop=None):
+def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=None):
     """
     `crop` can be an ImageAnalysisClient, a crop location in the image (x, y, width, height),
     or None to carry out a default (centered) crop.
     """
-
+    ph = placeholder(db)
     # Get the left and right leaf ids for the passed in taxon
     sql = "SELECT leaf_lft,leaf_rgt FROM ordered_nodes WHERE "
     # If ott_or_taxon is a number, it's an ott. If it's a string, it's a taxon name.
@@ -550,10 +561,13 @@ def process_clade(db_context, ott_or_taxon, dump_file, skip_images, crop=None):
     else:
         sql += "name={0};"
     try:
-        (leaf_left, leaf_right) = db_context.fetchone(sql, ott_or_taxon)
+        rows = db.executesql(sql, (ott_or_taxon,))
     except TypeError:
         logger.error(f"'{ott_or_taxon}' not found in ordered_nodes table")
-        return
+        if len(rows) > 1:
+            logger.error(f"Multiple results for '{ott_or_taxon}'")
+            return
+        (leaf_left, leaf_right) = rows[0]
 
     if not skip_images:
         # Find all the leaves in the clade that don't have wiki images (ignoring images from other sources)
@@ -561,9 +575,10 @@ def process_clade(db_context, ott_or_taxon, dump_file, skip_images, crop=None):
         SELECT wikidata, ordered_leaves.ott FROM ordered_leaves
         LEFT OUTER JOIN (SELECT ott,src,url FROM images_by_ott WHERE src={0}) as wiki_images_by_ott ON ordered_leaves.ott=wiki_images_by_ott.ott
         WHERE url IS NULL AND ordered_leaves.id >= {0} AND ordered_leaves.id <= {0};
-        """
-        db_context.execute(sql, (src_flags["wiki"], leaf_left, leaf_right))
-        leaves_without_images = dict(db_context.db_curs.fetchall())
+        """.format(ph)
+        leaves_without_images = dict(
+            db.execute_sql(sql, (src_flags["wiki"], leaf_left, leaf_right))
+        )
         logger.info(
             f"Found {len(leaves_without_images)} taxa without an image in the database"
         )
@@ -573,9 +588,9 @@ def process_clade(db_context, ott_or_taxon, dump_file, skip_images, crop=None):
     SELECT wikidata, ordered_leaves.ott FROM ordered_leaves
     LEFT OUTER JOIN (SELECT ott,src,vernacular FROM vernacular_by_ott WHERE src={0}) as wiki_vernacular_by_ott ON ordered_leaves.ott=wiki_vernacular_by_ott.ott
     WHERE vernacular IS NULL AND ordered_leaves.id >= {0} AND ordered_leaves.id <= {0};
-    """
-    db_context.execute(sql, (src_flags["wiki"], leaf_left, leaf_right))
-    leaves_without_vernaculars = dict(db_context.db_curs.fetchall())
+    """.format(ph)
+    leaves_without_vernaculars = dict(
+        db.executesql(sql, (src_flags["wiki"], leaf_left, leaf_right)))
     logger.info(
         f"Found {len(leaves_without_vernaculars)} taxa without a vernacular in the database"
     )
@@ -586,7 +601,7 @@ def process_clade(db_context, ott_or_taxon, dump_file, skip_images, crop=None):
     ):
         if not skip_images and image and qid in leaves_without_images:
             if save_wiki_image(
-                db_context,
+                db,
                 leaves_without_images[qid],
                 image,
                 src_flags["wiki"],
@@ -610,14 +625,14 @@ def process_clade(db_context, ott_or_taxon, dump_file, skip_images, crop=None):
 
 
 def process_args(args):
-    global db_context, config, output_dir
-
+    outdir = args.output_dir
+    ott_or_taxon = args.ott_or_taxon
     config = read_config(args.config_file)
     database = config.get("db", "uri")
 
     # Default to the static folder in the OZtree repo
-    if args.output_dir is None:
-        args.output_dir = os.path.join(
+    if outdir is None:
+        outdir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             os.pardir,
             os.pardir,
@@ -627,17 +642,16 @@ def process_args(args):
             "FinalOutputs",
             "img",
         )
-    output_dir = args.output_dir
 
-    db_context = connect_to_database(database)
+    db = connect_to_database(database)
     azure = get_image_analysis_client(config)
 
     if args.subcommand == "leaf":
         # Process one leaf, optionally forcing the specified image
-        process_leaf(db_context, args.ott_or_taxon, args.image, args.rating, args.skip_images, crop=azure)
+        process_leaf(db, ott_or_taxon, args.image, args.rating, args.skip_images, outdir, crop=azure)
     elif args.subcommand == "clade":
         # Process all the images in the passed in clade
-        process_clade(db_context, args.ott_or_taxon, args.dump_file, args.skip_images, crop=azure)
+        process_clade(db, ott_or_taxon, args.dump_file, args.skip_images, outdir, crop=azure)
 
 
 def main():

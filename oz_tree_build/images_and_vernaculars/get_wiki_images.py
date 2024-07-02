@@ -258,30 +258,24 @@ def get_image_license_info(escaped_image_name):
             license_info["artist"] = extmetadata["Artist"]["value"]
             # Strip the html tags from the artist
             license_info["artist"] = re.sub(r"<[^>]*>", "", license_info["artist"]).strip()
-            # add a copyright symbol
-            if license_info["artist"].startswith("©"):
-                pass
-            elif license_info["artist"].startswith("No machine-readable"):
-                pass
-            else:
-                license_info["artist"] = "© " + license_info["artist"]
         else:
+            logger.warning(f"Artist not found for '{escaped_image_name}': using 'Unknown artist'")
             license_info["artist"] = "Unknown artist"
 
-        # Some images have a flicker common license URL but not License field (e.g. Potos_flavus_(22985770100).jpg)
+        # Some images have a flickr common license URL but not License field (e.g. Potos_flavus_(22985770100).jpg)
         # We treat these as public domain, because the flicker common license is basically that.
         if (
             not "License" in extmetadata
             and license_info["license_url"] == "https://www.flickr.com/commons/usage/"
         ):
-            license_info["license"] = "pd"
+            license_info["license"] = "commons"
         else:
             license_info["license"] = extmetadata["License"]["value"]
 
         # If the license doesn't start with "cc" or "pd", we can't use it
         if not license_info["license"].startswith("cc") and not license_info[
             "license"
-        ].startswith("pd"):
+        ].startswith("pd") and not license_info["license"] == "commons":
             logger.warning(
                 f"Unacceptable license for '{escaped_image_name}': {license_info['license']}"
             )
@@ -352,12 +346,24 @@ def save_wiki_image(
         )
         return False
 
-    is_public_domain = license_info["license"] in {"pd", "cc0"}
-    license_string = (
-        f"{license_info['license']} ({license_info['license_url']})"
-        if license_info["license_url"]
-        else license_info["license"]
-    )
+    license = license_info["license"]
+    is_public_domain = True
+    if license.startswith("pd"):
+        license_string = "Marked as being in the public domain"
+    elif license in {"cc0", "commons"}:
+        license_string = "Released into the public domain"
+    else:
+        is_public_domain = False
+        license_string = license
+        if license_info.get("license_url"):
+            license_string += f" ({license_info['license_url']})"
+        # prefix a copyright symbol to the artist
+        prefix = "© "
+        for skip in ["©", "No machine-readable", "Unknown"]:
+            if license_info["artist"].startswith(skip):
+                prefix = ""
+                break
+        license_info["artist"] = prefix + license_info["artist"]
 
     image_url = get_image_url(escaped_image_name)
 
@@ -509,7 +515,6 @@ def process_leaf(
 
     try:
         result = db.executesql(sql, (ott_or_taxon, ))
-        print(result, sql, ott_or_taxon)
         if len(result) > 1:
             raise ValueError(f"Multiple results for '{ott_or_taxon}'")
         (ott, qid, name) = result[0]
@@ -520,14 +525,13 @@ def process_leaf(
     logger.info(f"Processing '{name}' (ott={ott}, qid={qid})")
 
     # Three cases for the rating:
-    # - If it's passed in for a bespoke image, use it
+    # - If it's passed in, use it
     # - If it's not passed in for a bespoke image, use 40000
     # - for non-bespoke images, use 35000
     if rating is None:
         rating = bespoke_wiki_image_rating if image_name else default_wiki_image_rating
 
     json_item = get_wikidata_json_for_qid(qid)
-
     if not skip_images:
         # If a specific image name is passed in (corresponding to a image name on
         # wikimedia commons), we use that. Otherwise, we need to look it up.
@@ -622,10 +626,11 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
 
     # Log the leaves for which we couldn't find images
     if len(leaves_without_images) > 0:
-        logger.info("Taxa for which we couldn't find a proper image:")
+        info = "Taxa for which we couldn't find a proper image:"
         for qid, ott in leaves_without_images.items():
             if qid not in leaves_that_got_images:
-                logger.info(f"  ott={ott} qid={qid}")
+                info += f"\n  ott={ott} qid={qid}"
+        logger.info(info)
 
 
 def process_args(args):
@@ -646,7 +651,8 @@ def process_args(args):
             "img",
         )
     if not os.path.exists(outdir):
-        raise ValueError(f"Output directory '{outdir}' does not exist")
+        logger.error(f"Output directory '{outdir}' does not exist")
+        return
 
     db = connect_to_database(database)
     azure = get_image_analysis_client(config)
@@ -664,30 +670,56 @@ def process_args(args):
         for name in args.ott_or_taxa:
             process_clade(db, name, args.wd_dump, args.skip_images, outdir, crop=azure)
 
+def setup_logging(args):
+    log_level = "WARN"
+    if args.quiet > 0:
+        log_level = "ERROR"
+        if args.quiet > 1:
+            log_level = "CRITICAL"
+            if args.quiet > 2:
+                log_level = logging.CRITICAL + 1
+    else:
+        if args.verbosity > 0:
+            log_level = "INFO"
+        if args.verbosity > 1:
+            log_level = "DEBUG"
+    logging.basicConfig(level=log_level)
+    return log_level
 
 def main():
-    logging.debug("")  # Makes logging work
-    logger.setLevel(logging.INFO)
-
     parser = argparse.ArgumentParser(description=__doc__)
 
     subparsers = parser.add_subparsers(help="help for subcommand", dest="subcommand")
 
     def add_common_args(parser):
         parser.add_argument(
+            "-v",
+            "--verbosity",
+            action="count",
+            default=0,
+            help="How much information to print: use multiple times for more info",
+        )
+        parser.add_argument(
+            "-q",
+            "--quiet",
+            action="count",
+            default=0,
+            help="Do not log warnings (-q) or errors (-qq)",
+        )
+        parser.add_argument(
             "--skip-images",
             action="store_true",
             help="Only process vernaculars, not images",
         )
         parser.add_argument(
-            "--output-dir",
             "-o",
+            "--output-dir",
             default=None,
             help="The location to save the cropped pictures (e.g. 'FinalOutputs/img'). If not given, defaults to ../../../static/FinalOutputs/img (relative to the script location). Files will be saved under output_dir/{src_flag}/{3-digits}/fn.jpg",
         )
         parser.add_argument(
-            "--conf-file",
             "-c",
+            "--conf-file",
             default=None,
             help="The configuration file to use. If not given, defaults to private/appconfig.ini",
         )
@@ -725,6 +757,8 @@ def main():
         parser.print_help()
         sys.exit()
 
+
+    setup_logging(args)
     process_args(args)
 
 

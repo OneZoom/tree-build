@@ -24,8 +24,6 @@ class MockResponse:
 
     def json(self):
         return self.json_data
-    
-    
 
 
 class RemoteAPIs:
@@ -192,6 +190,11 @@ def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, co
         conf_file=conf_file,
     )
 
+def default_rating(image=None):
+    if image is None:
+        return get_wiki_images.default_wiki_image_rating 
+    return get_wiki_images.bespoke_wiki_image_rating
+
 class TestFunctions:
     """
     Test calling the subfunctions
@@ -208,6 +211,22 @@ class TestFunctions:
 
 class TestAPI:
     apis = RemoteAPIs(mock_qid=-1234)
+
+    def setup(self, db, qid, tmp_path, keep_rows):
+        self.db = db
+        self.tmp_dir = tmp_path
+        self.keep_rows = keep_rows
+        self.qid = qid
+        delete_rows(db, self.ott)
+        db.executesql(
+            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
+            "VALUES (0, 0, {0}, {0}, {0});".format(placeholder(db)),
+            ("Panthera leo", self.ott, self.qid),
+        )
+
+    def teardown(self):
+        if not self.keep_rows:
+            delete_rows(self.db, self.ott)
 
     def check_downloaded_wiki_image(self, qid, crop=None):
         img_dir = os.path.join(self.tmp_dir, str(src_flags["wiki"]), str(qid)[-3:])
@@ -233,49 +252,73 @@ class TestAPI:
             return True
         return False
 
-    @apis.mock_patch_all_web_request_methods
-    def verify_process_leaf(self, image, rating, *args):
-        db = self.db
-        ott = self.ott
-        ph = placeholder(db)
-        qid = self.apis.mock_qid
-        crp = None
-        img_sql = "SELECT src_id, rating FROM images_by_ott WHERE ott={0};"
-        vn_sql = "SELECT vernacular FROM vernacular_by_ott WHERE ott={0};"
+    @property
+    def image_sql(self):
+        return (
+            "SELECT src_id, rating FROM images_by_ott "
+            "WHERE ott={0};".format(placeholder(self.db))
+        )
 
-        get_wiki_images.process_leaf(db, ott, output_dir=self.tmp_dir, skip_images=True)
-        # Quick check on vernaculars - should work even with the real wiki API
-        names = {r[0] for r in self.db.executesql(vn_sql.format(ph), (self.ott,))}
+    @property
+    def vernacular_sql(self):
+        return (
+            "SELECT vernacular FROM vernacular_by_ott "
+            "WHERE ott={0};".format(placeholder(self.db))
+        )
+
+    @apis.mock_patch_all_web_request_methods
+    def verify_process_leaf(self, image=None, rating=None, skip_images=None, crop=None, *args):
+        get_wiki_images.process_leaf(
+            self.db,
+            self.ott,
+            image,
+            rating=rating,
+            output_dir=self.tmp_dir,
+            skip_images=skip_images,
+            crop=crop,
+        )
+        names = {r[0] for r in self.db.executesql(self.vernacular_sql, (self.ott,))}
         assert "Lion" in names
 
-        # Images skipped, so should have no row
-        rows = self.db.executesql(img_sql.format(ph), (self.ott,))
-        assert len(rows) == 0
-        assert not self.check_downloaded_wiki_image(qid)
-
-        # Now get images
-        get_wiki_images.process_leaf(
-            db, ott, rating=rating, output_dir=self.tmp_dir, skip_images=False, crop=crp
-        )
-        assert self.check_downloaded_wiki_image(qid, crp)
-        rows = self.db.executesql(img_sql.format(ph), (self.ott,))
-        assert len(rows) == 1
-        assert rows[0] == (qid, 40123)
-
-    def test_process_default_leaf(self, db, keep_rows, tmp_path):
+    def test_process_default_leaf(self, db, tmp_path, keep_rows):
         self.ott = "-551"
-        self.db = db
-        self.tmp_dir = tmp_path
-        qid = self.apis.mock_qid
-        delete_rows(db, self.ott)
-        db.executesql(
-            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
-            "VALUES (0, 0, {0}, {0}, {0});".format(placeholder(db)),
-            ("Panthera leo", self.ott, qid),
-        )
+        crop = None
+        rating = 40123
+        self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
+        self.verify_process_leaf(None, rating, False, crop)
+        assert self.check_downloaded_wiki_image(self.qid, crop)
+        rows = self.db.executesql(self.image_sql, (self.ott,))
+        assert len(rows) == 1
+        assert rows[0] == (self.qid, rating or default_rating(image))
+        self.teardown()
+
+    def test_process_default_leaf_skip_images(self, db, tmp_path, keep_rows):
+        self.ott = "-552"
+        crop = None
+        self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
+        self.verify_process_leaf(None, None, True, crop)
+        # Images skipped, so should have no row
+        rows = self.db.executesql(self.image_sql, (self.ott,))
+        assert len(rows) == 0
+        assert not self.check_downloaded_wiki_image(self.qid, crop)
+        self.teardown()
+
+    @pytest.mark.skip(reason="https://github.com/OneZoom/tree-build/issues/78")
+    def test_existing_image_rating_kept(self, db, keep_rows, tmp_path):
+        self.ott = "-553"
+        crop=None
+        self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
+        self.verify_process_leaf(None, None, None, crop)
+        rows = self.db.executesql(self.image_sql, (self.ott,))
+        assert rows[0][1] == default_rating()
+        self.verify_process_leaf(None, 44444, None, crop)
+        assert rows[0][1] == 44444
+        self.verify_process_leaf(None, None, None, crop)
+        assert rows[0][1] == 44444
         self.verify_process_leaf(None, 40123)
-        if not keep_rows:
-            delete_rows(db, self.ott)
+        assert rows[0][1] == 40123
+        self.teardown()
+
 
     def test_process_clade(self):
         # TODO!
@@ -351,7 +394,7 @@ class TestCLI:
             int(self.ott),
             src,
             src_id + 1 if src == src_flags["onezoom_bespoke"] else int(qid),
-            rating if rating else 35000,
+            rating if rating else default_rating(image),
             1,
         )
         # In the bespoke case, the call to process_image_bits at the end of get_wiki_images should have

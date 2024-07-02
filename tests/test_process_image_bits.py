@@ -6,8 +6,8 @@ from oz_tree_build.images_and_vernaculars import process_image_bits
 
 
 class TestDBHelper:
-    def test_connect_to_database(self, appconfig):
-        db = connect_to_database(appconfig=appconfig)
+    def test_connect_to_database(self, conf_file):
+        db = connect_to_database(conf_file=conf_file)
         assert tuple(db.executesql("SELECT 1;")) == ((1, ),)
         # The following should pass without error if the tables exist
         db.executesql("SELECT id from images_by_ott LIMIT 1")
@@ -73,8 +73,8 @@ class TestCLI(BaseDB):
             assert row == expected_results[i]
 
     @pytest.mark.parametrize("init_value", [0, 1])
-    def test_process_image_bits(self, db, appconfig, keep_rows, init_value):
-        args = types.SimpleNamespace(ott=-777, config_file=appconfig)
+    def test_process_image_bits(self, db, conf_file, keep_rows, init_value):
+        args = types.SimpleNamespace(ott=-777, conf_file=conf_file)
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
 

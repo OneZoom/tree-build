@@ -186,7 +186,7 @@ def get_vernaculars_by_language_from_json_item(json_item):
 
             vernaculars_by_language.setdefault(language, []).append(vernacular_info)
     except (KeyError, IndexError):
-        return None
+        return vernaculars_by_language
 
     # For each language:
     # - We keep all the vernaculars
@@ -319,6 +319,7 @@ def save_wiki_image(
 
     # Wikimedia uses underscores instead of spaces in URLs
     escaped_image_name = image["name"].replace(" ", "_")
+    image_dir = os.path.join(output_dir, str(src), subdir_name(src_id))
 
     if check_if_up_to_date:
         # If we already have an image for this taxon, and it's the same as the one we're trying to download, skip it
@@ -330,7 +331,9 @@ def save_wiki_image(
             url = row[0][0]
             existing_image_name = url[len(wiki_image_url_prefix) :]
             if existing_image_name == escaped_image_name:
-                logger.info(f"Image for {ott} is already up to date: {image['name']}")
+                logger.info(
+                    f"Image {image['name']} for {ott} is already up to date: "
+                    f"should be at {image_dir}/{src_id}.jpg")
                 return
 
     logger.info(f"Processing image for ott={ott} (qid={src_id}): {image['name']}")
@@ -351,9 +354,8 @@ def save_wiki_image(
 
     image_url = get_image_url(escaped_image_name)
 
-    # We use the qid as the source id. This is convenient, although it does mean
-    # that we can't have two wikidata images for a given taxon.
-    image_dir = os.path.join(output_dir, str(src), subdir_name(src_id))
+    # For src=20 we use the qid as the source id. This is convenient, although it does mean
+    # that we can't have two src=20 wikidata images for a given taxon.
     if not os.path.exists(image_dir):
         os.makedirs(image_dir)
 
@@ -385,6 +387,7 @@ def save_wiki_image(
         ),
     )
     im.save(f"{image_dir}/{src_id}.jpg")
+    logger.info(f"Saved image {image['name']} for ott={ott} (Q{src_id}) in {image_dir}/{src_id}.jpg")
 
     # Save the crop info in a text file next to the image
     crop_info_path = f"{image_dir}/{src_id}_cropinfo.txt"
@@ -618,7 +621,7 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
 
 def process_args(args):
     outdir = args.output_dir
-    config = read_config(args.config_file)
+    config = read_config(args.conf_file)
     database = config.get("db", "uri")
 
     # Default to the static folder in the OZtree repo
@@ -672,7 +675,8 @@ def main():
             help="The location to save the cropped pictures (e.g. 'FinalOutputs/img'). If not given, defaults to ../../../static/FinalOutputs/img (relative to the script location). Files will be saved under output_dir/{src_flag}/{3-digits}/fn.jpg",
         )
         parser.add_argument(
-            "--config-file",
+            "--conf-file",
+            "-c",
             default=None,
             help="The configuration file to use. If not given, defaults to private/appconfig.ini",
         )

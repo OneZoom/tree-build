@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 def is_sqlite(db): 
     return db._adapter.driver_name.startswith("sqlite")
 
-def connect_to_database(database=None, appconfig=None):
+def connect_to_database(database=None, conf_file=None):
     if database is None:
-        database = read_config(appconfig).get("db", "uri")
+        database = read_config(conf_file).get("db", "uri")
     db = DAL(database)
     if is_sqlite(db):
         # This is running using a test sqlite db, so we need to define the tables
@@ -65,18 +65,18 @@ def get_next_src_id_for_src(db, src):
     return max_src_id[0][0] + 1 if max_src_id[0][0] else 1
 
 
-def read_config(config_file=None):
+def read_config(conf_file=None):
     """
     Read the passed-in configuration file, defaulting to the standard appconfig.ini
     """
 
-    if config_file is None:
-        config_file = os.path.join(
+    if conf_file is None:
+        conf_file = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "../../../OZtree/private/appconfig.ini",
         )
-    if not os.path.exists(config_file):
-        raise ValueError(f"Appconfig file {config_file} cannot be found.")
+    if not os.path.exists(conf_file):
+        raise ValueError(f"Appconfig file {conf_file} cannot be found.")
     config = configparser.ConfigParser()
-    config.read(config_file)
+    config.read(conf_file)
     return config

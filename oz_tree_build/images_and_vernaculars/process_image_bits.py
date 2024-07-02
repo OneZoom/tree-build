@@ -129,7 +129,7 @@ def resolve(db, ott):
 
 
 def process_args(args):
-    return resolve_from_config(args.ott, args.config_file)
+    return resolve_from_config(args.ott, args.conf_file)
 
 
 def main():
@@ -139,7 +139,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument(
-        "--config-file",
+        "--conf-file",
         default=None,
         help="The configuration file to use. If not given, defaults to private/appconfig.ini",
     )

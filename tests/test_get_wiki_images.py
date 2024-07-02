@@ -181,7 +181,7 @@ def delete_rows(db, ott):
     # and so adding and removing it shouldn't mess up the nested set structure, we hope
     delete_all_by_ott(db, "ordered_leaves", ott)
 
-def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, config_file):
+def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, conf_file):
     return SimpleNamespace(
         subcommand=subcommand,
         ott_or_taxa=ott_or_taxa,
@@ -189,7 +189,7 @@ def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, co
         rating=rating,
         skip_images=None,
         output_dir=output_dir,
-        config_file=config_file,
+        conf_file=conf_file,
     )
 
 class TestFunctions:
@@ -285,9 +285,9 @@ class TestAPI:
 class TestCLI:
     apis = RemoteAPIs(mock_qid=-4312)
 
-    def test_get_leaf_default_image(self, tmp_path, db, appconfig, keep_rows, real_apis):
+    def test_get_leaf_default_image(self, tmp_path, db, conf_file, keep_rows, real_apis):
         self.db = db
-        self.appconfig = appconfig
+        self.conf_file = conf_file
         self.ott = "-771"
         self.tmp_path = tmp_path
         self.real_apis = real_apis
@@ -296,9 +296,9 @@ class TestCLI:
         if not keep_rows:
             delete_rows(db, self.ott)
 
-    def test_get_leaf_bespoke_image(self, tmp_path, db, appconfig, keep_rows, real_apis):
+    def test_get_leaf_bespoke_image(self, tmp_path, db, conf_file, keep_rows, real_apis):
         self.db = db
-        self.appconfig = appconfig
+        self.conf_file = conf_file
         self.ott = "-772"
         self.tmp_path = tmp_path
         self.real_apis = real_apis
@@ -331,7 +331,7 @@ class TestCLI:
         )
         self.db.commit()
         # Call the method that we want to test
-        params = get_command_arguments("leaf", [self.ott], image, rating, self.tmp_path, self.appconfig)
+        params = get_command_arguments("leaf", [self.ott], image, rating, self.tmp_path, self.conf_file)
 
         if self.real_apis:
             get_wiki_images.process_args(params)

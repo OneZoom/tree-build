@@ -3,7 +3,7 @@ from oz_tree_build.utilities.db_helper import connect_to_database
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--appconfig",
+        "--conf-file",
         action="store",
         help="A path to the appconfig.ini file, that contains the database location and password",
         default=None
@@ -21,8 +21,8 @@ def pytest_addoption(parser):
 
 
 @fixture(scope='session')
-def appconfig(request):
-    return request.config.getoption("--appconfig")
+def conf_file(request):
+    return request.config.getoption("--conf-file")
 
 @fixture(scope='session')
 def keep_rows(request):
@@ -33,8 +33,8 @@ def real_apis(request):
     return request.config.getoption("--real-apis")
 
 @fixture(scope='class', autouse=True)
-def db(appconfig):
-    db = connect_to_database(appconfig=appconfig)
+def db(conf_file):
+    db = connect_to_database(conf_file=conf_file)
     yield db
     db.close()
 

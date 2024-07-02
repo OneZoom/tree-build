@@ -1,6 +1,6 @@
 import argparse
 import logging
-from oz_tree_build.utilities.db_helper import connect_to_database, read_config
+from oz_tree_build.utilities.db_helper import connect_to_database, read_config, placeholder
 from oz_tree_build._OZglobals import src_flags
 
 logger = logging.getLogger(__name__)
@@ -9,15 +9,40 @@ logger = logging.getLogger(__name__)
 def is_licence_public_domain(licence):
     return licence.startswith("pd") or licence.startswith("cc0")
 
+def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
+    """
+    Set the first row that meets the condition to 1, and all others to 0.
+    Returns `True` if any changes were made.
+    """
+    # Keep track of whether any changes are made, so we know whether to commit them
+    made_changes = False
+    first = True
+    for image in images:
+        new_value = 1 if first and candidate(image) else 0
+        if image[column_name] != new_value:
+            image[column_name] = new_value
+            made_changes = True
+        if new_value:
+            first = False
+    return made_changes
 
-def process_image_bits(ott, config_file=None):
-    global db_context, config
-
+def resolve_from_config(ott, config_file):
+    """
+    Process image bits for the given ott, getting a new db_context from a config file.
+    Returns `True` if any changes were made.
+    """
     config = read_config(config_file)
     database = config.get("db", "uri")
 
-    db_context = connect_to_database(database)
+    db = connect_to_database(database)
+    return resolve(db, ott)
 
+def resolve(db, ott):
+    """
+    Resolve image bits for the given ott, making sure that only one image is
+    marked as the best for each source, and that only one image is marked as
+    overall_best for all sources. Returns `True` if any changes were made.
+    """
     columns = [
         "id",
         "src",
@@ -30,15 +55,15 @@ def process_image_bits(ott, config_file=None):
         "overall_best_verified",
         "overall_best_pd",
     ]
-    db_context.execute(
+    rows = db.executesql(
         "SELECT "
         + ", ".join(columns)
-        + " FROM images_by_ott WHERE ott={0} ORDER BY id;",
-        ott,
+        + " FROM images_by_ott WHERE ott={0} ORDER BY id;".format(placeholder(db)),
+        (ott, ),
     )
 
     # Turn each row into a dictionary, and get them all into a list
-    images = [dict(zip(columns, row)) for row in db_context.db_curs.fetchall()]
+    images = [dict(zip(columns, row)) for row in rows]
     # Sort the images by rating descending
     images.sort(key=lambda x: x["rating"], reverse=True)
 
@@ -47,33 +72,16 @@ def process_image_bits(ott, config_file=None):
     for row in images:
         images_by_src.setdefault(row["src"], []).append(row)
 
-    # Keep track of whether any changes are made, so we know whether to commit them
     made_changes = False
-
-    def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
-        """
-        Set the first row that meets the condition to 1, and all others to 0.
-        Returns True if any changes were made.
-        """
-        nonlocal made_changes
-        first = True
-        for image in images:
-            new_value = 1 if first and candidate(image) else 0
-            if image[column_name] != new_value:
-                image[column_name] = new_value
-                made_changes = True
-            if new_value:
-                first = False
-
     # Set the best_any and best_pd bits for each source
     for src, images_for_src in images_by_src.items():
-        set_bit_for_first_image_only(images_for_src, "best_any")
-        set_bit_for_first_image_only(
+        made_changes |= set_bit_for_first_image_only(images_for_src, "best_any")
+        made_changes |= set_bit_for_first_image_only(
             images_for_src,
             "best_pd",
             candidate=lambda row: is_licence_public_domain(row["licence"]),
         )
-        set_bit_for_first_image_only(
+        made_changes |= set_bit_for_first_image_only(
             images_for_src,
             "best_verified",
             # Images from onezoom_bespoke or wiki are treated as verified, while others are not
@@ -82,11 +90,11 @@ def process_image_bits(ott, config_file=None):
         )
 
     # Set the overall_best_any and overall_best_pd bits for all images
-    set_bit_for_first_image_only(images, "overall_best_any")
-    set_bit_for_first_image_only(
+    made_changes |= set_bit_for_first_image_only(images, "overall_best_any")
+    made_changes |= set_bit_for_first_image_only(
         images, "overall_best_verified", candidate=lambda row: row["best_verified"]
     )
-    set_bit_for_first_image_only(
+    made_changes |= set_bit_for_first_image_only(
         images, "overall_best_pd", candidate=lambda row: row["best_pd"]
     )
 
@@ -94,8 +102,15 @@ def process_image_bits(ott, config_file=None):
         logger.info(f"Updating database since there are changes for ott {ott}")
 
         for row in images:
-            db_context.execute(
-                "UPDATE images_by_ott SET best_any={0}, best_verified={0}, best_pd={0}, overall_best_any={0}, overall_best_verified={0}, overall_best_pd={0} WHERE id={0};",
+            db._adapter.execute(
+                (
+                    "UPDATE images_by_ott SET best_any={0}, "
+                    "best_verified={0}, "
+                    "best_pd={0}, "
+                    "overall_best_any={0}, "
+                    "overall_best_verified={0}, "
+                    "overall_best_pd={0} "
+                    "WHERE id={0};").format(placeholder(db)),
                 (
                     row["best_any"],
                     row["best_verified"],
@@ -106,7 +121,7 @@ def process_image_bits(ott, config_file=None):
                     row["id"],
                 ),
             )
-        db_context.db_connection.commit()
+        db.commit()
     else:
         logger.info(f"No changes to make to the database for ott {ott}")
 
@@ -114,7 +129,7 @@ def process_image_bits(ott, config_file=None):
 
 
 def process_args(args):
-    return process_image_bits(args.ott, args.config_file)
+    return resolve_from_config(args.ott, args.conf_file)
 
 
 def main():
@@ -124,7 +139,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument(
-        "--config-file",
+        "--conf-file",
         default=None,
         help="The configuration file to use. If not given, defaults to private/appconfig.ini",
     )

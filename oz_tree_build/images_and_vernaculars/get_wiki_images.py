@@ -499,6 +499,7 @@ def process_leaf(
 
     try:
         result = db.executesql(sql, (ott_or_taxon, ))
+        print(result, sql, ott_or_taxon)
         if len(result) > 1:
             raise ValueError(f"Multiple results for '{ott_or_taxon}'")
         (ott, qid, name) = result[0]
@@ -518,7 +519,8 @@ def process_leaf(
     json_item = get_wikidata_json_for_qid(qid)
 
     if not skip_images:
-        # If a specific image name is passed in, use it. Otherwise, we need to look it up.
+        # If a specific image name is passed in (corresponding to a image name on
+        # wikimedia commons), we use that. Otherwise, we need to look it up.
         # Also, if an image is passed in, we categorize it as a bespoke image, not wiki.
         if image_name:
             image = {"name": image_name}
@@ -616,7 +618,6 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
 
 def process_args(args):
     outdir = args.output_dir
-    ott_or_taxon = args.ott_or_taxon
     config = read_config(args.config_file)
     database = config.get("db", "uri")
 
@@ -637,11 +638,17 @@ def process_args(args):
     azure = get_image_analysis_client(config)
 
     if args.subcommand == "leaf":
-        # Process one leaf, optionally forcing the specified image
-        process_leaf(db, ott_or_taxon, args.image, args.rating, args.skip_images, outdir, crop=azure)
+        # Process one leaf at a time
+        if len(args.ott_or_taxa) > 1 and args.image is not None:
+            raise ValueError("Cannot specify multiple taxa when using a bespoke image")
+        for name in args.ott_or_taxa:
+            process_leaf(
+                db, name, args.image, args.rating, args.skip_images, outdir, crop=azure
+            )
     elif args.subcommand == "clade":
-        # Process all the images in the passed in clade
-        process_clade(db, ott_or_taxon, args.dump_file, args.skip_images, outdir, crop=azure)
+        # Process all the taxa in the passed in clades
+        for ott_or_taxon in args.ott_or_taxa:
+            process_clade(db, name, args.wd_dump, args.skip_images, outdir, crop=azure)
 
 
 def main():
@@ -672,14 +679,16 @@ def main():
 
     parser_leaf = subparsers.add_parser("leaf", help="Process a single ott")
     parser_leaf.add_argument(
-        "ott_or_taxon", type=str, help="The leaf ott or taxon to process"
+        "ott_or_taxa", nargs="+", type=str, help="The leaf otts or taxa to process"
     )
     parser_leaf.add_argument(
-        "image", nargs="?", type=str, help="The image to use for the given ott"
+        "-i", "--image", type=str, help=(
+            "A name of an image on wikimedia commons to use: if provided, you can give "
+            "only one ott_or_taxon, and it will be treated as from a bespoke image src."
+        )
     )
     parser_leaf.add_argument(
-        "rating",
-        nargs="?",
+        "-r", "--rating",
         type=int,
         help="The rating for the image (defaults to 40000)",
     )
@@ -687,12 +696,12 @@ def main():
 
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(
-        "ott_or_taxon", type=str, help="The ott or taxon of the root of the clade"
+        "ott_or_taxa", type=str, help="The ott or taxa of the root of the clade(s)"
     )
     parser_clade.add_argument(
-        "dump_file",
+        "wd_dump",
         type=str,
-        help="The wikidata JSON dump from which to get the images",
+        help="The wikidata JSON dump file from which to get the images",
     )
     add_common_args(parser_clade)
 

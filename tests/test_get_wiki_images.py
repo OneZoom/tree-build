@@ -106,14 +106,14 @@ def build_wikidata_entities(qid, images, vernaculars):
     return entities
 
 
-def get_command_arguments(subcommand, ott_or_taxon, image, rating, config_file):
+def get_command_arguments(subcommand, ott_or_taxon, image, rating, output_dir, config_file):
     return types.SimpleNamespace(
-        output_dir=None,
         subcommand=subcommand,
         ott_or_taxon=ott_or_taxon,
         image=image,
         rating=rating,
         skip_images=None,
+        output_dir=output_dir,
         config_file=config_file,
     )
 
@@ -193,7 +193,7 @@ class TestFunctions:
     Test calling the subfunctions
     """
     def test_get_image_crop_box(self):
-        #assert get_wiki_images.get_image_crop_box("https://example.com/image.jpg") == {
+        #assert get_wiki_images.get_image_crop_box(temp_image_path) == {
         #    "x": 50,
         #    "y": 75,
         #    "width": 300,
@@ -230,13 +230,11 @@ class TestAPI:
         assert os.path.exists(cropinfo)
         with open(cropinfo) as f:
             s = f.read()
-            print(h>w, s)
             if h > w:
                 assert s.startswith(f"0,")
                 assert s.endswith(f",{w},{w}")
             else:    
                 assert s.endswith(f",0,{h},{h}")
-
         rows = self.db.executesql(sql.format(ph), (self.ott,))
         assert len(rows) == 1
         assert rows[0] == (qid, 40123)
@@ -256,23 +254,26 @@ class TestAPI:
             delete_rows(db, self.ott)
 
     def test_process_clade(self):
+        # TODO!
         pass
 
 
 class TestCLI:
-    def test_get_leaf_default_image(self, db, appconfig, keep_rows):
+    def test_get_leaf_default_image(self, tmp_path, db, appconfig, keep_rows):
         self.db = db
         self.appconfig = appconfig
         self.ott = "-771"
+        self.tmp_path = tmp_path
         delete_rows(db, self.ott)
         self.verify_image_behavior(None, None)
         if not keep_rows:
             delete_rows(db, self.ott)
 
-    def test_get_leaf_bespoke_image(self, db, appconfig, keep_rows):
+    def test_get_leaf_bespoke_image(self, tmp_path, db, appconfig, keep_rows):
         self.db = db
         self.appconfig = appconfig
         self.ott = "-772"
+        self.tmp_path = tmp_path
         delete_rows(db, self.ott)
         self.verify_image_behavior("SecondLionImage.jpg", 42000)
         if not keep_rows:
@@ -306,7 +307,8 @@ class TestCLI:
         self.db.commit()
 
         # Call the method that we want to test
-        get_wiki_images.process_args(get_command_arguments("leaf", self.ott, image, rating, self.appconfig))
+        args = get_command_arguments("leaf", self.ott, image, rating, self.tmp_path, self.appconfig)
+        get_wiki_images.process_args(args)
 
         rows = self.db.executesql(
             f"SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott WHERE ott={ph} ORDER BY id desc;",

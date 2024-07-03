@@ -24,7 +24,8 @@ To run the test suite, from the root of the repo, and from your activated enviro
 This will look for a config file to specify the database to use for testing. By default this will look
 in `../OZtree/private/appconfig.ini`, assuming that this repository is a sibling to a non-live
 [OZtree](https://github.com/OneZoom/OZtree) installation, and that the database used by this OZtree
-installation is active. Alternatively (e.g. if the plain `pytest` command is giving errors), a config file
+installation is active. Alternatively (e.g. if the plain `pytest` command is giving errors, or if you do not
+wish to use your OneZoom database for unit testing purposes), a config file
 that uses a SQLite database is provided in the `tests` directory, and the following command can be used
 which should always work without error
 

@@ -1,19 +1,21 @@
+import logging
 import os
-import pytest
 import shutil
 import urllib.request
-from unittest import mock
 from types import SimpleNamespace
+from unittest import mock
 
+import pytest
 from PIL import Image
 
 from oz_tree_build._OZglobals import src_flags
+from oz_tree_build.images_and_vernaculars import get_wiki_images
 from oz_tree_build.utilities.db_helper import (
     delete_all_by_ott,
     get_next_src_id_for_src,
     placeholder,
 )
-from oz_tree_build.images_and_vernaculars import get_wiki_images
+
 
 class MockResponse:
     def __init__(self, status_code, json_data=None, content=None):
@@ -30,7 +32,9 @@ class RemoteAPIs:
     """
     Use the lion as a test case
     """
+
     cc0_url = "https://creativecommons.org/publicdomain/zero/1.0/"
+
     def add_mocked_request(self, url, querystring=None, *, response):
         if querystring is not None:
             url += "?" + querystring
@@ -39,8 +43,7 @@ class RemoteAPIs:
     def __init__(self, mock_qid):
         self.mock_qid = mock_qid
         self.true_qid = 140
-        self.mocked_requests = {} # Maps URLs to the JSON responses that should be returned
-
+        self.mocked_requests = {}  # Maps URLs to JSON responses to return
 
         # Download an arbitrary test image in the tmp folder to use in the tests
         self.temp_image_path = "/tmp/mocked_urlretrieve_image.jpg"
@@ -53,7 +56,7 @@ class RemoteAPIs:
         self.add_mocked_request(
             "https://www.wikidata.org/w/api.php",
             f"action=wbgetentities&ids=Q{self.mock_qid}&format=json",
-            response = self.build_wikidata_entities(
+            response=self.build_wikidata_entities(
                 image_data=[
                     {"name": "FirstLionImage.jpg", "rank": "normal"},
                     {"name": "SecondLionImage.jpg", "rank": "preferred"},
@@ -77,9 +80,9 @@ class RemoteAPIs:
         )
 
         self.add_mocked_request(
-            "https://api.wikimedia.org/w/api.php",
-            "action=query&prop=imageinfo&iiprop=extmetadata&titles=File%3aSecondLionImage.jpg"
-            "&format=json&iiextmetadatafilter=License|LicenseUrl|Artist",
+            "https://api.wikimedia.org/w/api.php"
+            "?action=query&titles=File%3aSecondLionImage.jpg&format=json&prop=imageinfo"
+            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseUrl|Artist",
             response={
                 "query": {
                     "pages": {
@@ -97,15 +100,37 @@ class RemoteAPIs:
                         }
                     }
                 }
-            }
+            },
+        )
+        self.add_mocked_request(
+            "https://api.wikimedia.org/w/api.php"
+            "?action=query&titles=File%3aBadLicence.jpg&format=json&prop=imageinfo"
+            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseUrl|Artist",
+            response={
+                "query": {
+                    "pages": {
+                        "-1": {
+                            "title": "File:BadLicence.jpg",
+                            "imageinfo": [
+                                {
+                                    "extmetadata": {
+                                        "License": {"value": "GPL"},
+                                        "Artist": {"value": "John Doe"},
+                                    }
+                                }
+                            ],
+                        }
+                    }
+                }
+            },
         )
         self.add_mocked_request(
             "https://api.wikimedia.org/core/v1/commons/file/SecondLionImage.jpg",
             response={
-                "preferred": {  # NB: means preferred size of image, not which image is preferred
+                "preferred": {  # NB: means preferred image *size* not preferred image
                     "url": "https://upload.wikimedia.org/wikipedia/commons/7/73/SecondLionImage.jpg"
                 }
-            }
+            },
         )
 
     # Mock the requests.get function
@@ -116,7 +141,7 @@ class RemoteAPIs:
         return MockResponse(404)
 
     def mocked_urlretrieve(self, *args, **kwargs):
-        # Instead of actually downloading the image, we just copy our test image to the destination
+        # Instead of actually downloading, just copy the test image to the destination
         shutil.copyfile(self.temp_image_path, args[1])
 
     # Mock the Azure Vision API smart crop response
@@ -137,27 +162,30 @@ class RemoteAPIs:
         images = []
         vernaculars = []
         for img in image_data:
-            images.append({
-                "mainsnak": {
-                    "datavalue": {
-                        "value": img["name"],
+            images.append(
+                {
+                    "mainsnak": {
+                        "datavalue": {
+                            "value": img["name"],
+                        },
                     },
-                },
-                "rank": img["rank"],
-            })
+                    "rank": img["rank"],
+                }
+            )
         for vn in vernacular_data:
-            vernaculars.append({
-                "mainsnak": {
-                    "datavalue": {
-                        "value": {"language": vn["language"], "text": vn["name"]},
+            vernaculars.append(
+                {
+                    "mainsnak": {
+                        "datavalue": {
+                            "value": {"language": vn["language"], "text": vn["name"]},
+                        },
                     },
-                },
-                "rank": vn["rank"],
-            })
+                    "rank": vn["rank"],
+                }
+            )
 
         ret_val["entities"] = {qid: {"claims": {"P18": images, "P1843": vernaculars}}}
         return ret_val
-
 
     def mock_patch_all_web_request_methods(self, f):
         @mock.patch("requests.get", side_effect=self.mocked_requests_get)
@@ -179,6 +207,7 @@ def delete_rows(db, ott):
     # and so adding and removing it shouldn't mess up the nested set structure, we hope
     delete_all_by_ott(db, "ordered_leaves", ott)
 
+
 def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, conf_file):
     return SimpleNamespace(
         subcommand=subcommand,
@@ -190,29 +219,32 @@ def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, co
         conf_file=conf_file,
     )
 
+
 def default_rating(image=None):
     if image is None:
-        return get_wiki_images.default_wiki_image_rating 
+        return get_wiki_images.default_wiki_image_rating
     return get_wiki_images.bespoke_wiki_image_rating
+
 
 class TestFunctions:
     """
     Test calling the subfunctions
     """
+
     def test_get_image_crop_box(self):
-        #assert get_wiki_images.get_image_crop_box(temp_image_path) == {
+        # assert get_wiki_images.get_image_crop_box(temp_image_path) == {
         #    "x": 50,
         #    "y": 75,
         #    "width": 300,
         #    "height": 300,
-        #}
+        # }
         pass
 
 
 class TestAPI:
     apis = RemoteAPIs(mock_qid=-1234)
 
-    def setup(self, db, qid, tmp_path, keep_rows):
+    def setup_lookups(self, db, qid, tmp_path, keep_rows):
         self.db = db
         self.tmp_dir = tmp_path
         self.keep_rows = keep_rows
@@ -224,7 +256,7 @@ class TestAPI:
             ("Panthera leo", self.ott, self.qid),
         )
 
-    def teardown(self):
+    def teardown_lookups(self):
         if not self.keep_rows:
             delete_rows(self.db, self.ott)
 
@@ -245,9 +277,9 @@ class TestAPI:
                 with open(cropinfo) as f:
                     s = f.read()
                     if h > w:
-                        assert s.startswith(f"0,")
+                        assert s.startswith("0,")
                         assert s.endswith(f",{w},{w}")
-                    else:    
+                    else:
                         assert s.endswith(f",0,{h},{h}")
             return True
         return False
@@ -256,18 +288,20 @@ class TestAPI:
     def image_sql(self):
         return (
             "SELECT src_id, rating FROM images_by_ott "
-            "WHERE ott={0};".format(placeholder(self.db))
+            f"WHERE ott={placeholder(self.db)};"
         )
 
     @property
     def vernacular_sql(self):
         return (
             "SELECT vernacular FROM vernacular_by_ott "
-            "WHERE ott={0};".format(placeholder(self.db))
+            f"WHERE ott={placeholder(self.db)};"
         )
 
     @apis.mock_patch_all_web_request_methods
-    def verify_process_leaf(self, image=None, rating=None, skip_images=None, crop=None, *args):
+    def verify_process_leaf(
+        self, image=None, rating=None, skip_images=None, crop=None, *args
+    ):
         get_wiki_images.process_leaf(
             self.db,
             self.ott,
@@ -280,33 +314,45 @@ class TestAPI:
         names = {r[0] for r in self.db.executesql(self.vernacular_sql, (self.ott,))}
         assert "Lion" in names
 
-    def test_process_default_leaf(self, db, tmp_path, keep_rows):
+    def test_process_default_leaf(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-551"
         crop = None
+        image = None  # The name of the image to get or None to use the default WD image
         rating = 40123
-        self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
-        self.verify_process_leaf(None, rating, False, crop)
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf(image, rating, False, crop)
+        assert caplog.text == ""
         assert self.check_downloaded_wiki_image(self.qid, crop)
         rows = self.db.executesql(self.image_sql, (self.ott,))
         assert len(rows) == 1
         assert rows[0] == (self.qid, rating or default_rating(image))
-        self.teardown()
+        self.teardown_lookups()
 
     def test_process_default_leaf_skip_images(self, db, tmp_path, keep_rows):
         self.ott = "-552"
         crop = None
-        self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         self.verify_process_leaf(None, None, True, crop)
         # Images skipped, so should have no row
         rows = self.db.executesql(self.image_sql, (self.ott,))
         assert len(rows) == 0
         assert not self.check_downloaded_wiki_image(self.qid, crop)
-        self.teardown()
+        self.teardown_lookups()
+
+    def test_bad_licence(self, db, tmp_path, keep_rows, caplog):
+        self.ott = "-553"
+        crop = None
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf("BadLicence.jpg", None, False, crop)
+        assert "Unacceptable license" in caplog.text
+        self.teardown_lookups()
 
     @pytest.mark.skip(reason="https://github.com/OneZoom/tree-build/issues/78")
     def test_existing_image_rating_kept(self, db, keep_rows, tmp_path):
         self.ott = "-553"
-        crop=None
+        crop = None
         self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
         self.verify_process_leaf(None, None, None, crop)
         rows = self.db.executesql(self.image_sql, (self.ott,))
@@ -318,7 +364,6 @@ class TestAPI:
         self.verify_process_leaf(None, 40123)
         assert rows[0][1] == 40123
         self.teardown()
-
 
     def test_process_clade(self):
         # TODO!
@@ -352,29 +397,32 @@ class TestCLI:
 
     def verify_image_behavior(self, image, rating, *args):
         assert int(self.ott) < 0
-        ph = placeholder(self.db)
+        s = placeholder(self.db)
         qid = self.apis.true_qid if self.real_apis else self.apis.mock_qid
         # Insert a leaf to set up the mapping between the ott and the wikidata id
         self.db.executesql(
             "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
-            "VALUES (0, 0, {0}, {0}, {0});".format(ph),
+            f"VALUES (0, 0, {s}, {s}, {s});",
             ("Panthera leo", self.ott, qid),
         )
         # Note that the image src should be onezoom_bespoke if a bespoke image is used
         src = src_flags["onezoom_bespoke"] if image else src_flags["wiki"]
 
-        # Insert a dummy image to test that it gets deleted in the wiki case, and kept in the bespoke case
+        # Insert a dummy image to test that it gets deleted in the wiki case and
+        # kept in the bespoke case
         src_id = get_next_src_id_for_src(self.db, src)
         self.db.executesql(
             "INSERT INTO images_by_ott "
-            "(ott, src, src_id, url, rating, best_any, best_verified, best_pd, overall_best_any, "
-            "overall_best_verified, overall_best_pd) "
-            "VALUES ({0}, {0}, {0}, {0}, 1234, 1, 1, 1, 1, 1, 1);".format(ph),
+            "(ott, src, src_id, url, rating, best_any, best_verified, best_pd, "
+            "overall_best_any, overall_best_verified, overall_best_pd) "
+            f"VALUES ({s}, {s}, {s}, {s}, 1234, 1, 1, 1, 1, 1, 1);",
             (self.ott, src, src_id, "http://example.com/dummy.jpg"),
         )
         self.db.commit()
         # Call the method that we want to test
-        params = get_command_arguments("leaf", [self.ott], image, rating, self.tmp_path, self.conf_file)
+        params = get_command_arguments(
+            "leaf", [self.ott], image, rating, self.tmp_path, self.conf_file
+        )
 
         if self.real_apis:
             get_wiki_images.process_args(params)
@@ -382,14 +430,15 @@ class TestCLI:
             self.mock_process_args(params, *args)
 
         rows = self.db.executesql(
-            f"SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott WHERE ott={ph} ORDER BY id desc;",
-            (self.ott, ),
+            "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott "
+            f"WHERE ott={s} ORDER BY id desc;",
+            (self.ott,),
         )
-        # There should only be one image in the database in wiki mode (since we delete first),
-        # and two in bespoke mode
+        # There should only be one image in the database in wiki mode
+        # (since we delete first), and two in bespoke mode
         assert len(rows) == 1 if src == src_flags["wiki"] else 2
-        # Check the image details
-        # src_id should be one more than the test row in the bespoke case, and the qid in the wiki case
+        # Check the image details: src_id should be one more than the test row
+        # in the bespoke case, and the qid in the wiki case
         assert rows[0] == (
             int(self.ott),
             src,
@@ -397,15 +446,15 @@ class TestCLI:
             rating if rating else default_rating(image),
             1,
         )
-        # In the bespoke case, the call to process_image_bits at the end of get_wiki_images should have
-        # set the overall_best_any bit to 0 for the dummy image (from its original 1 when we added it)
+        # In the bespoke case, process_image_bits at the end of get_wiki_images should
+        # set the overall_best_any bit to 0 for the dummy image (we set it to 1 above)
         if src == src_flags["onezoom_bespoke"]:
             assert rows[1][4] == 0
         # Check the vernacular names
         rows = self.db.executesql(
-            "SELECT ott, vernacular, lang_primary, lang_full, preferred FROM vernacular_by_ott "
-            f"WHERE ott={ph} ORDER BY lang_full, preferred DESC",
-            (self.ott, ),
+            "SELECT ott, vernacular, lang_primary, lang_full, preferred "
+            f"FROM vernacular_by_ott WHERE ott={s} ORDER BY lang_full, preferred DESC",
+            (self.ott,),
         )
         count_preferred = {}
         for r in rows:
@@ -424,7 +473,3 @@ class TestCLI:
     @apis.mock_patch_all_web_request_methods
     def mock_process_args(self, params, *args):
         get_wiki_images.process_args(params)
-
-
-
-

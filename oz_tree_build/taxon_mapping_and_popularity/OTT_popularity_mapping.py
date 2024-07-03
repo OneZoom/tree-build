@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
 """
-Routines for mapping OpenTree Taxonomy identifiers to wikidata/pedia, and 
+Routines for mapping OpenTree Taxonomy identifiers to wikidata/pedia, and
 then calculating popularity indices from them.
 
 Most of these routines can be called from other files: running this file as the main
-python script will save popularity measures to a csv file. If you want to output 
+python script will save popularity measures to a csv file. If you want to output
 phylogenetic popularity measures, based on ancestors and descendants in a tree, you must
-specify an --OpenTreeFile. Otherwise, the script will produce a csv output with basic 
+specify an --OpenTreeFile. Otherwise, the script will produce a csv output with basic
 popularity measures which can be run through calc_phylogenetic_popularity.py to output
 phylogenetic (ancestor / descendant summmed) popularities separately. This allows quick
 popularity recalculation (NB: "ancestor" popularities include the popularity of self)
 
-The routines work by taking an OpenTree taxonomy file and map each line to wikidata Qid using source ids
+The routines work by taking an OpenTree taxonomy file and mapping
+each line to wikidata Qid using source ids
 
-    each source id is stored in a object, e.g. {"id":NCBIid}, to which we add wiki info such as the qID
+    each source id is stored in a object, to which we add wiki info such as the qID, e.g.
+
     {"id":NCBIid, WikidataItem(Q=Qid)}
-    
-    the object is pointed to from two sources, a source_data 2D array and an OTT_ids array, e.g.
-    
+
+    the object is pointed to from two sources, a source_data 2D array & an OTT_ids array, e.g.
+
     source_ptrs["ncbi"][NCBIid] -> {"id":NCBIid} <- OTT_ptrs[OTTid]["sources"]["ncbi"]
     source_ptrs["worms"][WORMSid] -> {"id":WORMSid} <- OTT_ptrs[OTTid]["sources"]["worms"]
-    
+
     this allows us to add Wikidata items to the object
-    which can then be seen from the OTT_ids reference, i.e.    
+    which can then be seen from the OTT_ids reference, i.e.
 
     source_ptrs["ncbi"][NCBIid] -> {"id":NCBIid, wd(Q=Qid1, l={"en","fr"}, iucn=IUCNid)} <- OTT_ptrs[OTTid]["sources"]["ncbi"]
     source_ptrs["worms"][WORMSid] -> {"id":WORMSid, "wd":{"Q":Qid2}} <- OTT_ptrs[OTTid]["sources"]["worms"]
@@ -30,26 +32,26 @@ The routines work by taking an OpenTree taxonomy file and map each line to wikid
     where "l" gives the sitelinks into the different language wikipedias
 
     We also create a wikipedia_title array of pointers into the same dataset
-    
+
     enwikipedia_ptrs[enwiki_title] -> {"Q":Qid1}
-    
+
     so that we can add e.g. page sizes & visits
 
 == Wikidata parsing ==
 
-Wikidata dump has one line per item or property, and there are millions of items 
-("type":"item") in the dump. We are only interested in taxon items (and possibly common 
+Wikidata dump has one line per item or property, and there are millions of items
+("type":"item") in the dump. We are only interested in taxon items (and possibly common
 names that point to taxon items)
 
 === Taxon items ===
-These must contain the strings Q16521, Q310890, Q23038290, or Q713623, since all taxon 
+These must contain the strings Q16521, Q310890, Q23038290, or Q713623, since all taxon
 items have property P31 ("instance of") set to taxon (Q16521) or a subclass of "taxon": monotypic taxon (Q310890),
-fossil taxon (Q23038290), clade (Q713623), or similar see 
+fossil taxon (Q23038290), clade (Q713623), or similar see
 https://www.wikidata.org/wiki/Wikidata:WikiProject_Taxonomy/Tutorial#Basic_properties, and all the subclasses of
-taxon at http://bit.ly/2m1717d). These taxon items should be in the following format e.g. 
+taxon at http://bit.ly/2m1717d). These taxon items should be in the following format e.g.
 ==== Example ====
 for Gorilla (Q36611) (simplified from the output via https://www.wikidata.org/wiki/Special:EntityData/Q737838.json
- or using `gzcat wikidata-20151005-all.json.gz | grep -A 200 ""id": "Q737838""`, with linebreaks added) 
+ or using `gzcat wikidata-20151005-all.json.gz | grep -A 200 ""id": "Q737838""`, with linebreaks added)
 
 {"type":"item","id":"Q36611","labels":{"pl":{"language":"pl","value":"goryl"},"en":{"language":"en","value":"Gorilla"}...},
   "claims":{
@@ -63,7 +65,7 @@ for Gorilla (Q36611) (simplified from the output via https://www.wikidata.org/wi
     "enwiki": {"badges":[],"site":"enwiki","title": "Gorilla"},...},...}
 
 === Common name items ===
-Common name items must contain the string Q55983715, since all these have property P31 ("instance of") set to 
+Common name items must contain the string Q55983715, since all these have property P31 ("instance of") set to
 organisms known by a particular common name (Q55983715) of (P642) [Taxon item]
 
 ==== Example ====
@@ -94,9 +96,9 @@ for Snake (Q2102) which points to the taxon page "Serpentes" (Q29540038)
 
 === Issues ===
 
-A good example of problematic issues is Gazella/gazelle. The English word "gazelle" 
-applies to a number of antelope species, not all of which are in the genus Gazella. 
-The genus Gazella is present in WD at [[Q190858]], and the concept of a gazelle at 
+A good example of problematic issues is Gazella/gazelle. The English word "gazelle"
+applies to a number of antelope species, not all of which are in the genus Gazella.
+The genus Gazella is present in WD at [[Q190858]], and the concept of a gazelle at
 [[Q29001815]]. The gazelle item is (correctly) stated as an instance of a common name of
 Gazella, Eudorcas, Nanger, and Antilopini. But there is no english wikipedia item for
 Gazella (the genus), only for gazelles (the vernacular).
@@ -106,30 +108,30 @@ Gazella (the genus), only for gazelles (the vernacular).
 You can run this script to produce a raw output file using something like
 
 ServerScripts/TaxonMappingAndPopularity/OTT_popularity_mapping.py data/OpenTree/ott/taxonomy.tsv data/Wiki/wd_JSON/*.bz2 data/Wiki/wp_SQL/*.gz  data/Wiki/wp_pagecounts/*.bz2 -o data/output_files/raw_pop -v > ServerScripts/TaxonMappingAndPopularity/ottmap.log
-    
-To get e.g. only the species in the current OpenTree, this raw_pop can be filtered by 
+
+To get e.g. only the species in the current OpenTree, this raw_pop can be filtered by
 first collecting a list of the OTT ids of interest, e.g.
 
-grep -o "\d\+" opentree7.0_tree/labelled_supertree/labelled_supertree.tre | sort | uniq > tree_taxa
-grep "|\s*species\s*|" ott/taxonomy.tsv | cut -f 1 | sort > ot_species
+grep -o "\\d\\+" opentree7.0_tree/labelled_supertree/labelled_supertree.tre | sort | uniq > tree_taxa
+grep "|\\s*species\\s*|" ott/taxonomy.tsv | cut -f 1 | sort > ot_species
 comm -12 tree_taxa ot_species > tree_species
-grep ",\d" raw_pop | cut -f 1 -d, | sort > wiki_taxa
+grep ",\\d" raw_pop | cut -f 1 -d, | sort > wiki_taxa
 
 == the number of wiki : total taxa
 wc -l raw_pop wiki_taxa # 1492679/3452152 = 43%
 
 the number of wiki : total taxa for those only in tree_species
 perl -e "open(F1, q|<tree_taxa|);open(F2, q|<raw_pop|); %foo = map {$_ => 1} <F1>; while(<F2>) {print if(exists($foo{(split(/,/,$_,2))[0].q|\n|}));};" > raw_species
-grep ",\d" raw_species | cut -f 1 -d, | sort > wiki_species
+grep ",\\d" raw_species | cut -f 1 -d, | sort > wiki_species
 wc -l raw_species wiki_species # 1429835/2335500 = 43%
 
-Note: a few organisms like Dog and Cat do not have the wikipedia pages linked from the taxon item, but 
-from another more generic page. For example, Canis lupus familiaris (Q26972265) is not linked to 
-the "dog" wikipedia items. Instead, these are linked from Q144 (dog) which is an 
+Note: a few organisms like Dog and Cat do not have the wikipedia pages linked from the taxon item, but
+from another more generic page. For example, Canis lupus familiaris (Q26972265) is not linked to
+the "dog" wikipedia items. Instead, these are linked from Q144 (dog) which is an
 "instance of (P31) common name (Q55983715) of (P642) Canis lupus familiaris (Q26972265)"
 we can find these (very few) examples by the wikidata query at https://w.wiki/enx
 
-"""
+"""  # noqa E501
 
 import csv
 import json
@@ -139,10 +141,8 @@ import re
 import sys
 from collections import OrderedDict, defaultdict
 from statistics import StatisticsError, mean
-from urllib.parse import unquote_to_bytes
 
 from oz_tree_build._OZglobals import wikiflags
-
 from oz_tree_build.utilities.file_utils import open_file_based_on_extension
 
 __author__ = "Yan Wong"
@@ -154,7 +154,7 @@ In jurisdictions that recognize copyright laws, the author or authors of this so
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-For more information, please refer to <http://unlicense.org/>"""
+For more information, please refer to <http://unlicense.org/>"""  # noqa E501
 
 
 def wikidata_value(wd_json, err=False):
@@ -172,17 +172,20 @@ def label(json_item, lang="en"):
     try:
         return json_item["labels"][lang]["value"]
     except LookupError:
-        return "no name for lang = {}".format(lang)
+        return f"no name for lang = {lang}"
 
 
 def Qid(json_item):
     return int(json_item["id"].replace("Q", "", 1))
 
 
+LANG_FLAGS = {lang: 2**bit for lang, bit in wikiflags.items()}
+
+
 class WikidataItem:
-    lang_flags = {lang: 2**bit for lang, bit in wikiflags.items()}
     # sitelinks can contain wikispecies & wikimedia commons links: exclude these
-    exclude_langs = {"species", "commons"}
+
+    exclude_langs = frozenset(("species", "commons"))
 
     def __init__(self, json_item):
         """
@@ -199,8 +202,8 @@ class WikidataItem:
         """
         try:
             return getattr(self, attribute)
-        except AttributeError:
-            raise KeyError
+        except AttributeError as err:
+            raise KeyError from err
 
     def get(self, attribute, default=None):
         try:
@@ -237,9 +240,7 @@ class WikidataItem:
         """
         self.raw_popularity = 0
         try:
-            trMeanViews = mean(
-                sorted([x for x in self.pageviews if x is not None])[:-trim_highest]
-            )
+            trMeanViews = mean(sorted([x for x in self.pageviews if x is not None])[:-trim_highest])
             self.raw_popularity = round((self.pagesize * trMeanViews) ** 0.5, 2)
             return True
         except (StatisticsError, ValueError, AttributeError):
@@ -257,7 +258,7 @@ class WikidataItem:
         """
         tot = 0
         for lang in self.l:
-            tot += self.lang_flags.get(lang) or 0  # add together as bit fields
+            tot += LANG_FLAGS.get(lang) or 0  # add together as bit fields
         return tot
 
     def merge_and_overwrite(self, other, overwrite=None, label=None):
@@ -285,9 +286,7 @@ class WikidataItem:
                 if v == "l":
                     lost_links = self.l - other.l - self.exclude_langs
                     if len(lost_links):
-                        logging.warning(
-                            " x Sitelinks lost in these languages: " + str(lost_links)
-                        )
+                        logging.warning(" x Sitelinks lost in these languages: " + str(lost_links))
             setattr(self, v, getattr(other, v))
         return ret
 
@@ -310,15 +309,13 @@ def JSON_contains_known_dbID(json_item, known_items):
             claim = json_item["claims"][taxon_id_prop]
             if source in ret:
                 logging.warning(
-                    f"Multiple {source} IDs for Q{Qid(json_item)} ({label(json_item)}); "
-                    "taking the last one"
+                    f"Multiple {source} IDs for Q{Qid(json_item)} ({label(json_item)}); " "taking the last one"
                 )
             try:
                 src_id = wikidata_value(claim[0]["mainsnak"], err=True)
             except (KeyError, ValueError, TypeError):
                 logging.warning(  # Lots of wikidata items may not be in
-                    f"Can't find a value for {source} for Q{Qid(json_item)} "
-                    f"({label(json_item)}) in wikidata"
+                    f"Can't find a value for {source} for Q{Qid(json_item)} " f"({label(json_item)}) in wikidata"
                 )
                 continue
             if src_id:
@@ -346,8 +343,8 @@ def mem():
 def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file=None):
     """
     Creates object data and a source_ptrs array pointing to elements within it.
-    Also fills out the OTT_ptrs array to point to the right place.
-    OTT_ptrs can be partially filled: new OTT numbers are simply appended OTT id in the taxonomy.
+    Also fills out the OTT_ptrs array to point to the right place. OTT_ptrs can be
+    partially filled: new OTT numbers are simply appended OTT id in the taxonomy.
 
     src ids are ints where possible, although can be strings if they contain characters
 
@@ -358,22 +355,22 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
     unused_sources = set()
     source_ptrs = {s: {} for s in sources}
 
-    # hack for NCBI_via_silva (see https://groups.google.com/d/msg/opentreeoflife/L2x3Ond16c4/CVp6msiiCgAJ)
+    # hack for NCBI_via_silva
+    # (see https://groups.google.com/d/msg/opentreeoflife/L2x3Ond16c4/CVp6msiiCgAJ)
     silva_regexp = re.compile(r"ncbi:(\d+),silva:([^,$]+)")
-    silva_sub = r"ncbi_silva:\1"  # keep the ncbi_id as ncbi_silva, but chop off the silva ID since it is not used in wikidata/EoL
+    # keep ncbi_id as ncbi_silva, but chop off the silva ID as it's not used in wikidata/EoL
+    silva_sub = r"ncbi_silva:\1"
 
     data_files = [OTTtax_filename]
     if extra_taxonomy_file is not None:
         try:
             data_files.append(extra_taxonomy_file)
         except FileNotFoundError:
-            logging.warning(
-                f" Extra taxonomy file '{extra_taxonomy_file}' not found, so ignored"
-            )
+            logging.warning(f" Extra taxonomy file '{extra_taxonomy_file}' not found, so ignored")
 
     used = 0
     for fn in data_files:
-        with open(fn, "rt", encoding="utf-8") as f:
+        with open(fn, encoding="utf-8") as f:
             reader = csv.DictReader(f, delimiter="\t")
             for OTTrow in reader:
                 # first 2 lines are header & blank in taxonomy.tsv
@@ -386,33 +383,29 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
                     OTTid = int(OTTrow["uid"])
                 except ValueError:
                     OTTid = OTTrow["uid"]
-                    logging.warning(
-                        " Found an ott 'number' which is not an integer: {}".format(
-                            OTTid
-                        )
-                    )
+                    logging.warning(f" Found an ott value which is not an integer: {OTTid}")
 
                 sourceinfo = silva_regexp.sub(silva_sub, OTTrow["sourceinfo"])
                 ncbi = False
-                for srcs in reversed(
-                    sourceinfo.split(",")
-                ):  # look at sources in reverse order, overwriting, so that first ones take priority
-                    src, id = srcs.split(":", 1)
+                for srcs in reversed(sourceinfo.split(",")):
+                    # look at sources in reverse order, overwriting, so 1st ones take priority
+                    src, src_id = srcs.split(":", 1)
                     if src == "ncbi":
                         ncbi = True
                     elif (src == "ncbi_silva") and (not ncbi):
-                        src = "ncbi"  # only use the ncbi_via_silva id if no 'normal' ncbi already set
+                        # only use the ncbi_via_silva id if no 'normal' ncbi already set
+                        src = "ncbi"
                     if src not in source_ptrs:
                         if src not in unused_sources:
                             logging.info(f" New and unused source: {src} (in '{srcs}')")
                         unused_sources.update([src])
                         continue
                     used += 1
-                    if id.isdigit():
-                        id = int(id)
-                    source_ptrs[src][id] = {"id": id}
+                    if src_id.isdigit():
+                        src_id = int(src_id)
+                    source_ptrs[src][src_id] = {"id": src_id}
                     try:
-                        OTT_ptrs[OTTid]["sources"][src] = source_ptrs[src][id]
+                        OTT_ptrs[OTTid]["sources"][src] = source_ptrs[src][src_id]
                         OTT_ptrs[OTTid]["rank"] = OTTrow["rank"]
                     except LookupError:
                         pass
@@ -446,7 +439,7 @@ def wikidata_info(
     source_ptrs,
     wikilang,
     EOLid_property_id="P830",
-    IUCNid_property_id=["P141", "P627"],
+    IUCNid_property_id=("P141", "P627"),
     IPNIid_property_id="P961",
 ):
     """
@@ -469,7 +462,7 @@ def wikidata_info(
     'Gölçük toothcarp', 'Galium × pomeranicum'. We replace underscores with spaces so
     that they match against page size & page counts (views).
 
-    If a wikilang is present, also store the wikipedia page title for this particular language.
+    If a wikilang is present, also store the wikipedia page title for that language.
 
     If an EOLid_property_id, IUCN id, or IPNI id exists, save these too (NB: the IUCN id
     is present as Property:P627 of claim P141. It may also be overwritten by an ID
@@ -478,9 +471,11 @@ def wikidata_info(
     Some taxa (especially common ones) have most sitelinks in a 'common name' item, e.g.
     cattle (Q830) contains most language sitelinks for the taxon items
     Q46889 (Bos primigenius indicus), Q20747320 (Bos primigenius taurus),
-    Q20747334 (Bos taurus *+), Q20747712, Q20747726, etc. (* marks the name used in OneZoom, + for OpenTree).
-    These 'common name' pages point to the taxon by having a property P31 ('instance of') set to
-    'organisms known by a particular common name' (Q55983715) of (P642) (locate them at https://w.wiki/enx).
+    Q20747334 (Bos taurus *+), Q20747712, Q20747726, etc.
+    (* marks the name used in OneZoom, + for OpenTree).
+    These 'common name' pages point to the taxon by having a property P31 ('instance of') set
+    to 'organisms known by a particular common name' (Q55983715) of (P642)
+    (locate them at https://w.wiki/enx).
     To spot these, we look for wikidata items that are common names, and link to items
     that are taxa. If the taxon has no wikipedia link in the specified language, we
     should use the common name WD item instead.
@@ -501,8 +496,7 @@ def wikidata_info(
     We also store the few common-name wikidata pages in a separate variable,
     wikidata_cname_info. Then, if the equivalent taxon exists, and it has no
     `wikilang`.wikipedia.org sitelink (or is a special case), we set 'Q' and 'l' to the new
-
-    """
+    """  # noqa: RUF002
     Q_to_WD = {}
     WPname_to_WD = {}
     replace_Q = {}
@@ -510,7 +504,7 @@ def wikidata_info(
     info = {"bytes_read": 0}
 
     regexp_match = "|".join([str(v) for v in list(match_taxa) + list(match_vernacular)])
-    quick_byte_match = re.compile('numeric-id":(?:{})\D'.format(regexp_match))
+    quick_byte_match = re.compile(rf'numeric-id":(?:{regexp_match})\D')
     with open_file_based_on_extension(wikidata_json_dump_file, "rt") as WDF:
         for line_num, line in enumerate(WDF):
             if line_num % 100000 == 0:
@@ -522,13 +516,10 @@ def wikidata_info(
                 if IPNIid_property_id:
                     more_info += f", {info.get('n_ipni', 0)} with IPNI ids"
                 logging.info(
-                    f"{line_num} of wikidata JSON dump read. "
-                    f"relevant items{more_info}. Mem usage {mem():.1f} Mb"
+                    f"{line_num} of wikidata JSON dump read. " f"relevant items{more_info}. Mem usage {mem():.1f} Mb"
                 )
             # this file is in byte form, so must match byte strings
-            if not (
-                line.startswith('{"type":"item"') and quick_byte_match.search(line)
-            ):
+            if not (line.startswith('{"type":"item"') and quick_byte_match.search(line)):
                 continue
 
             # done fast match, now check by parsing JSON (slower)
@@ -569,13 +560,11 @@ def wikidata_info(
 
             if is_taxon or len(alternate_Qs):
                 item_instance = WikidataItem(json_item)
-                wikipedia_name = item_instance.add_sitelinks_and_get_title(
-                    json_item, wikilang
-                )
+                wikipedia_name = item_instance.add_sitelinks_and_get_title(json_item, wikilang)
                 if wikipedia_name:
                     WPname_to_WD[wikipedia_name] = item_instance
-                for src, id in JSON_contains_known_dbID(json_item, source_ptrs).items():
-                    src_to_WD[src][id] = item_instance
+                for src, src_id in JSON_contains_known_dbID(json_item, source_ptrs).items():
+                    src_to_WD[src][src_id] = item_instance
                 Q_to_WD[item_instance.Q] = item_instance
 
                 if EOLid_property_id:
@@ -596,11 +585,9 @@ def wikidata_info(
                         # IUCN number is stored as a reference
                         for ref in claims[IUCNid_property_id[0]][0]["references"]:
                             try:
-                                iucnid = wikidata_value(
-                                    ref["snaks"][IUCNid_property_id[1]][0]
-                                )
-                                if iucnid:
-                                    item_instance.iucn = int(iucnid)
+                                iucn = wikidata_value(ref["snaks"][IUCNid_property_id[1]][0])
+                                if iucn:
+                                    item_instance.iucn = int(iucn)
                                     info["n_iucn"] = info.get("n_iucn", 0) + 1
                                     break
                             except LookupError:
@@ -609,13 +596,13 @@ def wikidata_info(
                         pass  # no IUCN property
                     except ValueError:
                         logging.warning(
-                            f" Cannot convert IUCN property {iucnid} to integer"
+                            f" Cannot convert IUCN property {iucn} to integer"
                             f" in Q{item_instance.Q} ({label(json_item)})."
                         )
                 if IPNIid_property_id:
                     try:
                         ipni = wikidata_value(claims[IPNIid_property_id][0]["mainsnak"])
-                        # convert e.g. 391732-1 to 3917321 (assumes last digit has a dash before it)
+                        # convert e.g. 391732-1 to 3917321, assume last digit prefixed by dash
                         if ipni:
                             item_instance.ipni = ipni.replace("-", "")
                             info["n_ipni"] = info.get("n_ipni", 0) + 1
@@ -637,17 +624,17 @@ def wikidata_info(
                         )
             # Check for matching instances that don't seem to be taxa
             elif 13406463 in instance_of:
-                # this is a "Wikimedia list article" (Q13406463), which explains why a taxon Qid might be present
-                # (e.g. "List of Lepidoptera that feed on Solanum" which is a "list of" taxon)
-                # we can ignore it without printing a message
+                # this is a "Wikimedia list article" (Q13406463), which explains why a taxon
+                # Qid might be present (e.g. "List of Lepidoptera that feed on Solanum" which
+                # is a "list of" taxon): ignore it without printing a message
                 pass
             elif 4167836 in instance_of:
-                # this is a "Wikimedia category" (Q4167836), which explains why a taxon Qid might be present
-                # e.g. "Category:Species described in 2016", which is a "category combines topics" taxon
-                # we can ignore it without printing a message
+                # this is a "Wikimedia category" (Q4167836), which explains why a taxon Qid
+                # might be present e.g. "Category:Species described in 2016", which is a
+                # "category combines topics" taxon: ignore it without printing a message
                 pass
             elif 19887878 in instance_of:
-                # a wikimedia template (Q19887878): we can ignore it without printing a message
+                # a wikimedia template (Q19887878): ignore it without printing a message
                 pass
             else:
                 # possibly flag up problems here, in case there are taxa which are instances
@@ -675,16 +662,10 @@ def overwrite_wd(Q_to_WD, Q_replacements, only_if_more_popular, check_lang=None)
             force_overwrite = None
         if check_lang is None or check_lang in Q_to_WD[newQ].l:
             if force_overwrite:
-                logging.info(
-                    f" Updating Q{origQ} with Qid and sitelinks from Q{newQ} ({label})."
-                )
+                logging.info(f" Updating Q{origQ} with Qid and sitelinks from Q{newQ} ({label}).")
             else:
-                logging.info(
-                    f" Checking Q{origQ} for possible replacement with Q{newQ} ({label})."
-                )
-            Qchanged = Q_to_WD[origQ].merge_and_overwrite(
-                Q_to_WD[newQ], force_overwrite, label
-            )
+                logging.info(f" Checking Q{origQ} for possible replacement with Q{newQ} ({label}).")
+            Qchanged = Q_to_WD[origQ].merge_and_overwrite(Q_to_WD[newQ], force_overwrite, label)
             if Qchanged:
                 if newQ in changed:
                     logging.warning(
@@ -709,41 +690,34 @@ def identify_best_wikidata(OTT_ptrs, lang, order_to_trust):
     for OTTid, data in OTT_ptrs.items():
         try:
             if OTTid < 0:
-                logging.warning(
-                    f" Skipped negative ott {OTTid} (unlabelled node) during wikidata map"
-                )
+                logging.warning(f" Skipped negative ott {OTTid} (unlabelled node) during wikidata map")
                 continue
         except TypeError:
             pass
         allOTTs += 1
         choose = OrderedDict()
-        for rank, src in enumerate(order_to_trust):
+        for src in order_to_trust:
             try:
                 Q = data["sources"][src]["wd"].Q
-                choose[Q] = choose.get(Q, []) + [src]
+                choose[Q] = [*choose.get(Q, []), src]
             except KeyError:
                 pass
         if len(choose) == 0:
-            data["wd"] = (
-                {}
-            )  # for future referencing, it is helpful to have a blank array here
+            data["wd"] = {}  # for future referencing, it is helpful to have a blank array here
         else:
             OTTs_with_wd += 1
             # Sort by presence of wikipedia link in the given lang, keeping order if tied
-            linked_src = (
-                sorted(  # items for a Q should point to the same wd => take x[0]
-                    choose.values(),
-                    key=lambda x: lang in data["sources"][x[0]]["wd"].l,
-                    reverse=True,
-                )
+            linked_src = sorted(  # items for a Q should point to the same wd => take x[0]
+                choose.values(),
+                key=lambda x: lang in data["sources"][x[0]]["wd"].l,
+                reverse=True,
             )
             # re-sort so the list with more srcs comes first, keeping order if tied
             best_src = sorted(linked_src, key=len, reverse=True)[0][0]
             data["wd"] = data["sources"][best_src]["wd"]
             if len(choose) > 1:
                 logging.info(
-                    f"  More than one wikidata ID {list(choose.keys())} for ott {OTTid},"
-                    f" chosen {data['wd'].Q}"
+                    f"  More than one wikidata ID {list(choose.keys())} for ott {OTTid}," f" chosen {data['wd'].Q}"
                 )
     logging.info(
         f" ✔ {allOTTs} final OpenTree taxa of which {OTTs_with_wd} "
@@ -753,20 +727,22 @@ def identify_best_wikidata(OTT_ptrs, lang, order_to_trust):
 
 def add_pagesize_for_titles(wiki_title_ptrs, wikipedia_SQL_filename):
     """
-    looks through the sql insertion file for page sizes. This file has extremely long lines with each csv entry
-    brace-delimited within a line, e.g.
+    looks through the sql insertion file for page sizes. This file has extremely long lines
+    with each csv entry brace-delimited within a line, e.g.
 
-    INSERT INTO `page` VALUES (45286,0,'Bonobo',0,0,0.7789633346525611,'20221229182135','20230101050331',1129925767,107184,'wikitext',NULL),(15133411,3,'Chimpanzee',0,0,0.850488449808,'20221102052637','20221102054547',1036955110,8862,'wikitext',NULL)
+    INSERT INTO `page` VALUES (45286,0,'Bonobo',0,0,0.7789633346525611,'20221229182135',\
+        '20230101050331',1129925767,107184,'wikitext',NULL),(15133411,3,'Chimpanzee',0,0,\
+        0.850488449808,'20221102052637','20221102054547',1036955110,8862,'wikitext',NULL)
 
-    The second entry (column 2) within each brace gives the namespace (we need namespace=0 for 'normal' pages).
-    Column 3 gives the title (in unicode). e.g. 'Bonobo' in the first example
+    The second entry (column 2) within each brace gives the namespace (we need namespace=0 for
+    'normal' pages). Column 3 gives the title (in unicode). e.g. 'Bonobo' in the first example
     The page length is in Column 10. e.g. 107184 in the first example
 
     Note that titles have had spaces replaced with underscores
 
-    See https://www.mediawiki.org/wiki/Manual:Page_table for a full description of all entries. Note that when
-    using the latest dump version, entries marked as deprecated won't be present (e.g. page_counter)
-
+    See https://www.mediawiki.org/wiki/Manual:Page_table for a description of all entries.
+    Note that when using the latest dump version, entries marked as deprecated are absent
+    (e.g. page_counter)
     """
     used = 0
     # the column numbers for each datum are specified in the SQL file, and hardcoded here.
@@ -775,9 +751,7 @@ def add_pagesize_for_titles(wiki_title_ptrs, wikipedia_SQL_filename):
     page_table_pagelen_column = 10
     # use csv reader as it copes well e.g. with escaped SQL quotes in fields etc.
     with open_file_based_on_extension(wikipedia_SQL_filename, "rt") as file:
-        pagelen_file = csv.reader(
-            file, quotechar="'", escapechar="\\", doublequote=False
-        )
+        pagelen_file = csv.reader(file, quotechar="'", escapechar="\\", doublequote=False)
         match_line = "INSERT INTO `page` VALUES"
         for fields in filter(
             lambda x: False if len(x) == 0 else x[0].startswith(match_line),
@@ -790,7 +764,8 @@ def add_pagesize_for_titles(wiki_title_ptrs, wikipedia_SQL_filename):
                     f" read. Mem usage {mem():.1f} Mb"
                 )
             field_num = 0
-            # the records are all on the same line, separated by '),(', so we need to count fields into the line.
+            # the records are all on the same line, separated by '),(',
+            # so we need to count fields into the line.
             for f in fields:
                 try:
                     if f.lstrip()[0] == "(":
@@ -825,19 +800,31 @@ def pageviews_for_titles(
     Return a dict mapping wiki_title => monthly pageview
 
     wiki_suffix taken from https://dumps.wikimedia.org/other/pagecounts-ez/
-    [b (wikibooks), k (wiktionary), n (wikinews), o (wikivoyage), q (wikiquote), s (wikisource), v (wikiversity), z (wikipedia)]
+    [
+        b (wikibooks),
+        k (wiktionary),
+        n (wikinews),
+        o (wikivoyage),
+        q (wikiquote),
+        s (wikisource),
+        v (wikiversity),
+        z (wikipedia)
+    ]
 
-    In the more recent files, missing values indicate <5 hits in that month, so we set these to 0
+    In more recent files, missing values indicate <5 hits in that month, so wset these to 0
 
     NB: see https://dumps.wikimedia.org/other/pagecounts-ez/ for format.
-    Pageviews totals files have a wikicode project name in ascii followed by .z for wikipedias (e.g. en.z) followed by space,
-    followed by uri-escaped title, followed by space, followed by integer. The format is a very difficult one to parse, as it varies
-    e.g. there are multiple differently quoted version of the same title, sometime with spaces not underscores, unicode encoding sometimes fails,
-    the bzip file sometimes appears truncated, etc etc. I've found that the best way to do this is to unquote_to_bytes first
+    Pageviews totals files have a wikicode project name in ascii followed by .z for wikipedias
+    (e.g. en.z) followed by space, followed by uri-escaped title, followed by space, followed
+    by integer. The format is a very difficult one to parse, as it varies e.g. there are
+    multiple differently quoted version of the same title, sometime with spaces not
+    underscores, unicode encoding sometimes fails, the bzip file sometimes appears truncated,
+    etc etc. I've found that the best way to do this is to unquote_to_bytes first
     (to remove uri-encoding), then convert to unicode.
-    In fact, the encoding is unclear, and sometimes utf-8 encoding seems to fail, so we pass on any utf-8 conversion errors.
-    Hopefully this should only affect a few taxa where the page title has odd accents that have not been either uri-escaped,
-    or properly encoded in utf-8.
+    In fact, the encoding is unclear, and sometimes utf-8 encoding seems to fail, so we
+    pass on any utf-8 conversion errors. Hopefully this should only affect a few taxa where
+    the page title has odd accents that have not been either uri-escaped, or properly encoded
+    in utf-8.
     """
     pageviews = defaultdict(int)
 
@@ -845,8 +832,7 @@ def pageviews_for_titles(
         for n, line in enumerate(PAGECOUNTfile):
             if n % 10000000 == 0:
                 logging.info(
-                    f"read {n} lines of pageviews file "
-                    f"{os.path.basename(filename)}. Mem usage {mem():.1f} Mb"
+                    f"read {n} lines of pageviews file " f"{os.path.basename(filename)}. Mem usage {mem():.1f} Mb"
                 )
 
             info = line.split(" ")
@@ -860,35 +846,41 @@ def pageviews_for_titles(
     return pageviews
 
 
-def sum_popularity_over_tree(
-    tree, OTT_ptrs=None, exclude=[], pop_store="pop", verbosity=0
-):
-    """Add popularity indices for branch lengths based on a phylogenetic tree (and return the tree, or the number of root descendants).
+def sum_popularity_over_tree(tree, OTT_ptrs=None, exclude=None, pop_store="pop", verbosity=0):
+    """
+    Add popularity indices for branch lengths based on a phylogenetic tree (and return the
+    tree, or the number of root descendants).
     We might want to exclude some names from the popularity metric (e.g. exclude archosaurs,
-    to make sure birds don't gather popularity intended for dinosaurs). This is done by passing an
-    array such as ['Dinosauria_ott90215', 'Archosauria_ott335588'] as the exclude argument.
+    to ensure birds don't gather popularity intended for dinosaurs). This is done by passing
+    an array such as ['Dinosauria_ott90215', 'Archosauria_ott335588'] as the exclude argument.
 
     'tree' can be the name of a tree file or a dendropy tree object
 
-    'pop_store' is the name of the attribute in which to store the popularity. If you wish to create a tree
-    with popularity on the branches, you can pass in pop_store='edge_length'
+    'pop_store' is the name of the attribute in which to store the popularity. If you wish to
+    create a tree with popularity on the branches, you can pass in pop_store='edge_length'
 
-    NB: if OTT_ptrs is given, then the raw popularity is stored in the object pointed to by OTT_ptrs[OTTid]['wd'], where
-    OTTid can be extracted from the node label in the tree. If OTT_ptrs is None, then the popularity is stored in the node object
-    itself, in Node.data['wd']['pop'].
-    popularity summed up and down the tree depends on the OpenTree structure, and is stored in OTT_ptrs[OTTid]['pop_ancst']
-    (popularity summed upwards for all ancestors of this node) and OTT_ptrs[OTTid]['pop_dscdt'] (popularity summed over all descendants).
-    To get a measure of the sum of both ancestor and descendant popularity, just add these together
+    NB: if OTT_ptrs is given, then the raw popularity is stored in the object pointed to by
+    OTT_ptrs[OTTid]['wd'], where OTTid can be extracted from the node label in the tree.
+    If OTT_ptrs is None, then the popularity is stored in the node object itself, in
+    Node.data['wd']['pop'].
 
-    we also count up the *number* of edges above each node to the root and the number of those that have a popularity measure. These are stored in
+    Popularity summed up and down the tree depends on the OpenTree structure, and is stored in
+    OTT_ptrs[OTTid]['pop_ancst'] (popularity summed upwards for all ancestors of this node)
+    and OTT_ptrs[OTTid]['pop_dscdt'] (popularity summed over all descendants). To get a
+    measure of the sum of both ancestor and descendant popularity, just add these together
+
+    We also count up the *number* of edges above each node to the root and the number of those
+    that have a popularity measure. These are stored in
 
     OTT_ptrs[OTTid]['n_ancst'] and OTT_ptrs[OTTid]['n_pop_ancst']
 
-    we also flag up the poor seed plants (Spermatophyta_ott1007992)- we could add a little to their pop value later
-
+    we also flag up the poor seed plants (Spermatophyta_ott1007992) - we could add a little
+    to their pop value later
     """
     from dendropy import Tree
 
+    if exclude is None:
+        exclude = []
     if not isinstance(tree, Tree):
         tree = Tree.get(
             file=tree,
@@ -898,9 +890,7 @@ def sum_popularity_over_tree(
             suppress_leaf_node_taxa=True,
         )
 
-    logging.info(
-        f" Tree read for phylogenetic popularity calc: mem usage {mem():.1f} Mb"
-    )
+    logging.info(f" Tree read for phylogenetic popularity calc: mem usage {mem():.1f} Mb")
 
     # put popularity into the pop_store attribute
     for node in tree.preorder_node_iter():
@@ -915,28 +905,25 @@ def sum_popularity_over_tree(
                 node.pop_store = 0
                 node.has_pop = False
 
-    # go up the tree from the tips, summing up the popularity indices beneath and adding the number of descendants
+    # go up the tree from the tips, summing up the popularity indices beneath and
+    # adding the number of descendants
     for node in tree.postorder_node_iter():
         if node.is_leaf():
             node.descendants_popsum = 0
             node.n_descendants = 0
         try:
             node._parent_node.n_descendants += 1 + node.n_descendants
-            node._parent_node.descendants_popsum += (
-                node.pop_store + node.descendants_popsum
-            )
+            node._parent_node.descendants_popsum += node.pop_store + node.descendants_popsum
         except AttributeError:  # could be the first time we have checked the parent
             try:
                 node._parent_node.n_descendants = 1 + node.n_descendants
-                node._parent_node.descendants_popsum = (
-                    node.pop_store + node.descendants_popsum
-                )
-            except (
-                AttributeError
-            ):  # this could be the root, with node._parent_node = None
-                root_descendants = node.n_descendants
+                node._parent_node.descendants_popsum = node.pop_store + node.descendants_popsum
+            except AttributeError:  # this could be the root, with node._parent_node = None
+                pass
+                # root_descendants = node.n_descendants
 
-    # go down the tree from the root, summing up the popularity indices above, and summing up numbers of nodes
+    # go down the tree from the root, summing up the popularity indices above,
+    # and summing up numbers of nodes
     for node in tree.preorder_node_iter():
         if node.parent_node is None:
             # this is the root.
@@ -961,27 +948,15 @@ def sum_popularity_over_tree(
     if OTT_ptrs:
         for node in tree.preorder_node_iter():
             try:
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
-                    "pop_self"
-                ] = node.pop_store
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
-                    "pop_ancst"
-                ] = node.ancestors_popsum  # nb, this includes popularity of self
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
-                    "pop_dscdt"
-                ] = node.descendants_popsum
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
-                    "n_ancst"
-                ] = node.n_ancestors
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
-                    "n_dscdt"
-                ] = node.n_descendants
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
-                    "n_pop_ancst"
-                ] = node.n_pop_ancestors
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
-                    "is_seed_plant"
-                ] = node.seedplant
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["pop_self"] = node.pop_store
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["pop_ancst"] = (
+                    node.ancestors_popsum
+                )  # nb, this includes popularity of self
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["pop_dscdt"] = node.descendants_popsum
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["n_ancst"] = node.n_ancestors
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["n_dscdt"] = node.n_descendants
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["n_pop_ancst"] = node.n_pop_ancestors
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["is_seed_plant"] = node.seedplant
             except (LookupError, AttributeError):
                 pass
     return tree

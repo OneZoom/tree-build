@@ -148,11 +148,7 @@ class RemoteAPIs:
     def mocked_analyze_from_url(self, *args, **kwargs):
         return SimpleNamespace(
             smart_crops=SimpleNamespace(
-                list=[
-                    SimpleNamespace(
-                        bounding_box=SimpleNamespace(x=50, y=75, width=300, height=300)
-                    )
-                ]
+                list=[SimpleNamespace(bounding_box=SimpleNamespace(x=50, y=75, width=300, height=300))]
             )
         )
 
@@ -286,22 +282,14 @@ class TestAPI:
 
     @property
     def image_sql(self):
-        return (
-            "SELECT src_id, rating FROM images_by_ott "
-            f"WHERE ott={placeholder(self.db)};"
-        )
+        return "SELECT src_id, rating FROM images_by_ott " f"WHERE ott={placeholder(self.db)};"
 
     @property
     def vernacular_sql(self):
-        return (
-            "SELECT vernacular FROM vernacular_by_ott "
-            f"WHERE ott={placeholder(self.db)};"
-        )
+        return "SELECT vernacular FROM vernacular_by_ott " f"WHERE ott={placeholder(self.db)};"
 
     @apis.mock_patch_all_web_request_methods
-    def verify_process_leaf(
-        self, image=None, rating=None, skip_images=None, crop=None, *args
-    ):
+    def verify_process_leaf(self, image=None, rating=None, skip_images=None, crop=None, *args):
         get_wiki_images.process_leaf(
             self.db,
             self.ott,
@@ -401,8 +389,7 @@ class TestCLI:
         qid = self.apis.true_qid if self.real_apis else self.apis.mock_qid
         # Insert a leaf to set up the mapping between the ott and the wikidata id
         self.db.executesql(
-            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
-            f"VALUES (0, 0, {s}, {s}, {s});",
+            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) " f"VALUES (0, 0, {s}, {s}, {s});",
             ("Panthera leo", self.ott, qid),
         )
         # Note that the image src should be onezoom_bespoke if a bespoke image is used
@@ -420,9 +407,7 @@ class TestCLI:
         )
         self.db.commit()
         # Call the method that we want to test
-        params = get_command_arguments(
-            "leaf", [self.ott], image, rating, self.tmp_path, self.conf_file
-        )
+        params = get_command_arguments("leaf", [self.ott], image, rating, self.tmp_path, self.conf_file)
 
         if self.real_apis:
             get_wiki_images.process_args(params)
@@ -430,8 +415,7 @@ class TestCLI:
             self.mock_process_args(params, *args)
 
         rows = self.db.executesql(
-            "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott "
-            f"WHERE ott={s} ORDER BY id desc;",
+            "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott " f"WHERE ott={s} ORDER BY id desc;",
             (self.ott,),
         )
         # There should only be one image in the database in wiki mode

@@ -1,8 +1,10 @@
 """
-Fix a tree to become ultrametric, by adjusting the leaf lengths to add up to the expected full tree length.
+Fix a tree to become ultrametric, by adjusting the leaf lengths
+to add up to the expected full tree length.
 """
 
 import argparse
+
 import dendropy
 
 from oz_tree_build.newick.check_ultrametricity import get_taxon_name
@@ -23,12 +25,12 @@ def fix_ultrametricity(tree, expected_length, max_adjustment):
                 # If the absolute difference is too large, raise an error
                 if abs(length_so_far - expected_length) > max_adjustment:
                     raise Exception(
-                        f"{name} has length {length_so_far}, which is {abs(length_so_far - expected_length)} from {expected_length} (max allowed delta is {max_adjustment}))"
+                        f"{name} has length {length_so_far}, which is "
+                        f"{abs(length_so_far - expected_length)} from {expected_length} "
+                        "(max allowed delta is {max_adjustment}))"
                     )
 
-                node.edge_length = round(
-                    node.edge_length + expected_length - length_so_far, 6
-                )
+                node.edge_length = round(node.edge_length + expected_length - length_so_far, 6)
         else:
             # If it's not a leaf node, recurse into its children
             for child in node.child_node_iter():

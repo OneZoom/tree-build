@@ -1,24 +1,34 @@
 """
-Create subtrees from the Open Tree of Life, on the basis of ott numbers in a set of newick files.
-"""
+Create subtrees from the OpenTree, on the basis of ott numbers in a set of newick files.
 
-"""Usage: getOpenTreesFromOneZoom.py OpenTreeFile.tre output_dir file1.PHY file2.PHY ...
+Usage: getOpenTreesFromOneZoom.py OpenTreeFile.tre output_dir file1.PHY file2.PHY ...
 
-This script places a set of inclusion files into output_dir, based on the names of nodes in the input .PHY
-files. The input files should contain one or more node names in the OneZoom @include format
-which is the scientific name + '_ott' + (an OTT id, optionally a ~ sign, and optionally other OTT numbers separated
-by an minus sign) + '@',  e.g. Brachiopoda_ott826261@
-This specifies that the node should be replaced with part of the OpenTree: namely the subtree 
-starting at ott node 826261. 
+This script places a set of inclusion files into output_dir, based on the names of nodes
+in the input .PHY files. The input files should contain one or more node names in the OneZoom
+@include format which is the scientific name + '_ott' + (an OTT id, optionally a ~ sign, and
+optionally other OTT numbers separated by an minus sign) + '@', e.g. Brachiopoda_ott826261@
+This specifies that the node should be replaced with part of the OpenTree: namely the subtree
+starting at ott node 826261.
 
-foobar_ott123@ means create a node named foobar with ott 123, consisting of all descendants of 123 in the opentree.
-foobar_ott123~456-789-111@ means create a node named foobar with ott 123, using ott456 minus the descendant subtrees 789 and 111
-The tilde sign can be read an a equals (Dendropy doesn't like equals signs in taxon names)
-foobar_ott123~-789-111@ is shorthand for foobar_ott123~123-789-111@
-foobar_ott~456-789-111@ means create a node named foobar without any OTT number, using ott456 minus the descendant subtrees 789 and 111
+E.g.
+    foobar_ott123@
+        create a node named foobar with ott 123, consisting of all descendants of
+        ott 123 in the opentree.
+
+    foobar_ott123~456-789-111@
+        create a node named foobar with ott 123, using ott456 minus the descendant
+        subtrees with ott 789 and 111 (the tilde sign can be read an a equals, used
+        as Dendropy doesn't like equals signs in taxon names.
+
+    foobar_ott123~-789-111@
+        shorthand for foobar_ott123~123-789-111@
+
+    foobar_ott~456-789-111@
+        create a node named foobar without any OTT number,
+        using ott456 minus the descendant subtrees 789 and 111
 
 The actual inclusion is done by the build_oz_tree.py. This script merely creates the
-files to include. It does this by extracting the relevant subtree from the full OpenTree 
+files to include. It does this by extracting the relevant subtree from the full OpenTree
 """
 
 import argparse
@@ -27,20 +37,19 @@ import os
 import sys
 import time
 
-from .oz_tokens import enumerate_one_zoom_tokens
 from oz_tree_build.newick.extract_trees import extract_trees
+
+from .oz_tokens import enumerate_one_zoom_tokens
 
 __author__ = "David Ebbo"
 
 
-def get_inclusions_and_exclusions_from_one_zoom_file(
-    file, all_included_otts, all_excluded_otts
-):
+def get_inclusions_and_exclusions_from_one_zoom_file(file, all_included_otts, all_excluded_otts):
     """
-    Find all the included and excluded ott numbers in a OneZoom files, and add them to the sets
+    Find all the included and excluded ott numbers in a OneZoom files & add them to the sets
     """
 
-    with open(file, "r", encoding="utf8") as stream:
+    with open(file, encoding="utf8") as stream:
         tree = stream.read()
 
     for result in enumerate_one_zoom_tokens(tree):
@@ -50,15 +59,13 @@ def get_inclusions_and_exclusions_from_one_zoom_file(
             all_excluded_otts.update(result["excluded_otts"])
 
 
-def extract_trees_from_open_tree_file(
-    open_tree_file, output_dir, all_included_otts, all_excluded_otts
-):
+def extract_trees_from_open_tree_file(open_tree_file, output_dir, all_included_otts, all_excluded_otts):
     """
     Extract the subtrees from the Open Tree file, based on the list of included/excluded otts
     """
 
     # Read the contents of the open tree file into a string
-    with open(open_tree_file, "r", encoding="utf8") as f:
+    with open(open_tree_file, encoding="utf8") as f:
         fulltree = f.read()
 
     trees = extract_trees(fulltree, all_included_otts, excluded_taxa=all_excluded_otts)
@@ -75,7 +82,7 @@ def extract_trees_from_open_tree_file(
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "--verbosity",
         "-v",
@@ -104,26 +111,20 @@ def main():
 
     start = time.time()
     if not os.path.isfile(args.open_tree_file):
-        logging.warning(
-            "Could not find the OpenTree file {}".format(args.open_tree_file)
-        )
+        logging.warning(f"Could not find the OpenTree file {args.open_tree_file}")
 
-    # Go through all the OneZoom files, and gather all the ott numbers to include and exclude
-    # Note that excluded ott numbers don't need to be specifically associated with an included ott number
+    # Go through all the OneZoom files, and gather all the ott numbers to include and exclude.
+    # NB: excluded ott numbers don't need to be specifically given an included ott number
     included_otts = set()
     excluded_otts = set()
     for file in args.parse_files:
         logging.info(f"== Processing One Zoom file {file}")
-        get_inclusions_and_exclusions_from_one_zoom_file(
-            file, included_otts, excluded_otts
-        )
+        get_inclusions_and_exclusions_from_one_zoom_file(file, included_otts, excluded_otts)
 
-    extract_trees_from_open_tree_file(
-        args.open_tree_file, args.output_dir, included_otts, excluded_otts
-    )
+    extract_trees_from_open_tree_file(args.open_tree_file, args.output_dir, included_otts, excluded_otts)
 
     end = time.time()
-    logging.debug("Time taken: {} seconds".format(end - start))
+    logging.debug(f"Time taken: {end - start} seconds")
 
 
 if __name__ == "__main__":

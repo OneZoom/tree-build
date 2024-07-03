@@ -20,7 +20,7 @@ token_to_file_map = {
         "edge_length": 20,
         "taxon": "Ambulacraria",
     },
-    #  DEEPFIN tree root (Shark + bony-fish) is at 462.4. Guess for Cyclostome divergence = 500Mya
+    #  DEEPFIN tree root (Shark + bony-fish) is at 462.4 => Cyclostome divergence ~ 500Mya
     "CYCLOSTOMATA": {
         "file": "Cyclostome_full_guess.PHY",
         "edge_length": 43,
@@ -28,8 +28,8 @@ token_to_file_map = {
     },
     "LAMPREYS": {"file": "Lampreys_Potter2015.phy", "edge_length": 332, "taxon": None},
     "GNATHOSTOMATA": {"file": "BonyFishOpenTree.PHY", "edge_length": 65, "taxon": None},
-    # for fewer species but with dates, try
-    # tree.substitute('GNATHOSTOMATA@', 'BespokeTree/include_files/Deepfin2.phy', 37.6)  # C20=430Ma
+    # for fewer species but with dates, try deepfin2, with Concestor 20 @ ~ 430Ma
+    # tree.substitute('GNATHOSTOMATA@', 'BespokeTree/include_files/Deepfin2.phy', 37.6)
     "CHONDRICHTHYES": {
         "file": "Chondrichthyes_Renz2013.phy",
         "edge_length": 40,
@@ -92,12 +92,12 @@ token_to_file_map = {
         "taxon": "Most_Carcharhinicae_",
     },
     #  Choanoflagellates: http://www.pnas.org/content/105/43/16641.short
-    ##########  NB: to use the original deepfin tree, substitute these text strings back in instead ##########
-    # 	tree.substitute('TETRAPODA@', '(Xenopus_tropicalis:335.4,(Monodelphis_domestica:129,(Mus_musculus:71.12,Homo_sapiens:71.12):57.88):206.4)Tetrapodomorpha:46.5');
+    ##  NB: to use the original deepfin tree, substitute these text strings back in instead ##
+    # 	tree.substitute('TETRAPODA@', '(Xenopus_tropicalis:335.4,(Monodelphis_domestica:129,(Mus_musculus:71.12,Homo_sapiens:71.12):57.88):206.4)Tetrapodomorpha:46.5');  # noqa E501
     # 	tree.substitute('COELACANTHIFORMES@', 'Latimeria_chalumnae:409.4');
-    # 	tree.substitute('DIPNOI@', '(Neoceratodus_forsteri:241.804369,(Protopterus_aethiopicus_annectens:103.2,Lepidosiren_paradoxa:103.2):138.604369)Dipnoi:140.095631');
-    # 	tree.substitute('POLYPTERIFORMES@', '(Erpetoichthys_calabaricus:29.2,(Polypterus_senegalus:16.555114,Polypterus_ornatipinnis:16.555114):12.644886)Polypteriformes:353.4');
-    # 	tree.substitute('ACIPENSERIFORMES@', '(Polyodon_spathula:138.9,(Acipenser_fulvescens:38.592824,(Scaphirhynchus_platorynchus:19.382705,Scaphirhynchus_albus:19.382705):19.210119):100.307176)Acipenseriformes:211.2');
+    # 	tree.substitute('DIPNOI@', '(Neoceratodus_forsteri:241.804369,(Protopterus_aethiopicus_annectens:103.2,Lepidosiren_paradoxa:103.2):138.604369)Dipnoi:140.095631');  # noqa E501
+    # 	tree.substitute('POLYPTERIFORMES@', '(Erpetoichthys_calabaricus:29.2,(Polypterus_senegalus:16.555114,Polypterus_ornatipinnis:16.555114):12.644886)Polypteriformes:353.4');  # noqa E501
+    # 	tree.substitute('ACIPENSERIFORMES@', '(Polyodon_spathula:138.9,(Acipenser_fulvescens:38.592824,(Scaphirhynchus_platorynchus:19.382705,Scaphirhynchus_albus:19.382705):19.210119):100.307176)Acipenseriformes:211.2');  # noqa E501
     "COELACANTHIFORMES": {
         "file": "CoelacanthSudarto2010.phy",
         "edge_length": 414,
@@ -118,7 +118,7 @@ token_to_file_map = {
     ########## TETRAPODS  ###########
     #  C18 @ 415, ChangedOneZoom tetrapods root @ 340 Mya. Stem = 75Ma
     "TETRAPODA": {"file": "Tetrapods_Zheng_base.PHY", "edge_length": 75, "taxon": None},
-    # $tree.substitute('AMPHIBIA@',     'BespokeTree/include_files/AmphibiansOneZoom.phy',                30.0);
+    # $tree.substitute('AMPHIBIA@', 'BespokeTree/include_files/AmphibiansOneZoom.phy', 30.0);
     "AMPHIBIA": {"file": "AmphibiansOpenTree.PHY", "edge_length": 30, "taxon": None},
     "CROCODYLIA": {
         "file": "Crocodylia_OneZoom.phy",
@@ -180,10 +180,10 @@ token_to_file_map = {
         "taxon": None,
     },
     ########## (to use original OneZoom data, try ###############
-    ##########	tree.substitute('PRIMATES@', 'BespokeTree/include_files/PrimatesOneZoom.phy', 23.3); #######
-    #  Onezoom colugo-primate @ 90 Mya, Springer primates root @ 66.7065Mya. Here stem = 90 - 66.7065 = 23.3My
+    ## tree.substitute('PRIMATES@', 'BespokeTree/include_files/PrimatesOneZoom.phy', 23.3); ##
+    #  Onezoom colugo-primate @ 90 Mya, Springer primates root @ 66.7065Mya. Here stem = 90 - 66.7065 = 23.3My  # noqa E501
     #  But ancestor's tale colugo-primate @ 70 Ma
-    # tree.substitute('PRIMATES@',      'BespokeTree/include_files/PrimatesSpringer2012.phy',  2.2932);  # base = 66.7068 C9 @ 69
+    # tree.substitute('PRIMATES@', 'BespokeTree/include_files/PrimatesSpringer2012.phy', 2.2932);  # base = 66.7068 C9 @ 69  # noqa E501
     "PRIMATES": {
         "file": "PrimatesSpringer2012_AT.PHY",
         "edge_length": 5,
@@ -199,15 +199,18 @@ token_to_file_map = {
         "edge_length": 55,
         "taxon": None,
     },
-    # STURGEON_TREE from http://onlinelibrary.wiley.com/doi/10.1111/j.1439-0426.2008.01088.x/abstract - should contain approx 30 spp. Base is at
-    # Needed
+    # STURGEON_TREE from http://onlinelibrary.wiley.com/doi/10.1111/j.1439-0426.2008.01088.x
+    # should contain approx 30 spp. Base is at ???
+    # Needed:
     # Correct Rattite tree
     # SHARK_TREE??
-    # AMPHIOXUS_TREE_~32SPP - 24 Branchiostoma species, 7 Asymmetron species, 1 Epigonichthys (http://eolspecies.lifedesks.org/pages/63233) see http://www.bioone.org/doi/abs/10.2108/zsj.21.203
+    # AMPHIOXUS_TREE_~32SPP - 24 Branchiostoma species, 7 Asymmetron species, 1 Epigonichthys
+    # see http://www.bioone.org/doi/abs/10.2108/zsj.21.203
     # Tunicate tree ~ 2,150 spp - see T. Stuck for phylogeny
-    # for dating look at B. Misof, et al. 2014. Phylogenomics resolves the timing and pattern of insect evolution. Science 346 (6210): 763-767.
+    # for dating look at B. Misof, et al. 2014. Phylogenomics resolves the timing and pattern
+    # of insect evolution. Science 346 (6210): 763-767.
     "PROTOSTOMIA": {"file": "Protostomes.PHY", "edge_length": 50, "taxon": None},
     "HOLOMYCOTA": {"file": "Holomycota.PHY", "edge_length": 300, "taxon": None},
     "APHELIDA": {"file": "Aphelida_rough.PHY", "edge_length": 100, "taxon": None},
-    "ANCYROMONADIDA": {"file": "Ancyromonadida.phy", "edge_length": 50, "taxon": None}
+    "ANCYROMONADIDA": {"file": "Ancyromonadida.phy", "edge_length": 50, "taxon": None},
 }

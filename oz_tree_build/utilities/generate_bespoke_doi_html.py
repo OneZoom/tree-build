@@ -1,9 +1,10 @@
 """
-Go through all the bespoke files and generate an html fragment with the list of DOI links in each file
-See https://github.com/OneZoom/tree-build/issues/42 for more details
+Go through all the bespoke files and generate an html fragment with the list of DOI links
+in each file. See https://github.com/OneZoom/tree-build/issues/42 for more details
 
 e.g. from the root of the repo, run:
-python3 oz_tree_build/utilities/generate_bespoke_doi_html.py data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT
+python oz_tree_build/utilities/generate_bespoke_doi_html.py \
+    data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT
 """
 
 import argparse
@@ -27,7 +28,7 @@ html_content = "<ul>\n"
 file_list = sorted(os.listdir(directory_path))
 for filename in file_list:
     file_path = os.path.join(directory_path, filename)
-    with open(file_path, "r") as file:
+    with open(file_path) as file:
         file_contents = file.read()
 
         doi_links = re.findall(doi_regex, file_contents)
@@ -39,7 +40,7 @@ for filename in file_list:
         clade_search = re.findall(clade_regex, file_contents)
         if clade_search:
             clade_name = clade_search[-1][0]
-            html_content += f"  <li><a href='https://www.onezoom.org/life/@{clade_name}'>{clade_name}</a></li>\n"
+            html_content += "  <li><a href='https://www.onezoom.org/life/" f"@{clade_name}'>{clade_name}</a></li>\n"
         else:
             # Some newicks don't have a final clade name, so just use the filename instead
             filename_without_extension = os.path.splitext(filename)[0]

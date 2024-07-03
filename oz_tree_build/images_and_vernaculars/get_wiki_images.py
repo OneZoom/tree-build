@@ -1,49 +1,46 @@
 """
-This utility retrieves images and vernacular names from Wikidata for a given taxon or clade.
-"""
+This utility retrieves images and vernacular names from Wikidata for a given set
+of taxa or tips in a clade.
 
-"""
 It can be called in two ways:
-- To process a single taxon, use the 'leaf' subcommand. This will get the image and vernaculars for the given taxon. e.g.
-    get_wiki_images.py leaf "Panthera leo"
-    get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg"
-    get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg" 42000
-- To process a full clade, use the 'clade' subcommand. This will get the images and vernaculars for all the taxa in the clade.
-    e.g. get_wiki_images.py clade "Panthera" OneZoom_latest-all.json
+- To process a single taxon, use the 'leaf' subcommand. This will get the image and
+  vernaculars for the given taxon. e.g.
+    * get_wiki_images.py leaf "Panthera leo"
+    * get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg"
+    * get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg" 42000
+- To process a full clade, use the 'clade' subcommand. This will get the images and
+  vernaculars for all the taxa in the clade, e.g.
+    * get_wiki_images.py clade "Panthera" OneZoom_latest-all.json
 """
 
 import argparse
 import configparser
 import datetime
 import json
-from io import BytesIO
 import logging
 import os
-from pathlib import Path
 import re
+import sys
 import time
 import types
-import requests
-import sys
-
 import urllib.request
-from oz_tree_build.images_and_vernaculars import process_image_bits
-from oz_tree_build.utilities.file_utils import enumerate_lines_from_file
-from oz_tree_build.utilities.db_helper import (
-    connect_to_database,
-    get_next_src_id_for_src,
-    read_config,
-    placeholder,
-)
+from pathlib import Path
 
-from oz_tree_build._OZglobals import src_flags
-import time
-
+import requests
 from azure.ai.vision.imageanalysis import ImageAnalysisClient
 from azure.ai.vision.imageanalysis.models import VisualFeatures
 from azure.core.credentials import AzureKeyCredential
-
 from PIL import Image
+
+from oz_tree_build._OZglobals import src_flags
+from oz_tree_build.images_and_vernaculars import process_image_bits
+from oz_tree_build.utilities.db_helper import (
+    connect_to_database,
+    get_next_src_id_for_src,
+    placeholder,
+    read_config,
+)
+from oz_tree_build.utilities.file_utils import enumerate_lines_from_file
 
 default_wiki_image_rating = 35000
 bespoke_wiki_image_rating = 40000
@@ -54,8 +51,8 @@ logger = logging.getLogger(Path(__file__).name)
 # Copied from OZTree/OZprivate/ServerScripts/Utilities/getEOL_crops.py
 def subdir_name(doID):
     """
-    Make a valid subdirectory name in which to save images, based on the last 3 chars of
-    the data object ID
+    Make a valid subdirectory name in which to save images, based on the last
+    3 chars of the data object ID
     """
     subdir = str(doID)[-3:]
     assert os.path.sep not in subdir
@@ -65,12 +62,13 @@ def subdir_name(doID):
 
 def make_http_request_with_retries(url):
     """
-    Make an HTTP GET request to the given URL with the given headers, retrying if we get a 429 rate limit error.
+    Make an HTTP GET request to the given URL with the given headers,
+    retrying if we get a 429 rate limit error.
     """
 
     # See https://meta.wikimedia.org/wiki/User-Agent_policy
     wiki_http_headers = {
-        "User-Agent": "OneZoomBot/0.1 (https://www.onezoom.org/; mail@onezoom.org) get-wiki-images/0.1"
+        "User-Agent": "OneZoomBot/0.1 (https://www.onezoom.org/; " "mail@onezoom.org) get-wiki-images/0.1"
     }
 
     retries = 6
@@ -126,14 +124,15 @@ def get_image_crop_box(image, crop):
             raise ValueError("Azure Vision API can only be used with URLs")
     else:
         if len(crop) != 4:
-            raise ValueError("If given, `crop` must be an ImageAnalysisClient or a tuple of 4 integers")
+            raise ValueError("`crop` must be an ImageAnalysisClient or a tuple of 4 integers")
         return types.SimpleNamespace(x=crop[0], y=crop[1], width=crop[2], height=crop[3])
+
 
 def get_preferred_or_first_image_from_json_item(json_item):
     """
-    Get the first preferred image, or the first image if there are no preferred images, from a Wikidata JSON item.
+    Get the first preferred image from a Wikidata JSON item
+    (or the first image if there are no preferred images)
     """
-
     # P18 is the property for images
     try:
         images = [
@@ -143,8 +142,8 @@ def get_preferred_or_first_image_from_json_item(json_item):
             }
             for claim in json_item["claims"]["P18"]
         ]
-    except KeyError as e:
-        # Some entries don't have images at all. Others like Q5733335 have a P18 but no images in it.
+    except KeyError:
+        # Some entries have no P18. Others like Q5733335 have a P18 but no images in it
         return None
 
     image = next((image for image in images if image["preferred"]), None)
@@ -173,13 +172,9 @@ def get_vernaculars_by_language_from_json_item(json_item):
                 "preferred": 1 if claim["rank"] == "preferred" else 0,
             }
 
-            # There are often multiple vernaculars that only differ in case or punctuation.
+            # Often multiple vernaculars exist that only differ in case or punctuation.
             # We only want to keep one of each for a given language.
-            canonical_vernacular = (
-                language
-                + ","
-                + "".join(filter(str.isalnum, vernacular_info["name"])).lower()
-            )
+            canonical_vernacular = language + "," + "".join(filter(str.isalnum, vernacular_info["name"])).lower()
             if canonical_vernacular in known_canonical_vernaculars:
                 continue
             known_canonical_vernaculars.add(canonical_vernacular)
@@ -190,10 +185,10 @@ def get_vernaculars_by_language_from_json_item(json_item):
 
     # For each language:
     # - We keep all the vernaculars
-    # - If none are marked as preferred, the first non-referred will be marked as preferred
+    # - If none are marked as preferred, use the first non-preferred as preferred
     # - If multiple are marked as preferred, the first one will be kept as preferred
     for vernaculars in vernaculars_by_language.values():
-        vernaculars.sort(reverse = True, key = lambda v: v["preferred"])
+        vernaculars.sort(reverse=True, key=lambda v: v["preferred"])
         for i, v in enumerate(vernaculars):
             v["preferred"] = 1 if i == 0 else 0
     return vernaculars_by_language
@@ -218,9 +213,9 @@ def enumerate_dump_items_with_images_or_vernaculars(wikipedia_dump_file):
 
 def get_wikidata_json_for_qid(qid):
     """
-    Use the Wikidata API to get the JSON for a given QID.
-    This is faster than using the dump file when we only need a single item.
-    Worth noting that this gets the latest version of the item, which may not be the same as the dump file.
+    Use the Wikidata API to get the JSON for a given QID. This is faster than
+    using the dump file when we only need a single item. It's worth noting that this
+    gets the latest version of the item, which may not be the same as the dump file.
     """
 
     wikidata_url = f"https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q{qid}&format=json"
@@ -236,8 +231,11 @@ def get_image_license_info(escaped_image_name):
     Use the Wikimedia API to get the license and artist for a Wikimedia image.
     """
 
-    image_metadata_url = f"https://api.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=extmetadata&titles=File%3a{escaped_image_name}&format=json&iiextmetadatafilter=License|LicenseUrl|Artist"
-
+    image_metadata_url = (
+        "https://api.wikimedia.org/w/api.php"
+        f"?action=query&titles=File%3a{escaped_image_name}&format=json&prop=imageinfo"
+        "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseUrl|Artist"
+    )
     r = make_http_request_with_retries(image_metadata_url)
     try:
         extmetadata = r.json()["query"]["pages"]["-1"]["imageinfo"][0]["extmetadata"]
@@ -262,23 +260,17 @@ def get_image_license_info(escaped_image_name):
             logger.warning(f"Artist not found for '{escaped_image_name}': using 'Unknown artist'")
             license_info["artist"] = "Unknown artist"
 
-        # Some images have a flickr common license URL but not License field (e.g. Potos_flavus_(22985770100).jpg)
-        # We treat these as public domain, because the flicker common license is basically that.
-        if (
-            not "License" in extmetadata
-            and license_info["license_url"] == "https://www.flickr.com/commons/usage/"
-        ):
+        # Some images have a flickr common license URL but not License field, meaning
+        # "No known copyright restrictions"==pd (e.g. Potos_flavus_(22985770100).jpg)
+        if "License" not in extmetadata and license_info["license_url"] == "https://www.flickr.com/commons/usage/":
             license_info["license"] = "commons"
         else:
             license_info["license"] = extmetadata["License"]["value"]
 
         # If the license doesn't start with "cc" or "pd", we can't use it
-        if not license_info["license"].startswith("cc") and not license_info[
-            "license"
-        ].startswith("pd") and not license_info["license"] == "commons":
-            logger.warning(
-                f"Unacceptable license for '{escaped_image_name}': {license_info['license']}"
-            )
+        li = license_info["license"].lower()
+        if not li.startswith("cc") and not li.startswith("pd") and not li == "commons":
+            logger.warning(f"Unacceptable license for '{escaped_image_name}': {li}")
             return None
     except KeyError:
         return None
@@ -292,40 +284,38 @@ def get_image_url(escaped_image_name):
     """
 
     # This returns JSON that contains the actual image URLs in various sizes
-    image_location_url = (
-        f"https://api.wikimedia.org/core/v1/commons/file/{escaped_image_name}"
-    )
+    image_location_url = f"https://api.wikimedia.org/core/v1/commons/file/{escaped_image_name}"
 
     r = make_http_request_with_retries(image_location_url)
 
     image_location_info = r.json()
-    # Note that 'preferred' here refers to the preferred image *size*, not the preferred image itself
+    # Note that 'preferred' here refers to the preferred image *size*
+    # not the preferred image itself
     image_url = image_location_info["preferred"]["url"]
 
     return image_url
 
 
-def save_wiki_image(
-    db, ott, image, src, src_id, rating, output_dir, crop=None, check_if_up_to_date=True
-):
+def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, crop=None, check_if_up_to_date=True):
     """
-    Download a Wikimedia image for a given QID and save it to the output directory.
-    We keep both the uncropped and cropped versions of the image, along with the crop info.
-    `crop` can be an Azure ImageAnalysisClient, a crop location in the image (x, y, width, height),
-    or None to carry out a default (centered) crop.
+    Download a Wikimedia image for a given QID and save it to the output directory. We
+    keep both the uncropped and cropped versions of the image, along with the crop info.
+    `crop` can be an Azure ImageAnalysisClient, a crop location in the image
+    (x, y, width, height), or None to carry out a default (centered) crop.
     """
 
     wiki_image_url_prefix = "https://commons.wikimedia.org/wiki/File:"
-    ph = placeholder(db)
+    s = placeholder(db)
 
     # Wikimedia uses underscores instead of spaces in URLs
     escaped_image_name = image["name"].replace(" ", "_")
     image_dir = os.path.join(output_dir, str(src), subdir_name(src_id))
 
     if check_if_up_to_date:
-        # If we already have an image for this taxon, and it's the same as the one we're trying to download, skip it
+        # If we already have an image for this taxon, and it's the same as the one
+        # we're trying to download, skip it
         row = db.executesql(
-            "SELECT url FROM images_by_ott WHERE src={0} and ott={0};".format(ph),
+            f"SELECT url FROM images_by_ott WHERE src={s} and ott={s};",
             (src, ott),
         )
         if len(row) > 0:
@@ -333,28 +323,25 @@ def save_wiki_image(
             existing_image_name = url[len(wiki_image_url_prefix) :]
             if existing_image_name == escaped_image_name:
                 logger.info(
-                    f"Image {image['name']} for {ott} is already up to date: "
-                    f"should be at {image_dir}/{src_id}.jpg")
+                    f"Image {image['name']} for {ott} is already up to date: " f"should be at {image_dir}/{src_id}.jpg"
+                )
                 return
 
     logger.info(f"Processing image for ott={ott} (qid={src_id}): {image['name']}")
 
     license_info = get_image_license_info(escaped_image_name)
     if not license_info:
-        logger.warning(
-            f"Couldn't get license or artist for '{escaped_image_name};. Ignoring it."
-        )
+        logger.warning(f"Couldn't get license or artist for '{escaped_image_name};. Ignoring it.")
         return False
 
-    license = license_info["license"]
     is_public_domain = True
-    if license.startswith("pd"):
+    if license_info["license"].startswith("pd"):
         license_string = "Marked as being in the public domain"
-    elif license in {"cc0", "commons"}:
+    elif license_info["license"] in {"cc0", "commons"}:
         license_string = "Released into the public domain"
     else:
         is_public_domain = False
-        license_string = license
+        license_string = license_info["license"]
         if license_info.get("license_url"):
             license_string += f" ({license_info['license_url']})"
         # prefix a copyright symbol to the artist
@@ -367,8 +354,8 @@ def save_wiki_image(
 
     image_url = get_image_url(escaped_image_name)
 
-    # For src=20 we use the qid as the source id. This is convenient, although it does mean
-    # that we can't have two src=20 wikidata images for a given taxon.
+    # For src=20 we use the qid as the source id. This is convenient, although it does
+    # mean that we can't have two src=20 wikidata images for a given taxon.
     if not os.path.exists(image_dir):
         os.makedirs(image_dir)
 
@@ -400,7 +387,7 @@ def save_wiki_image(
         ),
     )
     im.save(f"{image_dir}/{src_id}.jpg")
-    logger.info(f"Saved image {image['name']} for ott={ott} (Q{src_id}) in {image_dir}/{src_id}.jpg")
+    logger.info(f"Saved {image['name']} for ott={ott} (Q{src_id}) in {image_dir}/{src_id}.jpg")
 
     # Save the crop info in a text file next to the image
     crop_info_path = f"{image_dir}/{src_id}_cropinfo.txt"
@@ -408,9 +395,9 @@ def save_wiki_image(
         f.write(f"{crop_box.x},{crop_box.y},{crop_box.width},{crop_box.height}")
 
     # Delete any existing wiki images for this taxon from the database
-    # Note that we don't do this for bespoke images, as there can be multiple for a given taxon
+    # We don't do this for bespoke images, as there can be multiple for a given taxon
     if src == src_flags["wiki"]:
-        sql = "DELETE FROM images_by_ott WHERE ott={0} and src={0};".format(ph)
+        sql = f"DELETE FROM images_by_ott WHERE ott={s} and src={s};"
         db.executesql(sql, (ott, src))
 
     # Insert the new image into the database
@@ -419,7 +406,7 @@ def save_wiki_image(
         "INSERT INTO images_by_ott "
         "(ott,src,src_id,url,rating,rating_confidence,best_any,best_verified,best_pd,"
         "overall_best_any,overall_best_verified,overall_best_pd,rights,licence,updated) "
-        "VALUES ({0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0});".format(ph),
+        f"VALUES ({s},{s},{s},{s},{s},{s},{s},{s},{s},{s},{s},{s},{s},{s},{s});",
         (
             ott,
             src,
@@ -428,10 +415,8 @@ def save_wiki_image(
             rating,
             None,
             1,  # We only have one for the given src, so it's the best
-            1,  # We're assuming that all wiki images are verified (i.e. shows correct species)
-            (
-                1 if is_public_domain else 0
-            ),  # Only set this to 1 if the image is public domain
+            1,  # We're assuming that all wiki images are verified (i.e. correctly IDed)
+            (1 if is_public_domain else 0),  # Only set this to 1 if the image is public domain
             1,
             1,
             1,  # These will need to be adjusted based on all images for the taxon
@@ -447,32 +432,33 @@ def save_wiki_image(
     return True
 
 
-def save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
+def save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
     """
-    Save all vernacular names for a given QID to the database.
-    Note that there can be multiple vernaculars for one language (e.g. "Lion" and "Africa Lion")
+    Save all vernacular names for a given QID to the database. Note that there
+    can be multiple vernaculars for one language (e.g. "Lion" and "Africa Lion")
     """
-    ph = placeholder(db)
+    s = placeholder(db)
     # Delete any existing wiki vernaculars for this taxon from the database
-    sql = "DELETE FROM vernacular_by_ott WHERE ott={0} and src={0};".format(ph)
+    sql = f"DELETE FROM vernacular_by_ott WHERE ott={s} and src={s};"
     db.executesql(sql, (ott, src_flags["wiki"]))
 
     for language, vernaculars in vernaculars_by_language.items():
-        # The wikidata language could either be a full language code (e.g. "en-us") or just the primary code (e.g. "en")
-        # We need to make sure that lang_primary is just the primary code
+        # The wikidata language could either be a full language code (e.g. "en-us")
+        # or just the primary code (e.g. "en"): make lang_primary just the primary code
         lang_primary = language.split("-")[0]
 
         for vernacular in vernaculars:
-            # We only want to flag the first preferred vernacular for this source as preferred
+            # Only flag the first preferred vernacular for this source as preferred
             logger.info(
-                f"Setting '{language}' vernacular for ott={ott} (qid={qid}, preferred={vernacular['preferred']}): {vernacular['name']}"
+                f"Setting '{language}' vernacular for ott={ott} (qid={qid}, "
+                f"preferred={vernacular['preferred']}): {vernacular['name']}"
             )
 
             # Insert the new vernacular into the database
             sql = (
                 "INSERT INTO vernacular_by_ott "
-                "(ott, vernacular, lang_primary, lang_full, preferred, src, src_id, updated)"
-                " VALUES ({0},{0},{0},{0},{0},{0},{0},{0});".format(ph)
+                "(ott, vernacular, lang_primary, lang_full, preferred, src, src_id, "
+                f"updated) VALUES ({s},{s},{s},{s},{s},{s},{s},{s});"
             )
             db._adapter.execute(  # alternative to executesql that doesn't commit
                 sql,
@@ -484,7 +470,7 @@ def save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
                     vernacular["preferred"],
                     src_flags["wiki"],
                     qid,
-                    datetime.datetime.now()
+                    datetime.datetime.now(),
                 ),
             )
 
@@ -498,23 +484,23 @@ def process_leaf(
     rating=None,
     skip_images=None,
     output_dir=None,
-    crop=None
+    crop=None,
 ):
     """
-    If ott_or_taxon is a number, it's an ott. Otherwise, it's a taxon name.
-    `crop` can be an Azure ImageAnalysisClient, a crop location in the image (x, y, width, height),
+    If ott_or_taxon is a number it's an ott, otherwise it's a taxon name. `crop` can be
+    an Azure ImageAnalysisClient, a crop location in the image (x, y, width, height),
     or None to carry out a default (centered) crop.
     """
     # Real otts are never negative, but we abuse them in our tests, so account for that.
-    ph = placeholder(db)
+    s = placeholder(db)
     sql = "SELECT ott,wikidata,name FROM ordered_leaves WHERE "
     if ott_or_taxon.lstrip("-").isnumeric():
-        sql += f"ott={ph};"
+        sql += f"ott={s};"
     else:
-        sql += f"name={ph};"
+        sql += f"name={s};"
 
     try:
-        result = db.executesql(sql, (ott_or_taxon, ))
+        result = db.executesql(sql, (ott_or_taxon,))
         if len(result) > 1:
             raise ValueError(f"Multiple results for '{ott_or_taxon}'")
         (ott, qid, name) = result[0]
@@ -550,15 +536,15 @@ def process_leaf(
             save_wiki_image(db, ott, image, src, src_id, rating, output_dir, crop)
 
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
-    save_all_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
+    save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
 
 
 def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=None):
     """
-    `crop` can be an ImageAnalysisClient, a crop location in the image (x, y, width, height),
-    or None to carry out a default (centered) crop.
+    `crop` can be an ImageAnalysisClient, a crop location in the image
+    (x, y, width, height), or None to carry out a default (centered) crop.
     """
-    ph = placeholder(db)
+    s = placeholder(db)
     # Get the left and right leaf ids for the passed in taxon
     sql = "SELECT leaf_lft,leaf_rgt,ott FROM ordered_nodes WHERE "
     # If ott_or_taxon is a number, it's an ott. If it's a string, it's a taxon name.
@@ -566,46 +552,37 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
         sql += "ott={0};"
     else:
         sql += "name={0};"
-    rows = db.executesql(sql.format(ph), (ott_or_taxon,))
+    rows = db.executesql(sql.format(s), (ott_or_taxon,))
     if len(rows) == 0:
         raise ValueError(f"'{ott_or_taxon}' not found in ordered_nodes table")
     if len(rows) > 1:
-        logger.error(
-            f"Multiple results for '{ott_or_taxon}', "
-            f"choose out of these OTTs: {[r[2] for r in rows]}")
+        logger.error(f"Multiple results for '{ott_or_taxon}', " f"choose out of these OTTs: {[r[2] for r in rows]}")
         return
-    (leaf_left, leaf_right, ott) = rows[0]
+    (leaf_lft, leaf_rgt, ott) = rows[0]
 
     if not skip_images:
-        # Find all the leaves in the clade that don't have wiki images (ignoring images from other sources)
-        sql = """
+        # Get leaves in the clade with no wiki images, ignoring images from other sources
+        sql = f"""
         SELECT wikidata, ordered_leaves.ott FROM ordered_leaves
-        LEFT OUTER JOIN (SELECT ott,src,url FROM images_by_ott WHERE src={0}) as wiki_images_by_ott ON ordered_leaves.ott=wiki_images_by_ott.ott
-        WHERE url IS NULL AND ordered_leaves.id >= {0} AND ordered_leaves.id <= {0};
-        """.format(ph)
-        leaves_without_images = dict(
-            db.executesql(sql, (src_flags["wiki"], leaf_left, leaf_right))
-        )
-        logger.info(
-            f"Found {len(leaves_without_images)} taxa without an image in the database"
-        )
+        LEFT OUTER JOIN (SELECT ott,src,url FROM images_by_ott
+        WHERE src={s}) as wiki_images_by_ott ON ordered_leaves.ott=wiki_images_by_ott.ott
+        WHERE url IS NULL AND ordered_leaves.id >= {s} AND ordered_leaves.id <= {s};
+        """
+        leaves_without_images = dict(db.executesql(sql, (src_flags["wiki"], leaf_lft, leaf_rgt)))
+        logger.info(f"Found {len(leaves_without_images)} taxa without an image in the database")
 
-    # Find all the leaves in the clade that don't have wiki vernaculars (ignoring vernaculars from other sources)
-    sql = """
+    # Get leaves in the clade with no wiki vernaculars, ignoring verns from other sources
+    sql = f"""
     SELECT wikidata, ordered_leaves.ott FROM ordered_leaves
-    LEFT OUTER JOIN (SELECT ott,src,vernacular FROM vernacular_by_ott WHERE src={0}) as wiki_vernacular_by_ott ON ordered_leaves.ott=wiki_vernacular_by_ott.ott
-    WHERE vernacular IS NULL AND ordered_leaves.id >= {0} AND ordered_leaves.id <= {0};
-    """.format(ph)
-    leaves_without_vernaculars = dict(
-        db.executesql(sql, (src_flags["wiki"], leaf_left, leaf_right)))
-    logger.info(
-        f"Found {len(leaves_without_vernaculars)} taxa without a vernacular in the database"
-    )
+    LEFT OUTER JOIN (SELECT ott,src,vernacular FROM vernacular_by_ott WHERE src={s})
+    as wiki_vernacular_by_ott ON ordered_leaves.ott=wiki_vernacular_by_ott.ott
+    WHERE vernacular IS NULL AND ordered_leaves.id >= {s} AND ordered_leaves.id <= {s};
+    """
+    leaves_without_vn = dict(db.executesql(sql, (src_flags["wiki"], leaf_lft, leaf_rgt)))
+    logger.info(f"Found {len(leaves_without_vn)} taxa without a vernacular in the database")
 
     leaves_that_got_images = set()
-    for qid, image, vernaculars in enumerate_dump_items_with_images_or_vernaculars(
-        dump_file
-    ):
+    for qid, image, vernaculars in enumerate_dump_items_with_images_or_vernaculars(dump_file):
         if not skip_images and image and qid in leaves_without_images:
             if save_wiki_image(
                 db,
@@ -619,18 +596,16 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
                 check_if_up_to_date=False,
             ):
                 leaves_that_got_images.add(qid)
-        if vernaculars and qid in leaves_without_vernaculars:
-            save_all_wiki_vernaculars_for_qid(
-                db, leaves_without_vernaculars[qid], qid, vernaculars
-            )
+        if vernaculars and qid in leaves_without_vn:
+            save_wiki_vernaculars_for_qid(db, leaves_without_vn[qid], qid, vernaculars)
 
     # Log the leaves for which we couldn't find images
-    if len(leaves_without_images) > 0:
-        info = "Taxa for which we couldn't find a proper image:"
-        for qid, ott in leaves_without_images.items():
-            if qid not in leaves_that_got_images:
-                info += f"\n  ott={ott} qid={qid}"
-        logger.info(info)
+    info = ""
+    for qid, ott in leaves_without_images.items():
+        if qid not in leaves_that_got_images:
+            info += f"\n  ott={ott} qid={qid}"
+    if len(info) != 0:
+        logger.info(f"Taxa for which we couldn't find a proper image:{info}")
 
 
 def process_args(args):
@@ -662,13 +637,12 @@ def process_args(args):
         if len(args.ott_or_taxa) > 1 and args.image is not None:
             raise ValueError("Cannot specify multiple taxa when using a bespoke image")
         for name in args.ott_or_taxa:
-            process_leaf(
-                db, name, args.image, args.rating, args.skip_images, outdir, crop=azure
-            )
+            process_leaf(db, name, args.image, args.rating, args.skip_images, outdir, crop=azure)
     elif args.subcommand == "clade":
         # Process all the taxa in the passed in clades
         for name in args.ott_or_taxa:
             process_clade(db, name, args.wd_dump, args.skip_images, outdir, crop=azure)
+
 
 def setup_logging(args):
     log_level = "WARN"
@@ -686,8 +660,9 @@ def setup_logging(args):
     logging.basicConfig(level=log_level)
     return log_level
 
+
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
 
     subparsers = parser.add_subparsers(help="help for subcommand", dest="subcommand")
 
@@ -715,27 +690,33 @@ def main():
             "-o",
             "--output-dir",
             default=None,
-            help="The location to save the cropped pictures (e.g. 'FinalOutputs/img'). If not given, defaults to ../../../static/FinalOutputs/img (relative to the script location). Files will be saved under output_dir/{src_flag}/{3-digits}/fn.jpg",
+            help=(
+                "The location to save the image files (e.g. 'FinalOutputs/img'). "
+                "Defaults to ../../../static/FinalOutputs/img (relative to the script "
+                "location). Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
+            ),
         )
         parser.add_argument(
             "-c",
             "--conf-file",
             default=None,
-            help="The configuration file to use. If not given, defaults to private/appconfig.ini",
+            help=("The configuration file to use. " "Defaults to ../../../OZtree/private/appconfig.ini"),
         )
 
     parser_leaf = subparsers.add_parser("leaf", help="Process a single ott")
+    parser_leaf.add_argument("ott_or_taxa", nargs="+", type=str, help="The leaf otts or taxa to process")
     parser_leaf.add_argument(
-        "ott_or_taxa", nargs="+", type=str, help="The leaf otts or taxa to process"
-    )
-    parser_leaf.add_argument(
-        "-i", "--image", type=str, help=(
+        "-i",
+        "--image",
+        type=str,
+        help=(
             "A name of an image on wikimedia commons to use: if provided, you can give "
             "only one ott_or_taxon, and it will be treated as from a bespoke image src."
-        )
+        ),
     )
     parser_leaf.add_argument(
-        "-r", "--rating",
+        "-r",
+        "--rating",
         type=int,
         help="The rating for the image (defaults to 40000)",
     )
@@ -745,10 +726,13 @@ def main():
     parser_clade.add_argument(
         "wd_dump",
         type=str,
-        help="The wikidata JSON dump file from which to get the image URLs and vernaculars",
+        help="The wikidata JSON dump file from which to get image URLs and vernaculars",
     )
     parser_clade.add_argument(
-        "ott_or_taxa", nargs="+", type=str, help="The ott or taxa of the root of the clade(s)"
+        "ott_or_taxa",
+        nargs="+",
+        type=str,
+        help="The ott or taxa of the root of the clade(s)",
     )
     add_common_args(parser_clade)
 
@@ -756,7 +740,6 @@ def main():
     if not args.subcommand:
         parser.print_help()
         sys.exit()
-
 
     setup_logging(args)
     process_args(args)

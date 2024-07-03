@@ -20,16 +20,15 @@ def prune_children_of_otts(self, ott_species_list):
                 # check for extinction props
                 if (
                     (nd.num_child_nodes() == 1)
-                    and (list(nd.child_nodes())[0].num_child_nodes() == 0)
-                    and (list(nd.child_nodes())[0].edge.length)
+                    and (next(iter(nd.child_nodes())).num_child_nodes() == 0)
+                    and (next(iter(nd.child_nodes())).edge.length)
                 ):
                     trim_me = False  # this is an extinction prop
                 # check for species within this group
                 for sub_nd in nd.postorder_internal_node_iter():
                     if sub_nd in to_trim:
                         logging.warning(
-                            f"Species {sub_nd.label} is contained within another "
-                            "species {nd.label}: not trimming it"
+                            f"Species {sub_nd.label} is contained within another " "species {nd.label}: not trimming it"
                         )
                         trim_me = False
                 if trim_me:
@@ -44,15 +43,17 @@ def prune_children_of_otts(self, ott_species_list):
 def prune_non_species(
     self,
     recursive=True,
-    bad_matches=[],  # any strings in here indicate non-species (e.g. ' cf.')
+    bad_matches=None,  # any strings in here indicate non-species (e.g. ' cf.')
     update_bipartitions=False,
 ):
     """
-    Recursive=true means remove tips (which may create more tips) and keep going until non left to prune
-    Removes all terminal nodes whose name is '' or does not contain a space. Extinction props should be
-    unlabelled nodes with a length, e.g.
+    Removes all terminal nodes whose name is '' or does not contain a space.
+    Recursive=true means remove tips (which may create more tips) & keep going until
+    none left to prune. Extinction props should be unlabelled nodes with a length, e.g.
     ((:65)Tyrannosaurus_rex,Birds)
     """
+    if bad_matches is None:
+        bad_matches = []
     nodes_removed = {"no_space": [], "unlabelled": [], "bad_match": []}
     done = False
     while not done:
@@ -65,22 +66,19 @@ def prune_non_species(
                     and nd.parent_node.label
                     and (nd.parent_node.num_child_nodes() == 1)
                 ):
-                    # only an extinction prop, if it has a length AND the parent node is a named unifurcation
+                    # only an extinction prop, if it has a length AND the parent
+                    # node is a named unifurcation
                     pass
                 else:
                     nodes_to_remove["no_space"].append(nd)
-            elif (
-                " " not in nd.label
-            ):  # number of spaces is 0: a leaf, but probably not a species. Also catches label==''
+            elif " " not in nd.label:
+                # num_spaces is 0: a leaf, but prob not a species. Also catches label==''
                 logging.info(
-                    f"Removing '{nd.label}' since it does not seem to be a species "
-                    "(it does not contain a space)"
+                    f"Removing '{nd.label}' since it does not seem to be a species " "(it does not contain a space)"
                 )
                 nodes_to_remove["unlabelled"].append(nd)
             elif any(match in nd.label for match in bad_matches):
-                logging.info(
-                    f"Removing '{nd.label}' since it contains one of {bad_matches}"
-                )
+                logging.info(f"Removing '{nd.label}' since it contains one of {bad_matches}")
                 nodes_to_remove["bad_match"].append(nd)
         for k, nodes in nodes_to_remove.items():
             for nd in nodes:
@@ -102,9 +100,10 @@ def set_node_ages(self):
     the sum of edge lengths from the node to the tips. Also adds the attribute
     extinction_date to terminal nodes that have been propped to earlier in time than 0Ma
 
-    By convention, null branch lengths are of unspecified length, whereas zero-length branches (e.g. injected by
-    resolving polytomies) are of a fixed length = 0. Fossil species are denoted by a terminal unnamed
-    monotomy (an 'extinction prop') which allows us to set the extinction date of any taxon. That means the
+    By convention, null branch lengths are of unspecified length, whereas zero-length
+    branches (e.g. injected by resolving polytomies) are of a fixed length = 0.
+    Fossil species are denoted by a terminal unnamed monotomy (an 'extinction prop')
+    which allows us to set the extinction date of any taxon. That means the
     entire tree is expected to be ultrametric.
 
     Returns number of nodes with age set, and number of deleted extinction props
@@ -138,7 +137,7 @@ def set_node_ages(self):
                 # Round to 6 decimal places to prevent floating point errors
                 node.parent_node.age = round(node.parent_node.age, 6)
 
-    # For newly fixed ages, now percolate them down the tree if we know the age of a deeper node
+    # For newly fixed ages, percolate them down the tree if we know the age of a deeper node
     for node in self.preorder_node_iter():
         if getattr(node, "age", None) is not None:
             for ch in node.child_node_iter():
@@ -146,7 +145,7 @@ def set_node_ages(self):
                     ch.age = node.age - (ch.edge.length if ch.edge.length > 0 else 0)
                     tot_ages += 1
 
-    # Now that we have calculated dates, remove 'extinction props', and flag up extinct species
+    # Now we have calculated dates, remove 'extinction props', and flag up extinct species
     removed = 0
     for leaf in self.leaf_node_iter():
         if (leaf.label is None) and leaf.edge.length > 0:
@@ -178,9 +177,7 @@ def is_on_unifurcation_path(node):
     this is a node which is either a unifurcation or the first node in a path of
     successive unifurcations
     """
-    return node.num_child_nodes() == 1 or (
-        node.parent_node and node.parent_node.num_child_nodes() == 1
-    )
+    return node.num_child_nodes() == 1 or (node.parent_node and node.parent_node.num_child_nodes() == 1)
 
 
 def remove_unifurcations_keeping_higher_taxa(self):
@@ -211,9 +208,7 @@ def remove_unifurcations_keeping_higher_taxa(self):
                     # behaviour (by default Dendropy keeps the lowest level taxa)
                     logging.debug(
                         "Unary nodes ending in tip left so that first is used: "
-                        + ", ".join(
-                            [(x.label or "None") for x in sequential_unary_nodes]
-                        )
+                        + ", ".join([(x.label or "None") for x in sequential_unary_nodes])
                     )
                 else:
                     # sort so that best is last - by popularity then presence of label,
@@ -234,16 +229,12 @@ def remove_unifurcations_keeping_higher_taxa(self):
                         # these should still be in postorder
                         if nd != keep_node:
                             n_deleted += 1
-                            nd.edge.collapse(
-                                adjust_collapsed_head_children_edge_lengths=True
-                            )
+                            nd.edge.collapse(adjust_collapsed_head_children_edge_lengths=True)
     n_deleted += len(self.suppress_unifurcations())
     return n_deleted
 
 
-def write_preorder_ages(
-    self, node_dates_filehandle, leaf_dates_filehandle=None, format="tsv"
-):
+def write_preorder_ages(self, node_dates_fh, leaf_dates_fh=None, format="tsv"):  # noqa A002
     """
     Write the dates to one or two files. If no second file is given, only write leaves if
     the format is 'json'. The main file is for nodes: any absent dates should be treated
@@ -272,42 +263,39 @@ def write_preorder_ages(
 
     leaf_num = 0
     node_num = 0
-    if leaf_dates_filehandle or format == "json":
-        if leaf_dates_filehandle is None:
-            leaf_dates_filehandle = node_dates_filehandle
-            leaf_dates_filehandle.write('var tree_date = {"leaves":')
+    if leaf_dates_fh or format == "json":
+        if leaf_dates_fh is None:
+            leaf_dates_fh = node_dates_fh
+            leaf_dates_fh.write('var tree_date = {"leaves":')
             join = ['"', '"']
             end = ['},"nodes":', "}}"]
 
-        leaf_dates_filehandle.write(start)
+        leaf_dates_fh.write(start)
         for leaf in self.leaf_node_iter():
-            # for compactness, we should probably write this in binary, as a series of (4-byte int, float)
-            # but for the moment we write it as text format, which will be gzipped
+            # for compactness, we should probably write this in binary, as a series of
+            # (4-byte int, float); for the moment write it as text format, to be gzipped
             leaf_num += 1
             if (getattr(leaf, "age", None) is not None) and (leaf.age > 0):
-                leaf_dates_filehandle.write(
-                    join[0] + str(leaf_num) + sep + str(leaf.age)
-                )
+                leaf_dates_fh.write(join[0] + str(leaf_num) + sep + str(leaf.age))
                 if format == "json":
-                    join[0] = (
-                        ',"'  # after the first value, start putting initial commas (avoids trailing comma)
-                    )
+                    # after first value, start putting initial commas (avoids trailing comma)
+                    join[0] = ',"'
                 else:
                     join[0] = "\n"
-        leaf_dates_filehandle.write(end[0])
-        leaf_dates_filehandle.flush()
+        leaf_dates_fh.write(end[0])
+        leaf_dates_fh.flush()
 
-    node_dates_filehandle.write(start)
+    node_dates_fh.write(start)
     for node in self.preorder_internal_node_iter():
         node_num += 1
         if getattr(node, "age", None) is not None:
-            node_dates_filehandle.write(join[-1] + str(node_num) + sep + str(node.age))
+            node_dates_fh.write(join[-1] + str(node_num) + sep + str(node.age))
             if format == "json":
                 join[-1] = ',"'
             else:
                 join[-1] = "\n"
-    node_dates_filehandle.write(end[-1])
-    node_dates_filehandle.flush()
+    node_dates_fh.write(end[-1])
+    node_dates_fh.flush()
 
 
 def write_preorder_to_csv(
@@ -322,29 +310,66 @@ def write_preorder_to_csv(
     Write the leaf and node info for this tree to csv files.
     * for leaves, always write the parent, name, and extinction_data
     * for nodes, always write the parent,node_rgt,leaf_lft,leaf_rgt, name, and age
-    In addition to these, also write out the extra_leaf_data_properties and extra_node_data_properties
-    contained in the data property dictionary of each node (or blank if the property does not exist),
-    e.g. for leaves this might be extinction_date,ott,wikidata,wikipedia_lang_flag,eol,iucn,popularity,popularity_rank,price,ncbi,ifung,worms,irmng,gbif
-    for nodes: age,ott,wikidata,wikipedia_lang_flag,eol,popularity,ncbi,ifung,worms,irmng,gbif,vern_synth,rep1,...,rtr1,...,iucnNE,...
+
+    In addition to these, also write out the extra_leaf_data_properties and
+    extra_node_data_properties contained in the data property dictionary of each node
+    (or blank if the property does not exist), e.g. for leaves this might be
+        extinction_date,
+        ott,
+        wikidata,
+        wikipedia_lang_flag,
+        eol,
+        iucn,
+        popularity,
+        popularity_rank,
+        price,
+        ncbi,
+        ifung,
+        worms,
+        irmng,
+        gbif
+
+    for nodes:
+        age,
+        ott,
+        wikidata,
+        wikipedia_lang_flag,
+        eol,
+        popularity,
+        ncbi,
+        ifung,
+        worms,
+        irmng,
+        gbif,
+        vern_synth,
+        rep1,...,
+        rtr1,...,
+        iucnNE,...
     """
     import csv
     from collections import OrderedDict
 
     leaf_csv = csv.writer(leaf_file, quoting=csv.QUOTE_MINIMAL, lineterminator="\n")
-    leaf_csv.writerow(
-        ["parent", "real_parent", "name", "extinction_date"]
-        + list(extra_leaf_data_properties.keys())
-    )
+    leaf_csv.writerow(["parent", "real_parent", "name", "extinction_date", *extra_leaf_data_properties])
     node_csv = csv.writer(node_file, quoting=csv.QUOTE_MINIMAL, lineterminator="\n")
     node_csv.writerow(
-        ["parent", "real_parent", "node_rgt", "leaf_lft", "leaf_rgt", "name", "age"]
-        + list(extra_node_data_properties.keys())
+        [
+            "parent",
+            "real_parent",
+            "node_rgt",
+            "leaf_lft",
+            "leaf_rgt",
+            "name",
+            "age",
+            *extra_node_data_properties,
+        ]
     )
 
     # allocate node numbers
     internal_node_number = 0
     for node in self.preorder_internal_node_iter():
-        internal_node_number += 1  # NB: increment first, since we use a 1-base numbering system, for mySQL row numbering
+        # NB: increment first, since we use a 1-base numbering system, for mySQL row numbering
+        internal_node_number += 1
         node.id = internal_node_number
 
     # postorder traversal to allocate rgt side of ranges
@@ -352,8 +377,9 @@ def write_preorder_to_csv(
     prev_node = None
     for node in self.postorder_node_iter():
         # find rightmost leaf by postorder iteration.
-        # For rightmost node, if previously visited node is a leaf, then (because we are ladderized ascending)
-        # the rightmost node must be self (i.e. this is a terminal internal node). Otherwise it is the previously visted node
+        # For rightmost node, if previously visited node is a leaf, then (because we ladderize
+        # ascending) the rightmost node must be self (i.e. this is a terminal internal node).
+        # Otherwise it is the previously visted node
         if node.is_leaf():
             internal_leaf_count += 1
         else:
@@ -373,11 +399,7 @@ def write_preorder_to_csv(
             base_output = [
                 node.parent_node.id,
                 # negative real_parent ids if this is a polytomy
-                (
-                    -node.real_parent_node.id
-                    if node.edge.length == 0
-                    else node.real_parent_node.id
-                ),
+                (-node.real_parent_node.id if node.edge.length == 0 else node.real_parent_node.id),
                 node.label,
                 getattr(node, "extinction_date", None),
             ]
@@ -390,7 +412,9 @@ def write_preorder_to_csv(
                     KeyError,
                     TypeError,
                     AttributeError,
-                ):  # catch none existent key name, None, or no data attribute (e.g. for polytomies)
+                ):
+                    # catch non-existent key name, None, or no data attribute
+                    # (e.g. for polytomies)
                     extra_leaf_output[colname] = None
             leaf_csv.writerow(base_output + list(extra_leaf_output.values()))
             leaf_count += 1
@@ -398,11 +422,7 @@ def write_preorder_to_csv(
             base_output = [
                 node.parent_node.id if node.parent_node else root_parent_id,
                 (
-                    (
-                        -node.real_parent_node.id
-                        if node.edge.length == 0
-                        else node.real_parent_node.id
-                    )
+                    (-node.real_parent_node.id if node.edge.length == 0 else node.real_parent_node.id)
                     if hasattr(node, "real_parent_node")
                     else 0
                 ),
@@ -417,11 +437,9 @@ def write_preorder_to_csv(
                     extra_node_output[colname] = node.data
                     for k in keys:
                         extra_node_output[colname] = extra_node_output[colname][k]
-                except (
-                    KeyError,
-                    TypeError,
-                    AttributeError,
-                ):  # catch none existent key name, None, or no data attribute (e.g. for polytomies)
+                except (KeyError, TypeError, AttributeError):
+                    # catch none existent key name, None, or no data attribute
+                    # (e.g. for polytomies)
                     extra_node_output[colname] = None
             node_csv.writerow(base_output + list(extra_node_output.values()))
 
@@ -435,9 +453,9 @@ def write_brief_newick(self, out, polytomy_braces="()", write_otts=False):
     """
     Copied from the default dendropy 4 function Node._write_newick
     The function requires a binary tree, and the tree should have been ladderized beforehand
-    It outputs id a string consisting of braces only (no commas), such that the number of tips
-    (and therefore the number of nodes-1, since this is a binary tree) is equal to the number of
-    characters in the string. Edges lengths are not output, but internal nodes that have an edge
+    It outputs a string consisting of braces only (no commas), such that the number of tips
+    (& therefore the number of nodes-1, since this is a binary tree) is equal to the number of
+    characters in the string. Edges lengths are omitted, but internal nodes that have an edge
     length of 0 are represented by 'polytomy_braces' which can be specified, e.g. '{}' or '<>'
     """
     child_nodes = self.child_nodes()
@@ -486,28 +504,31 @@ def write_pop_newick(self, out):
     try:
         ott = self.data["ott"]
         if label.endswith("'"):
-            out.write(label[:-1] + "_ott{}'".format(ott))
+            out.write(label[:-1] + f"_ott{ott}'")
         else:
-            out.write(label + "_ott{}".format(ott))
+            out.write(label + f"_ott{ott}")
     except (AttributeError, KeyError):
         out.write(label)
-
-    if sel is not None:
-        s = ""
-        try:
-            s = float(sel)
-            s = str(s)
-        except ValueError:
-            s = str(sel)
-        if s:
-            out.write(":%s" % s)
+    e = self.edge
+    if e:
+        sel = e.length
+        if sel is not None:
+            s = ""
+            try:
+                s = float(sel)
+                s = str(s)
+            except ValueError:
+                s = str(sel)
+            if s:
+                out.write(f":{s}")
 
 
 if __name__ == "__main__":
     # test
     import sys
-    from dendropy import Tree
     from collections import OrderedDict
+
+    from dendropy import Tree
 
     Tree.write_preorder_to_csv = write_preorder_to_csv
     Tree.set_node_ages = set_node_ages

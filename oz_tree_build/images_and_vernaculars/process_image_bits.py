@@ -1,17 +1,19 @@
 import argparse
 import logging
-from oz_tree_build.utilities.db_helper import connect_to_database, read_config, placeholder
+
 from oz_tree_build._OZglobals import src_flags
+from oz_tree_build.utilities.db_helper import (
+    connect_to_database,
+    placeholder,
+    read_config,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def is_licence_public_domain(licence):
-    return (
-        licence.endswith("public domain") or 
-        licence.startswith("pd") or 
-        licence.startswith("cc0")
-    )
+    return licence.endswith("public domain") or licence.startswith("pd") or licence.startswith("cc0")
+
 
 def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
     """
@@ -30,6 +32,7 @@ def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
             first = False
     return made_changes
 
+
 def resolve_from_config(ott, config_file):
     """
     Process image bits for the given ott, getting a new db_context from a config file.
@@ -40,6 +43,7 @@ def resolve_from_config(ott, config_file):
 
     db = connect_to_database(database)
     return resolve(db, ott)
+
 
 def resolve(db, ott):
     """
@@ -60,10 +64,8 @@ def resolve(db, ott):
         "overall_best_pd",
     ]
     rows = db.executesql(
-        "SELECT "
-        + ", ".join(columns)
-        + " FROM images_by_ott WHERE ott={0} ORDER BY id;".format(placeholder(db)),
-        (ott, ),
+        "SELECT " + ", ".join(columns) + f" FROM images_by_ott WHERE ott={placeholder(db)} ORDER BY id;",
+        (ott,),
     )
 
     # Turn each row into a dictionary, and get them all into a list
@@ -71,7 +73,7 @@ def resolve(db, ott):
     # Sort the images by rating descending
     images.sort(key=lambda x: x["rating"], reverse=True)
 
-    # Group the images by their source (each sublist will already be sorted by rating descending)
+    # Group the images by src (each sublist will already be sorted by rating descending)
     images_by_src = {}
     for row in images:
         images_by_src.setdefault(row["src"], []).append(row)
@@ -88,9 +90,9 @@ def resolve(db, ott):
         made_changes |= set_bit_for_first_image_only(
             images_for_src,
             "best_verified",
-            # Images from onezoom_bespoke or wiki are treated as verified, while others are not
-            candidate=lambda x: src == src_flags["onezoom_bespoke"]
-            or src == src_flags["wiki"],
+            # Images from onezoom_bespoke or wiki are treated as verified,
+            # others may not be: TODO: check this - some others are
+            candidate=lambda _, src=src: src == src_flags["onezoom_bespoke"] or src == src_flags["wiki"],
         )
 
     # Set the overall_best_any and overall_best_pd bits for all images
@@ -98,9 +100,7 @@ def resolve(db, ott):
     made_changes |= set_bit_for_first_image_only(
         images, "overall_best_verified", candidate=lambda row: row["best_verified"]
     )
-    made_changes |= set_bit_for_first_image_only(
-        images, "overall_best_pd", candidate=lambda row: row["best_pd"]
-    )
+    made_changes |= set_bit_for_first_image_only(images, "overall_best_pd", candidate=lambda row: row["best_pd"])
 
     if made_changes:
         logger.info(f"Updating database since there are changes for ott {ott}")
@@ -108,13 +108,14 @@ def resolve(db, ott):
         for row in images:
             db._adapter.execute(
                 (
-                    "UPDATE images_by_ott SET best_any={0}, "
-                    "best_verified={0}, "
-                    "best_pd={0}, "
-                    "overall_best_any={0}, "
-                    "overall_best_verified={0}, "
-                    "overall_best_pd={0} "
-                    "WHERE id={0};").format(placeholder(db)),
+                    f"UPDATE images_by_ott SET best_any={placeholder(db)}, "
+                    f"best_verified={placeholder(db)}, "
+                    f"best_pd={placeholder(db)}, "
+                    f"overall_best_any={placeholder(db)}, "
+                    f"overall_best_verified={placeholder(db)}, "
+                    f"overall_best_pd={placeholder(db)} "
+                    f"WHERE id={placeholder(db)};"
+                ),
                 (
                     row["best_any"],
                     row["best_verified"],
@@ -145,7 +146,7 @@ def main():
     parser.add_argument(
         "--conf-file",
         default=None,
-        help="The configuration file to use. If not given, defaults to private/appconfig.ini",
+        help=("The configuration file to use. " "If not given, defaults to ../../../OZtree/private/appconfig.ini"),
     )
 
     parser.add_argument("ott", type=str, help="The leaf ott to process")

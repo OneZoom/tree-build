@@ -1,8 +1,6 @@
 """
 Format a newick tree with indentation to make it more human readable
-"""
 
-"""
 For example, if the input tree is:
 (Tupaia_tana:8.5,(Tupaia_picta:8.0,(Tupaia_montana:7.0,Tupaia_splendidula:7.0):1.0):0.5):4.5;
 The output is:
@@ -31,7 +29,7 @@ __author__ = "David Ebbo"
 whole_token_regex = re.compile("[^(),;]+")
 
 
-def format(newick_tree, output_stream, indent_spaces=2):
+def format_nwk(newick_tree, output_stream, indent_spaces=2):
     newick_tree = trim_tree(newick_tree, strip_semicolon=False)
 
     indent_string = " " * indent_spaces
@@ -76,7 +74,7 @@ def format(newick_tree, output_stream, indent_spaces=2):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "treefile",
         type=argparse.FileType("r"),
@@ -99,7 +97,7 @@ def main():
         help="the number of spaces for each indentation level",
     )
     args = parser.parse_args()
-    format(args.treefile.read(), args.outputfile, args.indent_spaces)
+    format_nwk(args.treefile.read(), args.outputfile, args.indent_spaces)
 
 
 if __name__ == "__main__":

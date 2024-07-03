@@ -3,8 +3,9 @@ Unit test for check_ultrametricity and fix_ultrametricity
 """
 
 import dendropy
-from oz_tree_build.newick.fix_ultrametricity import fix_ultrametricity
+
 from oz_tree_build.newick.check_ultrametricity import check_ultrametricity
+from oz_tree_build.newick.fix_ultrametricity import fix_ultrametricity
 
 
 def check_tree_string(tree_string):
@@ -40,9 +41,7 @@ def test_non_ultrametric_tree_with_missing_length():
     assert not check_tree_string("(A:3,(B:2,C:2),E:3)D:7;")
 
 
-def check_fix_ultrametric_tree(
-    tree_string, expected_length, max_adjustment, expected_tree_string
-):
+def check_fix_ultrametric_tree(tree_string, expected_length, max_adjustment, expected_tree_string):
     tree = dendropy.Tree.get(data=tree_string, schema="newick")
     fix_ultrametricity(tree, expected_length, max_adjustment)
     assert tree.as_string(schema="newick").strip() == expected_tree_string

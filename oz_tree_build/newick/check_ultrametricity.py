@@ -3,8 +3,9 @@ Check if a tree is ultrametric, and if not, print the details of the non-ultrame
 """
 
 import argparse
-import dendropy
 import os
+
+import dendropy
 
 
 def get_taxon_name(node):
@@ -15,7 +16,7 @@ def get_taxon_name(node):
         return "Root"
 
     if len(node.child_nodes()) > 0:
-        return f"(Unnamed node)"
+        return "(Unnamed node)"
 
     # If there's no taxon, it's probably an extinct prop-up node,
     # and we get the name from the parent node
@@ -53,9 +54,12 @@ def check_ultrametricity(tree, print_details=False):
                 known_total_length = total_length
                 initial_name = name
             elif not non_ultrametric_message:
-                # For other leaves, check that they have the same total length. If not, record the error
+                # For other leaves, check they have the same total length
                 if known_total_length != total_length:
-                    non_ultrametric_message = f"Not ultrametric! {name} has length {total_length}, but {initial_name} has length {known_total_length}"
+                    non_ultrametric_message = (
+                        f"Not ultrametric! {name} has length {total_length}, "
+                        f"but {initial_name} has length {known_total_length}"
+                    )
 
             if print_details:
                 print(f"{name}: {total_length}={'+'.join([str(x) for x in edge_lens])}")

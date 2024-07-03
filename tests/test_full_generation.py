@@ -1,9 +1,9 @@
-import io
-import types
 import os
+import types
 
 from oz_tree_build.taxon_mapping_and_popularity import CSV_base_table_creator
 from oz_tree_build.utilities.file_utils import check_identical_files
+
 from .felidae_helpers import get_felidae_test_folders
 
 
@@ -26,13 +26,9 @@ def test_full_felidae_generation():
     args.OpenTreeTaxonomy = os.path.join(input_path, "Felidae_taxonomy.tsv")
     args.EOLidentifiers = os.path.join(input_path, "Felidae_provider_ids.csv")
     args.wikidataDumpFile = os.path.join(input_path, "Felidae_latest-all.json")
-    args.wikipediaSQLDumpFile = os.path.join(
-        input_path, "Felidae_enwiki-latest-page.sql"
-    )
+    args.wikipediaSQLDumpFile = os.path.join(input_path, "Felidae_enwiki-latest-page.sql")
     args.wikipedia_totals_bz2_pageviews = [
-        os.path.join(input_path, f)
-        for f in os.listdir(input_path)
-        if f.startswith("Felidae_pageviews")
+        os.path.join(input_path, f) for f in os.listdir(input_path) if f.startswith("Felidae_pageviews")
     ]
 
     # Sort the list of pagecount files so that the order is consistent

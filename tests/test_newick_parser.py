@@ -1,3 +1,7 @@
+import re
+
+import pytest
+
 from oz_tree_build.newick.newick_parser import parse_tree
 
 
@@ -38,26 +42,15 @@ def test_full_parse_result():
 
 
 def test_quoted_taxa():
-    node_list = list(
-        parse_tree("('Abc/def_ott123','qw e$r&ty':1.2)'C_*(ot)t789_ott987':5.5;")
-    )
+    node_list = list(parse_tree("('Abc/def_ott123','qw e$r&ty':1.2)'C_*(ot)t789_ott987':5.5;"))
     assert node_list[0]["taxon"] == "Abc/def"
     assert node_list[1]["taxon"] == "qw e$r&ty"
     assert node_list[2]["taxon"] == "C_*(ot)t789"
 
 
 def verify_exception(tree_string, exception_text):
-    exception = False
-    try:
-        node_list = list(parse_tree(tree_string))
-    except SyntaxError as e:
-        exception = True
-
-        # Assert that the error message contains the expected text
-        assert exception_text in e.msg
-
-    # Assert that we did in fact get an exception
-    assert exception
+    with pytest.raises(SyntaxError, match=re.escape(exception_text)):
+        list(parse_tree(tree_string))
 
 
 def test_syntax_error_too_many_closed_braces():

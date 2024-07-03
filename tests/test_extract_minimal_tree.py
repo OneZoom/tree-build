@@ -4,7 +4,10 @@ Unit test for extract_minimal_tree
 
 from oz_tree_build.newick.extract_minimal_tree import extract_minimal_tree
 
-test_tree = "(A,(BA,((BBAA_ott123,BBAB,BBAC,BBAD)BAA,(BBBA)BBB,(BBCA:12.34,BBCB)BBC_ott456:78.9)BB)B_ott789,((CAA,CAB):5.25,CB)C,D)Root;"
+test_tree = (
+    "(A,(BA,((BBAA_ott123,BBAB,BBAC,BBAD)BAA,(BBBA)BBB,(BBCA:12.34,BBCB)BBC_ott456:78.9)"
+    "BB)B_ott789,((CAA,CAB):5.25,CB)C,D)Root;"
+)
 
 
 def test_some_missing_taxa():

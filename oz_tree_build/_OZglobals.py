@@ -11,9 +11,7 @@ except ImportError:
     # Simply define cache.ram to be a function that returns the result of calling
     # the 2nd arg. This is a complex HACK!!!
     cache = type("", (), dict(ram=lambda self, name, func, **kw: func()))()
-    current = type(
-        "", (), {}
-    )()  # allow us to set e.g. current.OZglobals, so we don't bomb out later
+    current = type("", (), {})()  # allow us to set e.g. current.OZglobals
 
 # bitwise flags for existence of different language wikipedia articles
 # this variable is also used in construct_wiki_info in CSV_base_table_creator.py

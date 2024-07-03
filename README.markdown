@@ -1,6 +1,8 @@
 # OneZoom Tree Building repo
 
 This repository contains everything that is needed to build the OneZoom tree and all the other files needed by the backend.
+It also contains scripting libraries for harvesting information from wikidata and images from wikimedia commons that can
+be used to populate a running OneZoom instance.
 
 ## Setting up the environment
 

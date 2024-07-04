@@ -57,10 +57,10 @@ def resolve(db, ott):
         "rating",
         "licence",
         "best_any",
-        "best_verified",
-        "best_pd",
         "overall_best_any",
+        "best_verified",
         "overall_best_verified",
+        "best_pd",
         "overall_best_pd",
     ]
     rows = db.executesql(
@@ -87,12 +87,15 @@ def resolve(db, ott):
             "best_pd",
             candidate=lambda row: is_licence_public_domain(row["licence"]),
         )
+        # NB: sources can be marked as verified, but only if they are already marked as such
+        # However, images from onezoom_bespoke or wiki are always treated as verified,
         made_changes |= set_bit_for_first_image_only(
             images_for_src,
             "best_verified",
-            # Images from onezoom_bespoke or wiki are treated as verified,
-            # others may not be: TODO: check this - some others are
-            candidate=lambda _, src=src: src == src_flags["onezoom_bespoke"] or src == src_flags["wiki"],
+            candidate=lambda row, src=src: (
+                src in (src_flags["wiki"], src_flags["onezoom_bespoke"])
+                or row["best_verified"] == 1
+            ),
         )
 
     # Set the overall_best_any and overall_best_pd bits for all images

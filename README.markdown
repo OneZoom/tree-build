@@ -9,7 +9,7 @@ be used to populate a running OneZoom instance.
 The first step to using this repo is to create a Python virtual environment and activate it:
 
     # From the root of the repo, create a Python environment and activate it
-    python3 -m venv .venv
+    python -m venv .venv
     source .venv/bin/activate
 
     # Install it
@@ -29,9 +29,12 @@ in `../OZtree/private/appconfig.ini`, assuming that this repository is a sibling
 installation is active. Alternatively (e.g. if the plain `pytest` command is giving errors, or if you do not
 wish to use your OneZoom database for unit testing purposes), a config file
 that uses a SQLite database is provided in the `tests` directory, and the following command can be used
-which should always work without error
+which should always work without error.
 
     pytest --conf-file tests/appconfig.ini
+
+This uses mocked APIs. You can also run with the real APIs using the `--real-apis` swithc, in whcih case
+you will need a valid Azure Image cropping key in your appconfig.ini.
 
 ## Building the latest tree from OpenTree
 

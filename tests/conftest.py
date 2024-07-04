@@ -42,3 +42,11 @@ def db(conf_file):
     db = connect_to_database(conf_file=conf_file)
     yield db
     db.close()
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--real-apis"):
+        skip_real_api = pytest.mark.skip(reason="skipped because testing against real APIs")
+        for item in items:
+            if "skip_real_api" in item.keywords:
+                item.add_marker(skip_real_api)

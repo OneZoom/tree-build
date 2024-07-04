@@ -262,14 +262,28 @@ def get_image_license_info(escaped_image_name):
 
         # Some images have a flickr common license URL but not License field, meaning
         # "No known copyright restrictions"==pd (e.g. Potos_flavus_(22985770100).jpg)
-        if "License" not in extmetadata and license_info["license_url"] == "https://www.flickr.com/commons/usage/":
-            license_info["license"] = "commons"
+        # TODO, generalise this to other appropriate licenses, e.g. using a dict:
+        # {
+        #     "https://www.flickr.com/commons/usage/": (
+        #          "Flickr commons",
+        #          "Marked on Flickr commmons as being in the public domain",
+        #     ),
+        #     "http://artlibre.org/licence/lal/en": (
+        #         "cc-by-sa-4.0",
+        #         None,
+        #     ),
+        # }
+        if license_info["license_url"] == "https://www.flickr.com/commons/usage/":
+            license_info["license"] = "flickr_commons"
+        if license_info["license_url"] == "http://artlibre.org/licence/lal/en":
+            # See https://en.wikipedia.org/wiki/Free_Art_License
+            license_info["license"] = "cc-by-sa-4.0"
         else:
             license_info["license"] = extmetadata["License"]["value"]
 
         # If the license doesn't start with "cc" or "pd", we can't use it
         li = license_info["license"].lower()
-        if not li.startswith("cc") and not li.startswith("pd") and not li == "commons":
+        if not li.startswith("cc") and not li.startswith("pd") and not li == "flickr_commons":
             logger.warning(f"Unacceptable license for '{escaped_image_name}': {li}")
             return None
     except KeyError:
@@ -335,9 +349,12 @@ def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, crop=None, 
         return False
 
     is_public_domain = True
+    # NB keep all pd strings as ending with the words "public domain"
     if license_info["license"].startswith("pd"):
         license_string = "Marked as being in the public domain"
-    elif license_info["license"] in {"cc0", "commons"}:
+    elif license_info["license"] == "flickr_commons":
+        license_string = "Marked on Flickr commons as being in the public domain"
+    elif license_info["license"] == "cc0":
         license_string = "Released into the public domain"
     else:
         is_public_domain = False
@@ -499,15 +516,15 @@ def process_leaf(
     else:
         sql += f"name={s};"
 
-    try:
-        result = db.executesql(sql, (ott_or_taxon,))
-        if len(result) > 1:
-            raise ValueError(f"Multiple results for '{ott_or_taxon}'")
-        (ott, qid, name) = result[0]
-    except TypeError:
+    result = db.executesql(sql, (ott_or_taxon,))
+    if len(result) > 1:
+        logger.error(f"Multiple results for '{ott_or_taxon}'")
+        return
+    if len(result) == 0:
         logger.error(f"'{ott_or_taxon}' not found in ordered_leaves table")
         return
 
+    (ott, qid, name) = result[0]
     logger.info(f"Processing '{name}' (ott={ott}, qid={qid})")
 
     # Three cases for the rating:

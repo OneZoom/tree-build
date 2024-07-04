@@ -33,8 +33,6 @@ class RemoteAPIs:
     Use the lion as a test case
     """
 
-    cc0_url = "https://creativecommons.org/publicdomain/zero/1.0/"
-
     def add_mocked_request(self, url, querystring=None, *, response):
         if querystring is not None:
             url += "?" + querystring
@@ -44,6 +42,12 @@ class RemoteAPIs:
         self.mock_qid = mock_qid
         self.true_qid = 140
         self.mocked_requests = {}  # Maps URLs to JSON responses to return
+        self.license_urls = {
+            "cc0": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "flickr_commons": "https://www.flickr.com/commons/usage/",
+            "lal": "http://artlibre.org/licence/lal/en",
+            "cc-by-3.0": "https://creativecommons.org/licenses/by/3.0",
+        }
 
         # Download an arbitrary test image in the tmp folder to use in the tests
         self.temp_image_path = "/tmp/mocked_urlretrieve_image.jpg"
@@ -54,9 +58,7 @@ class RemoteAPIs:
             self.temp_image_content = f.read()
 
         self.add_mocked_request(
-            "https://www.wikidata.org/w/api.php",
-            f"action=wbgetentities&ids=Q{self.mock_qid}&format=json",
-            response=self.build_wikidata_entities(
+            **self.wikidata_response(
                 image_data=[
                     {"name": "FirstLionImage.jpg", "rank": "normal"},
                     {"name": "SecondLionImage.jpg", "rank": "preferred"},
@@ -79,58 +81,24 @@ class RemoteAPIs:
             ("Lion d'Afrique", "fr"),
         )
 
+        self.add_mocked_request(**self.wikimedia_response("SecondLionImage.jpg"))
+        self.add_mocked_request(**self.wikimedia_file_response("SecondLionImage.jpg"))
+        self.add_mocked_request(**self.wikimedia_response("NoArtist.jpg", artist=None))
+        self.add_mocked_request(**self.wikimedia_file_response("NoArtist.jpg"))
         self.add_mocked_request(
-            "https://api.wikimedia.org/w/api.php"
-            "?action=query&titles=File%3aSecondLionImage.jpg&format=json&prop=imageinfo"
-            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseUrl|Artist",
-            response={
-                "query": {
-                    "pages": {
-                        "-1": {
-                            "title": "File:Blah.jpg",
-                            "imageinfo": [
-                                {
-                                    "extmetadata": {
-                                        "License": {"value": "cc0"},
-                                        "LicenseUrl": {"value": self.cc0_url},
-                                        "Artist": {"value": "John Doe"},
-                                    }
-                                }
-                            ],
-                        }
-                    }
-                }
-            },
+            **self.wikimedia_response("PublicDomain.jpg", licence="pd-NOOA")
         )
+        self.add_mocked_request(**self.wikimedia_file_response("PublicDomain.jpg"))
+        self.add_mocked_request(**self.wikimedia_response("CC-BY3.jpg", licence="cc-by-3.0"))
+        self.add_mocked_request(**self.wikimedia_file_response("CC-BY3.jpg"))
         self.add_mocked_request(
-            "https://api.wikimedia.org/w/api.php"
-            "?action=query&titles=File%3aBadLicence.jpg&format=json&prop=imageinfo"
-            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseUrl|Artist",
-            response={
-                "query": {
-                    "pages": {
-                        "-1": {
-                            "title": "File:BadLicence.jpg",
-                            "imageinfo": [
-                                {
-                                    "extmetadata": {
-                                        "License": {"value": "GPL"},
-                                        "Artist": {"value": "John Doe"},
-                                    }
-                                }
-                            ],
-                        }
-                    }
-                }
-            },
+            **self.wikimedia_response("Flickr.jpg", licence="flickr_commons")
         )
+        self.add_mocked_request(**self.wikimedia_file_response("Flickr.jpg"))
+        self.add_mocked_request(**self.wikimedia_response("BadLicence.jpg", "GPL"))
         self.add_mocked_request(
-            "https://api.wikimedia.org/core/v1/commons/file/SecondLionImage.jpg",
-            response={
-                "preferred": {  # NB: means preferred image *size* not preferred image
-                    "url": "https://upload.wikimedia.org/wikipedia/commons/7/73/SecondLionImage.jpg"
-                }
-            },
+            # This should not be called: if license is bad => don't download
+            **self.wikimedia_file_response("BadLicence.jpg", "xxx")
         )
 
     # Mock the requests.get function
@@ -142,6 +110,8 @@ class RemoteAPIs:
 
     def mocked_urlretrieve(self, *args, **kwargs):
         # Instead of actually downloading, just copy the test image to the destination
+        if not args[0].startswith("http"):
+            raise ValueError("Only HTTP URLs are supported in these tests")
         shutil.copyfile(self.temp_image_path, args[1])
 
     # Mock the Azure Vision API smart crop response
@@ -152,9 +122,48 @@ class RemoteAPIs:
             )
         )
 
-    def build_wikidata_entities(self, image_data, vernacular_data):
+    def wikimedia_file_response(self, image_name, url=None):
+        if url is None:
+            url = "https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg"
+        return {
+            "url": f"https://api.wikimedia.org/core/v1/commons/file/{image_name}",
+            "response": {
+                "preferred": {"url": url}  # means preferred image *size* not preferred image
+            },
+        }
+
+    def wikimedia_response(self, image_name, licence="cc0", artist="John Doe"):
+        # NB use british spelling of licence to avoid shadowing python builtin
+        url = (
+            "https://api.wikimedia.org/w/api.php"
+            f"?action=query&titles=File%3a{image_name}&format=json&prop=imageinfo"
+            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseUrl|Artist"
+        )
+        response = {
+            "query": {
+                "pages": {
+                    "-1": {
+                        "title": "File:Blah.jpg",
+                        "imageinfo": [{"extmetadata": {}}],
+                    }
+                }
+            }
+        }
+        extmetadata = response["query"]["pages"]["-1"]["imageinfo"][0]["extmetadata"]
+        if artist is not None:
+            extmetadata["Artist"] = {"value": artist}
+        if licence in self.license_urls:
+            extmetadata["License"] = {"value": licence}
+            extmetadata["LicenseUrl"] = {"value": self.license_urls[licence]}
+        else:
+            extmetadata["License"] = {"value": licence}
+        return {"url": url, "response": response}
+
+    def wikidata_response(self, image_data, vernacular_data):
         qid = f"Q{self.mock_qid}"
-        ret_val = {}
+        url = "https://www.wikidata.org/w/api.php"
+        querystring = f"action=wbgetentities&ids={qid}&format=json"
+        response = {}
         images = []
         vernaculars = []
         for img in image_data:
@@ -179,9 +188,9 @@ class RemoteAPIs:
                     "rank": vn["rank"],
                 }
             )
+        response["entities"] = {qid: {"claims": {"P18": images, "P1843": vernaculars}}}
 
-        ret_val["entities"] = {qid: {"claims": {"P18": images, "P1843": vernaculars}}}
-        return ret_val
+        return {"url": url, "querystring": querystring, "response": response}
 
     def mock_patch_all_web_request_methods(self, f):
         @mock.patch("requests.get", side_effect=self.mocked_requests_get)
@@ -240,24 +249,32 @@ class TestFunctions:
 class TestAPI:
     apis = RemoteAPIs(mock_qid=-1234)
 
-    def setup_lookups(self, db, qid, tmp_path, keep_rows):
+    def setup_lookups(
+        self, db, qid, tmp_path, keep_rows, ott=None, repeat_rows=1, name="Panthera leo"
+    ):
         self.db = db
         self.tmp_dir = tmp_path
         self.keep_rows = keep_rows
         self.qid = qid
-        delete_rows(db, self.ott)
-        db.executesql(
-            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
-            "VALUES (0, 0, {0}, {0}, {0});".format(placeholder(db)),
-            ("Panthera leo", self.ott, self.qid),
-        )
+        if ott is None:
+            ott = self.ott
+        delete_rows(db, ott)
+        for _ in range(repeat_rows):
+            db.executesql(
+                "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
+                "VALUES (0, 0, {0}, {0}, {0});".format(placeholder(db)),
+                (name, ott, qid),
+            )
 
-    def teardown_lookups(self):
+    def teardown_lookups(self, ott=None):
+        if ott is None:
+            ott = self.ott
         if not self.keep_rows:
-            delete_rows(self.db, self.ott)
+            delete_rows(self.db, ott)
 
-    def check_downloaded_wiki_image(self, qid, crop=None):
-        img_dir = os.path.join(self.tmp_dir, str(src_flags["wiki"]), str(qid)[-3:])
+    def check_downloaded_wiki_image(self, qid, crop=None, is_wikidata=True):
+        src_dir = str(src_flags["wiki"]) if is_wikidata else str(src_flags["onezoom_bespoke"])
+        img_dir = os.path.join(self.tmp_dir, src_dir, str(qid)[-3:])
         if os.path.exists(os.path.join(img_dir, f"{qid}.jpg")):
             uncropped = os.path.join(img_dir, f"{qid}_uncropped.jpg")
             assert os.path.exists(uncropped)
@@ -280,42 +297,60 @@ class TestAPI:
             return True
         return False
 
-    @property
-    def image_sql(self):
-        return "SELECT src_id, rating FROM images_by_ott " f"WHERE ott={placeholder(self.db)};"
+    def vernaculars_in_db(self, ott=None):
+        sql = f"SELECT vernacular FROM vernacular_by_ott WHERE ott={placeholder(self.db)};"
+        if ott is None:
+            ott = self.ott
+        return {r[0] for r in self.db.executesql(sql, (ott,))}
 
-    @property
-    def vernacular_sql(self):
-        return "SELECT vernacular FROM vernacular_by_ott " f"WHERE ott={placeholder(self.db)};"
+    def image_rows_in_db(self, ott=None):
+        sql = (
+            "SELECT src_id, rating, rights, licence FROM images_by_ott "
+            f"WHERE ott={placeholder(self.db)};"
+        )
+        if ott is None:
+            ott = self.ott
+        return self.db.executesql(sql, (ott,))
 
     @apis.mock_patch_all_web_request_methods
     def verify_process_leaf(self, image=None, rating=None, skip_images=None, crop=None, *args):
         get_wiki_images.process_leaf(
             self.db,
-            self.ott,
+            self.ott or self.taxon_name,
             image,
             rating=rating,
             output_dir=self.tmp_dir,
             skip_images=skip_images,
             crop=crop,
         )
-        names = {r[0] for r in self.db.executesql(self.vernacular_sql, (self.ott,))}
-        assert "Lion" in names
 
-    def test_process_default_leaf(self, db, tmp_path, keep_rows, caplog):
-        self.ott = "-551"
+    @pytest.mark.parametrize("use_ott", [True, False])
+    def test_process_default_leaf(self, db, use_ott, tmp_path, keep_rows, caplog):
+        ott = "-551"
+        sp_name = "Homo sapiens"
+        if use_ott:
+            self.ott = ott
+        else:
+            self.ott = None
+            self.taxon_name = sp_name
         crop = None
         image = None  # The name of the image to get or None to use the default WD image
         rating = 40123
-        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, ott=ott, name=sp_name)
         with caplog.at_level(logging.WARNING):
             self.verify_process_leaf(image, rating, False, crop)
         assert caplog.text == ""
-        assert self.check_downloaded_wiki_image(self.qid, crop)
-        rows = self.db.executesql(self.image_sql, (self.ott,))
+        assert self.check_downloaded_wiki_image(self.qid, crop, image is None)
+        assert "Lion" in self.vernaculars_in_db(ott)
+        rows = self.image_rows_in_db(ott)
         assert len(rows) == 1
-        assert rows[0] == (self.qid, rating or default_rating(image))
-        self.teardown_lookups()
+        assert rows[0] == (
+            self.qid,
+            rating or default_rating(image),
+            "John Doe",
+            "Released into the public domain",
+        )
+        self.teardown_lookups(ott=ott)
 
     def test_process_default_leaf_skip_images(self, db, tmp_path, keep_rows):
         self.ott = "-552"
@@ -323,27 +358,131 @@ class TestAPI:
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         self.verify_process_leaf(None, None, True, crop)
         # Images skipped, so should have no row
-        rows = self.db.executesql(self.image_sql, (self.ott,))
-        assert len(rows) == 0
+        assert "Lion" in self.vernaculars_in_db()
         assert not self.check_downloaded_wiki_image(self.qid, crop)
+        assert len(self.image_rows_in_db()) == 0
+        self.teardown_lookups()
+
+    def test_alt_cc_license(self, db, tmp_path, keep_rows, caplog):
+        self.ott = "-553"
+        crop = None
+        image = "CC-BY3.jpg"
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
+        # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf(image, None, False, crop)
+        rows = self.image_rows_in_db()
+        assert len(rows) == 1
+        assert rows[0][1:] == (
+            default_rating(image),
+            "© John Doe",
+            f"cc-by-3.0 ({self.apis.license_urls['cc-by-3.0']})",
+        )
+        assert self.check_downloaded_wiki_image(rows[0][0], crop, image is None)
+        self.teardown_lookups()
+
+    def test_pd_license(self, db, tmp_path, keep_rows, caplog):
+        self.ott = "-554"
+        crop = None
+        image = "PublicDomain.jpg"
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf(image, None, False, crop)
+        rows = self.image_rows_in_db()
+        assert len(rows) == 1
+        assert rows[0][1:] == (
+            default_rating(image),
+            "John Doe",
+            "Marked as being in the public domain",
+        )
+        assert self.check_downloaded_wiki_image(rows[0][0], crop, image is None)
+        self.teardown_lookups()
+
+    def test_flickr_license(self, db, tmp_path, keep_rows, caplog):
+        self.ott = "-555"
+        crop = None
+        rating = 44444
+        image = "Flickr.jpg"
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf(image, rating, False, crop)
+        assert "Lion" in self.vernaculars_in_db()
+        rows = self.image_rows_in_db()
+        assert len(rows) == 1
+        assert rows[0][1:] == (
+            rating or default_rating(image),
+            "John Doe",
+            "Marked on Flickr commons as being in the public domain",
+        )
+        assert self.check_downloaded_wiki_image(rows[0][0], crop, image is None)
+        self.teardown_lookups()
+
+    def test_no_artist(self, db, tmp_path, keep_rows, caplog):
+        self.ott = "-556"
+        crop = None
+        rating = 40123
+        image = "NoArtist.jpg"
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
+        # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf(image, rating, False, crop)
+        assert "Artist not found" in caplog.text
+        assert "Lion" in self.vernaculars_in_db()
+        rows = self.image_rows_in_db()
+        assert len(rows) == 1
+        assert rows[0][1:] == (
+            rating or default_rating(image),
+            "Unknown artist",
+            "Released into the public domain",
+        )
+        assert self.check_downloaded_wiki_image(rows[0][0], crop, image is None)
         self.teardown_lookups()
 
     def test_bad_licence(self, db, tmp_path, keep_rows, caplog):
-        self.ott = "-553"
+        self.ott = "-557"
         crop = None
+        image = "BadLicence.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf("BadLicence.jpg", None, False, crop)
+            self.verify_process_leaf(image, None, False, crop)
         assert "Unacceptable license" in caplog.text
+        assert "Lion" in self.vernaculars_in_db()
+        assert not self.check_downloaded_wiki_image(self.qid, crop, image is None)
+        assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups()
+
+    def test_multiple_ott(self, db, tmp_path, keep_rows, caplog):
+        self.ott = "-558"
+        crop = None
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, repeat_rows=2)
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf(None, None, False, crop)
+        assert "Multiple" in caplog.text
+        assert len(self.vernaculars_in_db()) == 0
+        assert not self.check_downloaded_wiki_image(self.qid, crop)
+        assert len(self.image_rows_in_db()) == 0
+        self.teardown_lookups()
+
+    def test_no_ott(self, db, tmp_path, keep_rows, caplog):
+        ordered_leaf_ott = -1111111
+        self.ott = "-559"
+        crop = None
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, ott=ordered_leaf_ott)
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf(None, None, False, crop)
+        assert "not found in ordered_leaves table" in caplog.text
+        assert len(self.vernaculars_in_db()) == 0
+        assert not self.check_downloaded_wiki_image(self.qid, crop)
+        assert len(self.image_rows_in_db()) == 0
+        self.teardown_lookups(ott=ordered_leaf_ott)
 
     @pytest.mark.skip(reason="https://github.com/OneZoom/tree-build/issues/78")
     def test_existing_image_rating_kept(self, db, keep_rows, tmp_path):
-        self.ott = "-553"
+        self.ott = "-560"
         crop = None
         self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
         self.verify_process_leaf(None, None, None, crop)
-        rows = self.db.executesql(self.image_sql, (self.ott,))
+        rows = self.image_rows_in_db()
         assert rows[0][1] == default_rating()
         self.verify_process_leaf(None, 44444, None, crop)
         assert rows[0][1] == 44444
@@ -353,8 +492,10 @@ class TestAPI:
         assert rows[0][1] == 40123
         self.teardown()
 
+    @pytest.mark.skip_real_apis()
     def test_process_clade(self):
-        # TODO!
+        # TODO! We need to creata a fake filtered wikidata JSON dump with a 2 taxa
+        # with different (negative) qIDs.
         pass
 
 

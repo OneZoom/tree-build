@@ -85,15 +85,11 @@ class RemoteAPIs:
         self.add_mocked_request(**self.wikimedia_file_response("SecondLionImage.jpg"))
         self.add_mocked_request(**self.wikimedia_response("NoArtist.jpg", artist=None))
         self.add_mocked_request(**self.wikimedia_file_response("NoArtist.jpg"))
-        self.add_mocked_request(
-            **self.wikimedia_response("PublicDomain.jpg", licence="pd-NOOA")
-        )
+        self.add_mocked_request(**self.wikimedia_response("PublicDomain.jpg", licence="pd-NOOA"))
         self.add_mocked_request(**self.wikimedia_file_response("PublicDomain.jpg"))
         self.add_mocked_request(**self.wikimedia_response("CC-BY3.jpg", licence="cc-by-3.0"))
         self.add_mocked_request(**self.wikimedia_file_response("CC-BY3.jpg"))
-        self.add_mocked_request(
-            **self.wikimedia_response("Flickr.jpg", licence="flickr_commons")
-        )
+        self.add_mocked_request(**self.wikimedia_response("Flickr.jpg", licence="flickr_commons"))
         self.add_mocked_request(**self.wikimedia_file_response("Flickr.jpg"))
         self.add_mocked_request(**self.wikimedia_response("BadLicence.jpg", "GPL"))
         self.add_mocked_request(
@@ -249,9 +245,7 @@ class TestFunctions:
 class TestAPI:
     apis = RemoteAPIs(mock_qid=-1234)
 
-    def setup_lookups(
-        self, db, qid, tmp_path, keep_rows, ott=None, repeat_rows=1, name="Panthera leo"
-    ):
+    def setup_lookups(self, db, qid, tmp_path, keep_rows, ott=None, repeat_rows=1, name="Panthera leo"):
         self.db = db
         self.tmp_dir = tmp_path
         self.keep_rows = keep_rows
@@ -304,10 +298,7 @@ class TestAPI:
         return {r[0] for r in self.db.executesql(sql, (ott,))}
 
     def image_rows_in_db(self, ott=None):
-        sql = (
-            "SELECT src_id, rating, rights, licence FROM images_by_ott "
-            f"WHERE ott={placeholder(self.db)};"
-        )
+        sql = "SELECT src_id, rating, rights, licence FROM images_by_ott " f"WHERE ott={placeholder(self.db)};"
         if ott is None:
             ott = self.ott
         return self.db.executesql(sql, (ott,))
@@ -327,7 +318,7 @@ class TestAPI:
     @pytest.mark.parametrize("use_ott", [True, False])
     def test_process_default_leaf(self, db, use_ott, tmp_path, keep_rows, caplog):
         ott = "-551"
-        sp_name = "Homo sapiens"
+        sp_name = "Thisisnota speciesname"
         if use_ott:
             self.ott = ott
         else:

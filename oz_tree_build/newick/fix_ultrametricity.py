@@ -30,7 +30,9 @@ def fix_ultrametricity(tree, expected_length, max_adjustment):
                         "(max allowed delta is {max_adjustment}))"
                     )
 
-                node.edge_length = round(node.edge_length + expected_length - length_so_far, 6)
+                node.edge_length = round(
+                    node.edge_length + expected_length - length_so_far, 6
+                )
         else:
             # If it's not a leaf node, recurse into its children
             for child in node.child_node_iter():

@@ -113,7 +113,10 @@ def extract_trees(
         logging.warning(f'Could not find the following taxa: {", ".join(target_taxa)}')
 
     # Return a dictionary of subtrees, indexed by ott or name
-    return {subtree["ott"] or subtree["name"]: subtree["tree_string"] for subtree in subtrees}
+    return {
+        subtree["ott"] or subtree["name"]: subtree["tree_string"]
+        for subtree in subtrees
+    }
 
 
 """
@@ -149,8 +152,12 @@ def main():
         default=sys.stdout,
         help="The output tree file",
     )
-    parser.add_argument("--taxa", "-t", nargs="+", required=True, help="the taxon to search for")
-    parser.add_argument("--excluded_taxa", "-x", nargs="+", help="taxa to exclude from the result")
+    parser.add_argument(
+        "--taxa", "-t", nargs="+", required=True, help="the taxon to search for"
+    )
+    parser.add_argument(
+        "--excluded_taxa", "-x", nargs="+", help="taxa to exclude from the result"
+    )
     parser.add_argument(
         "--included_ancestors",
         "-a",

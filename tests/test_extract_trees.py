@@ -28,7 +28,10 @@ def test_one_taxon():
     tree = extract_trees(test_tree, {"B"})
 
     assert tree == {
-        "789": ("(BA,((BBAA_ott123,BBAB,BBAC,BBAD)BAA,(BBBA)BBB," "(BBCA:12.34,BBCB)BBC_ott456:78.9)BB)B_ott789")
+        "789": (
+            "(BA,((BBAA_ott123,BBAB,BBAC,BBAD)BAA,(BBBA)BBB,"
+            "(BBCA:12.34,BBCB)BBC_ott456:78.9)BB)B_ott789"
+        )
     }
 
 
@@ -39,19 +42,25 @@ def test_one_taxon_with_exclusion():
 
 
 def test_two_taxa_with_exclusion_and_one_ancestor():
-    tree = extract_trees(test_tree, {"BBAB", "BBC"}, excluded_taxa={"BBCB"}, included_ancestor_count=1)
+    tree = extract_trees(
+        test_tree, {"BBAB", "BBC"}, excluded_taxa={"BBCB"}, included_ancestor_count=1
+    )
 
     assert tree == {"456": "((BBCA:12.34)BBC_ott456:78.9)BB", "BBAB": "(BBAB)BAA"}
 
 
 def test_one_taxon_with_exclusion_and_two_ancestors():
-    tree = extract_trees(test_tree, {"BBC"}, excluded_taxa={"BBCB"}, included_ancestor_count=2)
+    tree = extract_trees(
+        test_tree, {"BBC"}, excluded_taxa={"BBCB"}, included_ancestor_count=2
+    )
 
     assert tree == {"456": "(((BBCA:12.34)BBC_ott456:78.9)BB)B"}
 
 
 def test_one_taxon_with_exclusion_and_many_ancestors():
-    tree = extract_trees(test_tree, {"BBC"}, excluded_taxa={"BBCB"}, included_ancestor_count=100)
+    tree = extract_trees(
+        test_tree, {"BBC"}, excluded_taxa={"BBCB"}, included_ancestor_count=100
+    )
 
     assert tree == {"456": "((((BBCA:12.34)BBC_ott456:78.9)BB)B)Root"}
 

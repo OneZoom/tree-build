@@ -68,7 +68,11 @@ class RemoteAPIs:
                     {"name": second_lion_image_name, "rank": "preferred"},
                 ],
                 vernacular_data=[
-                    {"name": "Löwe", "language": "de", "rank": "normal"},  # -> preferred
+                    {
+                        "name": "Löwe",
+                        "language": "de",
+                        "rank": "normal",
+                    },  # -> preferred
                     {"name": "Lion", "language": "en", "rank": "normal"},
                     {"name": "Lion", "language": "fr", "rank": "preferred"},
                     {"name": "African Lion", "language": "en", "rank": "preferred"},
@@ -89,11 +93,17 @@ class RemoteAPIs:
         self.add_mocked_request(**self.wikimedia_file_response(second_lion_image_name))
         self.add_mocked_request(**self.wikimedia_response("NoArtist.jpg", artist=None))
         self.add_mocked_request(**self.wikimedia_file_response("NoArtist.jpg"))
-        self.add_mocked_request(**self.wikimedia_response("PublicDomain.jpg", licence="pd-NOOA"))
+        self.add_mocked_request(
+            **self.wikimedia_response("PublicDomain.jpg", licence="pd-NOOA")
+        )
         self.add_mocked_request(**self.wikimedia_file_response("PublicDomain.jpg"))
-        self.add_mocked_request(**self.wikimedia_response("CC-BY3.jpg", licence="cc-by-3.0"))
+        self.add_mocked_request(
+            **self.wikimedia_response("CC-BY3.jpg", licence="cc-by-3.0")
+        )
         self.add_mocked_request(**self.wikimedia_file_response("CC-BY3.jpg"))
-        self.add_mocked_request(**self.wikimedia_response("Flickr.jpg", licence="flickr_commons"))
+        self.add_mocked_request(
+            **self.wikimedia_response("Flickr.jpg", licence="flickr_commons")
+        )
         self.add_mocked_request(**self.wikimedia_file_response("Flickr.jpg"))
         self.add_mocked_request(**self.wikimedia_response("BadLicence.jpg", "GPL"))
         self.add_mocked_request(
@@ -118,7 +128,11 @@ class RemoteAPIs:
     def mocked_analyze_from_url(self, *args, **kwargs):
         return SimpleNamespace(
             smart_crops=SimpleNamespace(
-                list=[SimpleNamespace(bounding_box=SimpleNamespace(x=50, y=75, width=300, height=300))]
+                list=[
+                    SimpleNamespace(
+                        bounding_box=SimpleNamespace(x=50, y=75, width=300, height=300)
+                    )
+                ]
             )
         )
 
@@ -128,7 +142,9 @@ class RemoteAPIs:
         return {
             "url": f"https://api.wikimedia.org/core/v1/commons/file/{image_name}",
             "response": {
-                "preferred": {"url": url}  # means preferred image *size* not preferred image
+                "preferred": {
+                    "url": url
+                }  # means preferred image *size* not preferred image
             },
         }
 
@@ -213,7 +229,9 @@ def delete_rows(db, ott):
     delete_all_by_ott(db, "ordered_leaves", ott)
 
 
-def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, conf_file):
+def get_command_arguments(
+    subcommand, ott_or_taxa, image, rating, output_dir, conf_file
+):
     return SimpleNamespace(
         subcommand=subcommand,
         ott_or_taxa=ott_or_taxa,
@@ -249,7 +267,9 @@ class TestFunctions:
 class TestAPI:
     apis = RemoteAPIs(mock_qid=-1234)
 
-    def setup_lookups(self, db, qid, tmp_path, keep_rows, ott=None, repeat_rows=1, name="Panthera leo"):
+    def setup_lookups(
+        self, db, qid, tmp_path, keep_rows, ott=None, repeat_rows=1, name="Panthera leo"
+    ):
         self.db = db
         self.tmp_dir = tmp_path
         self.keep_rows = keep_rows
@@ -271,7 +291,9 @@ class TestAPI:
             delete_rows(self.db, ott)
 
     def check_downloaded_wiki_image(self, qid, crop=None, is_wikidata=True):
-        src_dir = str(src_flags["wiki"]) if is_wikidata else str(src_flags["onezoom_bespoke"])
+        src_dir = (
+            str(src_flags["wiki"]) if is_wikidata else str(src_flags["onezoom_bespoke"])
+        )
         img_dir = os.path.join(self.tmp_dir, src_dir, str(qid)[-3:])
         if os.path.exists(os.path.join(img_dir, f"{qid}.jpg")):
             uncropped = os.path.join(img_dir, f"{qid}_uncropped.jpg")
@@ -302,13 +324,18 @@ class TestAPI:
         return {r[0] for r in self.db.executesql(sql, (ott,))}
 
     def image_rows_in_db(self, ott=None):
-        sql = "SELECT src_id, rating, rights, licence FROM images_by_ott " f"WHERE ott={placeholder(self.db)};"
+        sql = (
+            "SELECT src_id, rating, rights, licence FROM images_by_ott "
+            f"WHERE ott={placeholder(self.db)};"
+        )
         if ott is None:
             ott = self.ott
         return self.db.executesql(sql, (ott,))
 
     @apis.mock_patch_all_web_request_methods
-    def verify_process_leaf(self, image=None, rating=None, skip_images=None, crop=None, *args):
+    def verify_process_leaf(
+        self, image=None, rating=None, skip_images=None, crop=None, *args
+    ):
         get_wiki_images.process_leaf(
             self.db,
             self.ott or self.taxon_name,
@@ -331,7 +358,9 @@ class TestAPI:
         crop = None
         image = None  # The name of the image to get or None to use the default WD image
         rating = 40123
-        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, ott=ott, name=sp_name)
+        self.setup_lookups(
+            db, self.apis.mock_qid, tmp_path, keep_rows, ott=ott, name=sp_name
+        )
         with caplog.at_level(logging.WARNING):
             self.verify_process_leaf(image, rating, False, crop)
         assert caplog.text == ""
@@ -462,7 +491,9 @@ class TestAPI:
         ordered_leaf_ott = -1111111
         self.ott = "-559"
         crop = None
-        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, ott=ordered_leaf_ott)
+        self.setup_lookups(
+            db, self.apis.mock_qid, tmp_path, keep_rows, ott=ordered_leaf_ott
+        )
         with caplog.at_level(logging.WARNING):
             self.verify_process_leaf(None, None, False, crop)
         assert "not found in ordered_leaves table" in caplog.text
@@ -497,7 +528,9 @@ class TestAPI:
 class TestCLI:
     apis = RemoteAPIs(mock_qid=-4312)
 
-    def test_get_leaf_default_image(self, tmp_path, db, conf_file, keep_rows, real_apis):
+    def test_get_leaf_default_image(
+        self, tmp_path, db, conf_file, keep_rows, real_apis
+    ):
         self.db = db
         self.conf_file = conf_file
         self.ott = "-771"
@@ -508,7 +541,9 @@ class TestCLI:
         if not keep_rows:
             delete_rows(db, self.ott)
 
-    def test_get_leaf_bespoke_image(self, tmp_path, db, conf_file, keep_rows, real_apis):
+    def test_get_leaf_bespoke_image(
+        self, tmp_path, db, conf_file, keep_rows, real_apis
+    ):
         self.db = db
         self.conf_file = conf_file
         self.ott = "-772"
@@ -525,7 +560,8 @@ class TestCLI:
         qid = self.apis.true_qid if self.real_apis else self.apis.mock_qid
         # Insert a leaf to set up the mapping between the ott and the wikidata id
         self.db.executesql(
-            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) " f"VALUES (0, 0, {s}, {s}, {s});",
+            "INSERT INTO ordered_leaves (parent, real_parent, name, ott, wikidata) "
+            f"VALUES (0, 0, {s}, {s}, {s});",
             ("Panthera leo", self.ott, qid),
         )
         # Note that the image src should be onezoom_bespoke if a bespoke image is used
@@ -543,7 +579,9 @@ class TestCLI:
         )
         self.db.commit()
         # Call the method that we want to test
-        params = get_command_arguments("leaf", [self.ott], image, rating, self.tmp_path, self.conf_file)
+        params = get_command_arguments(
+            "leaf", [self.ott], image, rating, self.tmp_path, self.conf_file
+        )
 
         if self.real_apis:
             get_wiki_images.process_args(params)
@@ -551,7 +589,8 @@ class TestCLI:
             self.mock_process_args(params, *args)
 
         rows = self.db.executesql(
-            "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott " f"WHERE ott={s} ORDER BY id desc;",
+            "SELECT ott, src, src_id, rating, overall_best_any FROM images_by_ott "
+            f"WHERE ott={s} ORDER BY id desc;",
             (self.ott,),
         )
         # There should only be one image in the database in wiki mode

@@ -58,7 +58,9 @@ def extract_minimal_tree(newick_tree, target_taxa: Set[str]):
 
             # Assert that all the children have depth 1 less than this node. This is
             # because any deeper nodes would have been bubbled up
-            assert all([child_node["depth"] == node["depth"] + 1 for child_node in children])
+            assert all(
+                [child_node["depth"] == node["depth"] + 1 for child_node in children]
+            )
 
             # Reduce the depth of the children to bubble them up
             for child_node in children:
@@ -70,10 +72,14 @@ def extract_minimal_tree(newick_tree, target_taxa: Set[str]):
                 node_list = [n for n in node_list if n not in children]
 
                 # Full name including the edge length
-                tree_string = newick_tree[node["full_name_start_index"] : node_end_index]
+                tree_string = newick_tree[
+                    node["full_name_start_index"] : node_end_index
+                ]
                 if children:
                     # Add the children to the tree string
-                    ch = ",".join([child_node["tree_string"] for child_node in children])
+                    ch = ",".join(
+                        [child_node["tree_string"] for child_node in children]
+                    )
                     tree_string = f"({ch}){tree_string}"
 
                 node_list.append(
@@ -113,7 +119,9 @@ def main():
         default=sys.stdout,
         help="The output tree file",
     )
-    parser.add_argument("--taxa", "-t", nargs="+", required=True, help="the taxa to search for")
+    parser.add_argument(
+        "--taxa", "-t", nargs="+", required=True, help="the taxa to search for"
+    )
     args = parser.parse_args()
 
     target_taxa = set(args.taxa)

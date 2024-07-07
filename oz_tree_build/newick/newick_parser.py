@@ -84,7 +84,9 @@ def parse_tree(newick_tree):
                     edge_length_str = newick_tree[index : match.start()]
                     edge_length = float(edge_length_str)
                 except ValueError:
-                    raise_syntax_error(f"'{edge_length_str}' is not a valid edge length")
+                    raise_syntax_error(
+                        f"'{edge_length_str}' is not a valid edge length"
+                    )
                 index = match.start()
 
         if taxon:

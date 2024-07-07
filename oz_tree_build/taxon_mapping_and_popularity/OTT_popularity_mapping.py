@@ -240,7 +240,9 @@ class WikidataItem:
         """
         self.raw_popularity = 0
         try:
-            trMeanViews = mean(sorted([x for x in self.pageviews if x is not None])[:-trim_highest])
+            trMeanViews = mean(
+                sorted([x for x in self.pageviews if x is not None])[:-trim_highest]
+            )
             self.raw_popularity = round((self.pagesize * trMeanViews) ** 0.5, 2)
             return True
         except (StatisticsError, ValueError, AttributeError):
@@ -286,7 +288,9 @@ class WikidataItem:
                 if v == "l":
                     lost_links = self.l - other.l - self.exclude_langs
                     if len(lost_links):
-                        logging.warning(" x Sitelinks lost in these languages: " + str(lost_links))
+                        logging.warning(
+                            " x Sitelinks lost in these languages: " + str(lost_links)
+                        )
             setattr(self, v, getattr(other, v))
         return ret
 
@@ -309,13 +313,15 @@ def JSON_contains_known_dbID(json_item, known_items):
             claim = json_item["claims"][taxon_id_prop]
             if source in ret:
                 logging.warning(
-                    f"Multiple {source} IDs for Q{Qid(json_item)} ({label(json_item)}); " "taking the last one"
+                    f"Multiple {source} IDs for Q{Qid(json_item)} ({label(json_item)}); "
+                    "taking the last one"
                 )
             try:
                 src_id = wikidata_value(claim[0]["mainsnak"], err=True)
             except (KeyError, ValueError, TypeError):
                 logging.warning(  # Lots of wikidata items may not be in
-                    f"Can't find a value for {source} for Q{Qid(json_item)} " f"({label(json_item)}) in wikidata"
+                    f"Can't find a value for {source} for Q{Qid(json_item)} "
+                    f"({label(json_item)}) in wikidata"
                 )
                 continue
             if src_id:
@@ -366,7 +372,9 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
         try:
             data_files.append(extra_taxonomy_file)
         except FileNotFoundError:
-            logging.warning(f" Extra taxonomy file '{extra_taxonomy_file}' not found, so ignored")
+            logging.warning(
+                f" Extra taxonomy file '{extra_taxonomy_file}' not found, so ignored"
+            )
 
     used = 0
     for fn in data_files:
@@ -383,7 +391,9 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
                     OTTid = int(OTTrow["uid"])
                 except ValueError:
                     OTTid = OTTrow["uid"]
-                    logging.warning(f" Found an ott value which is not an integer: {OTTid}")
+                    logging.warning(
+                        f" Found an ott value which is not an integer: {OTTid}"
+                    )
 
                 sourceinfo = silva_regexp.sub(silva_sub, OTTrow["sourceinfo"])
                 ncbi = False
@@ -516,10 +526,13 @@ def wikidata_info(
                 if IPNIid_property_id:
                     more_info += f", {info.get('n_ipni', 0)} with IPNI ids"
                 logging.info(
-                    f"{line_num} of wikidata JSON dump read. " f"relevant items{more_info}. Mem usage {mem():.1f} Mb"
+                    f"{line_num} of wikidata JSON dump read. "
+                    f"relevant items{more_info}. Mem usage {mem():.1f} Mb"
                 )
             # this file is in byte form, so must match byte strings
-            if not (line.startswith('{"type":"item"') and quick_byte_match.search(line)):
+            if not (
+                line.startswith('{"type":"item"') and quick_byte_match.search(line)
+            ):
                 continue
 
             # done fast match, now check by parsing JSON (slower)
@@ -560,10 +573,14 @@ def wikidata_info(
 
             if is_taxon or len(alternate_Qs):
                 item_instance = WikidataItem(json_item)
-                wikipedia_name = item_instance.add_sitelinks_and_get_title(json_item, wikilang)
+                wikipedia_name = item_instance.add_sitelinks_and_get_title(
+                    json_item, wikilang
+                )
                 if wikipedia_name:
                     WPname_to_WD[wikipedia_name] = item_instance
-                for src, src_id in JSON_contains_known_dbID(json_item, source_ptrs).items():
+                for src, src_id in JSON_contains_known_dbID(
+                    json_item, source_ptrs
+                ).items():
                     src_to_WD[src][src_id] = item_instance
                 Q_to_WD[item_instance.Q] = item_instance
 
@@ -585,7 +602,9 @@ def wikidata_info(
                         # IUCN number is stored as a reference
                         for ref in claims[IUCNid_property_id[0]][0]["references"]:
                             try:
-                                iucn = wikidata_value(ref["snaks"][IUCNid_property_id[1]][0])
+                                iucn = wikidata_value(
+                                    ref["snaks"][IUCNid_property_id[1]][0]
+                                )
                                 if iucn:
                                     item_instance.iucn = int(iucn)
                                     info["n_iucn"] = info.get("n_iucn", 0) + 1
@@ -662,10 +681,16 @@ def overwrite_wd(Q_to_WD, Q_replacements, only_if_more_popular, check_lang=None)
             force_overwrite = None
         if check_lang is None or check_lang in Q_to_WD[newQ].l:
             if force_overwrite:
-                logging.info(f" Updating Q{origQ} with Qid and sitelinks from Q{newQ} ({label}).")
+                logging.info(
+                    f" Updating Q{origQ} with Qid and sitelinks from Q{newQ} ({label})."
+                )
             else:
-                logging.info(f" Checking Q{origQ} for possible replacement with Q{newQ} ({label}).")
-            Qchanged = Q_to_WD[origQ].merge_and_overwrite(Q_to_WD[newQ], force_overwrite, label)
+                logging.info(
+                    f" Checking Q{origQ} for possible replacement with Q{newQ} ({label})."
+                )
+            Qchanged = Q_to_WD[origQ].merge_and_overwrite(
+                Q_to_WD[newQ], force_overwrite, label
+            )
             if Qchanged:
                 if newQ in changed:
                     logging.warning(
@@ -690,7 +715,9 @@ def identify_best_wikidata(OTT_ptrs, lang, order_to_trust):
     for OTTid, data in OTT_ptrs.items():
         try:
             if OTTid < 0:
-                logging.warning(f" Skipped negative ott {OTTid} (unlabelled node) during wikidata map")
+                logging.warning(
+                    f" Skipped negative ott {OTTid} (unlabelled node) during wikidata map"
+                )
                 continue
         except TypeError:
             pass
@@ -703,21 +730,26 @@ def identify_best_wikidata(OTT_ptrs, lang, order_to_trust):
             except KeyError:
                 pass
         if len(choose) == 0:
-            data["wd"] = {}  # for future referencing, it is helpful to have a blank array here
+            data["wd"] = (
+                {}
+            )  # for future referencing, it is helpful to have a blank array here
         else:
             OTTs_with_wd += 1
             # Sort by presence of wikipedia link in the given lang, keeping order if tied
-            linked_src = sorted(  # items for a Q should point to the same wd => take x[0]
-                choose.values(),
-                key=lambda x: lang in data["sources"][x[0]]["wd"].l,
-                reverse=True,
+            linked_src = (
+                sorted(  # items for a Q should point to the same wd => take x[0]
+                    choose.values(),
+                    key=lambda x: lang in data["sources"][x[0]]["wd"].l,
+                    reverse=True,
+                )
             )
             # re-sort so the list with more srcs comes first, keeping order if tied
             best_src = sorted(linked_src, key=len, reverse=True)[0][0]
             data["wd"] = data["sources"][best_src]["wd"]
             if len(choose) > 1:
                 logging.info(
-                    f"  More than one wikidata ID {list(choose.keys())} for ott {OTTid}," f" chosen {data['wd'].Q}"
+                    f"  More than one wikidata ID {list(choose.keys())} for ott {OTTid},"
+                    f" chosen {data['wd'].Q}"
                 )
     logging.info(
         f" ✔ {allOTTs} final OpenTree taxa of which {OTTs_with_wd} "
@@ -751,7 +783,9 @@ def add_pagesize_for_titles(wiki_title_ptrs, wikipedia_SQL_filename):
     page_table_pagelen_column = 10
     # use csv reader as it copes well e.g. with escaped SQL quotes in fields etc.
     with open_file_based_on_extension(wikipedia_SQL_filename, "rt") as file:
-        pagelen_file = csv.reader(file, quotechar="'", escapechar="\\", doublequote=False)
+        pagelen_file = csv.reader(
+            file, quotechar="'", escapechar="\\", doublequote=False
+        )
         match_line = "INSERT INTO `page` VALUES"
         for fields in filter(
             lambda x: False if len(x) == 0 else x[0].startswith(match_line),
@@ -832,7 +866,8 @@ def pageviews_for_titles(
         for n, line in enumerate(PAGECOUNTfile):
             if n % 10000000 == 0:
                 logging.info(
-                    f"read {n} lines of pageviews file " f"{os.path.basename(filename)}. Mem usage {mem():.1f} Mb"
+                    f"read {n} lines of pageviews file "
+                    f"{os.path.basename(filename)}. Mem usage {mem():.1f} Mb"
                 )
 
             info = line.split(" ")
@@ -846,7 +881,9 @@ def pageviews_for_titles(
     return pageviews
 
 
-def sum_popularity_over_tree(tree, OTT_ptrs=None, exclude=None, pop_store="pop", verbosity=0):
+def sum_popularity_over_tree(
+    tree, OTT_ptrs=None, exclude=None, pop_store="pop", verbosity=0
+):
     """
     Add popularity indices for branch lengths based on a phylogenetic tree (and return the
     tree, or the number of root descendants).
@@ -890,7 +927,9 @@ def sum_popularity_over_tree(tree, OTT_ptrs=None, exclude=None, pop_store="pop",
             suppress_leaf_node_taxa=True,
         )
 
-    logging.info(f" Tree read for phylogenetic popularity calc: mem usage {mem():.1f} Mb")
+    logging.info(
+        f" Tree read for phylogenetic popularity calc: mem usage {mem():.1f} Mb"
+    )
 
     # put popularity into the pop_store attribute
     for node in tree.preorder_node_iter():
@@ -913,12 +952,18 @@ def sum_popularity_over_tree(tree, OTT_ptrs=None, exclude=None, pop_store="pop",
             node.n_descendants = 0
         try:
             node._parent_node.n_descendants += 1 + node.n_descendants
-            node._parent_node.descendants_popsum += node.pop_store + node.descendants_popsum
+            node._parent_node.descendants_popsum += (
+                node.pop_store + node.descendants_popsum
+            )
         except AttributeError:  # could be the first time we have checked the parent
             try:
                 node._parent_node.n_descendants = 1 + node.n_descendants
-                node._parent_node.descendants_popsum = node.pop_store + node.descendants_popsum
-            except AttributeError:  # this could be the root, with node._parent_node = None
+                node._parent_node.descendants_popsum = (
+                    node.pop_store + node.descendants_popsum
+                )
+            except (
+                AttributeError
+            ):  # this could be the root, with node._parent_node = None
                 pass
                 # root_descendants = node.n_descendants
 
@@ -948,15 +993,27 @@ def sum_popularity_over_tree(tree, OTT_ptrs=None, exclude=None, pop_store="pop",
     if OTT_ptrs:
         for node in tree.preorder_node_iter():
             try:
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["pop_self"] = node.pop_store
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["pop_ancst"] = (
-                    node.ancestors_popsum
-                )  # nb, this includes popularity of self
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["pop_dscdt"] = node.descendants_popsum
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["n_ancst"] = node.n_ancestors
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["n_dscdt"] = node.n_descendants
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["n_pop_ancst"] = node.n_pop_ancestors
-                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])]["is_seed_plant"] = node.seedplant
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
+                    "pop_self"
+                ] = node.pop_store
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
+                    "pop_ancst"
+                ] = node.ancestors_popsum  # nb, this includes popularity of self
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
+                    "pop_dscdt"
+                ] = node.descendants_popsum
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
+                    "n_ancst"
+                ] = node.n_ancestors
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
+                    "n_dscdt"
+                ] = node.n_descendants
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
+                    "n_pop_ancst"
+                ] = node.n_pop_ancestors
+                OTT_ptrs[int(node.label.rsplit("_ott", 1)[1])][
+                    "is_seed_plant"
+                ] = node.seedplant
             except (LookupError, AttributeError):
                 pass
     return tree

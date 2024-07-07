@@ -42,7 +42,9 @@ def test_full_parse_result():
 
 
 def test_quoted_taxa():
-    node_list = list(parse_tree("('Abc/def_ott123','qw e$r&ty':1.2)'C_*(ot)t789_ott987':5.5;"))
+    node_list = list(
+        parse_tree("('Abc/def_ott123','qw e$r&ty':1.2)'C_*(ot)t789_ott987':5.5;")
+    )
     assert node_list[0]["taxon"] == "Abc/def"
     assert node_list[1]["taxon"] == "qw e$r&ty"
     assert node_list[2]["taxon"] == "C_*(ot)t789"

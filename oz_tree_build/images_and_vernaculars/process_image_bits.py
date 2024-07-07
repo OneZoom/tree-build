@@ -12,7 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 def is_licence_public_domain(licence):
-    return licence.endswith("public domain") or licence.startswith("pd") or licence.startswith("cc0")
+    return (
+        licence.endswith("public domain")
+        or licence.startswith("pd")
+        or licence.startswith("cc0")
+    )
 
 
 def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
@@ -64,7 +68,9 @@ def resolve(db, ott):
         "overall_best_pd",
     ]
     rows = db.executesql(
-        "SELECT " + ", ".join(columns) + f" FROM images_by_ott WHERE ott={placeholder(db)} ORDER BY id;",
+        "SELECT "
+        + ", ".join(columns)
+        + f" FROM images_by_ott WHERE ott={placeholder(db)} ORDER BY id;",
         (ott,),
     )
 
@@ -103,7 +109,9 @@ def resolve(db, ott):
     made_changes |= set_bit_for_first_image_only(
         images, "overall_best_verified", candidate=lambda row: row["best_verified"]
     )
-    made_changes |= set_bit_for_first_image_only(images, "overall_best_pd", candidate=lambda row: row["best_pd"])
+    made_changes |= set_bit_for_first_image_only(
+        images, "overall_best_pd", candidate=lambda row: row["best_pd"]
+    )
 
     if made_changes:
         logger.info(f"Updating database since there are changes for ott {ott}")
@@ -149,7 +157,10 @@ def main():
     parser.add_argument(
         "--conf-file",
         default=None,
-        help=("The configuration file to use. " "If not given, defaults to ../../../OZtree/private/appconfig.ini"),
+        help=(
+            "The configuration file to use. "
+            "If not given, defaults to ../../../OZtree/private/appconfig.ini"
+        ),
     )
 
     parser.add_argument("ott", type=str, help="The leaf ott to process")

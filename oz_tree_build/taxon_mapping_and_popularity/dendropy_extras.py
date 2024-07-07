@@ -28,7 +28,8 @@ def prune_children_of_otts(self, ott_species_list):
                 for sub_nd in nd.postorder_internal_node_iter():
                     if sub_nd in to_trim:
                         logging.warning(
-                            f"Species {sub_nd.label} is contained within another " "species {nd.label}: not trimming it"
+                            f"Species {sub_nd.label} is contained within another "
+                            "species {nd.label}: not trimming it"
                         )
                         trim_me = False
                 if trim_me:
@@ -74,11 +75,14 @@ def prune_non_species(
             elif " " not in nd.label:
                 # num_spaces is 0: a leaf, but prob not a species. Also catches label==''
                 logging.info(
-                    f"Removing '{nd.label}' since it does not seem to be a species " "(it does not contain a space)"
+                    f"Removing '{nd.label}' since it does not seem to be a species "
+                    "(it does not contain a space)"
                 )
                 nodes_to_remove["unlabelled"].append(nd)
             elif any(match in nd.label for match in bad_matches):
-                logging.info(f"Removing '{nd.label}' since it contains one of {bad_matches}")
+                logging.info(
+                    f"Removing '{nd.label}' since it contains one of {bad_matches}"
+                )
                 nodes_to_remove["bad_match"].append(nd)
         for k, nodes in nodes_to_remove.items():
             for nd in nodes:
@@ -177,7 +181,9 @@ def is_on_unifurcation_path(node):
     this is a node which is either a unifurcation or the first node in a path of
     successive unifurcations
     """
-    return node.num_child_nodes() == 1 or (node.parent_node and node.parent_node.num_child_nodes() == 1)
+    return node.num_child_nodes() == 1 or (
+        node.parent_node and node.parent_node.num_child_nodes() == 1
+    )
 
 
 def remove_unifurcations_keeping_higher_taxa(self):
@@ -208,7 +214,9 @@ def remove_unifurcations_keeping_higher_taxa(self):
                     # behaviour (by default Dendropy keeps the lowest level taxa)
                     logging.debug(
                         "Unary nodes ending in tip left so that first is used: "
-                        + ", ".join([(x.label or "None") for x in sequential_unary_nodes])
+                        + ", ".join(
+                            [(x.label or "None") for x in sequential_unary_nodes]
+                        )
                     )
                 else:
                     # sort so that best is last - by popularity then presence of label,
@@ -229,12 +237,16 @@ def remove_unifurcations_keeping_higher_taxa(self):
                         # these should still be in postorder
                         if nd != keep_node:
                             n_deleted += 1
-                            nd.edge.collapse(adjust_collapsed_head_children_edge_lengths=True)
+                            nd.edge.collapse(
+                                adjust_collapsed_head_children_edge_lengths=True
+                            )
     n_deleted += len(self.suppress_unifurcations())
     return n_deleted
 
 
-def write_preorder_ages(self, node_dates_fh, leaf_dates_fh=None, format="tsv"):  # noqa A002
+def write_preorder_ages(
+    self, node_dates_fh, leaf_dates_fh=None, format="tsv"
+):  # noqa A002
     """
     Write the dates to one or two files. If no second file is given, only write leaves if
     the format is 'json'. The main file is for nodes: any absent dates should be treated
@@ -350,7 +362,15 @@ def write_preorder_to_csv(
     from collections import OrderedDict
 
     leaf_csv = csv.writer(leaf_file, quoting=csv.QUOTE_MINIMAL, lineterminator="\n")
-    leaf_csv.writerow(["parent", "real_parent", "name", "extinction_date", *extra_leaf_data_properties])
+    leaf_csv.writerow(
+        [
+            "parent",
+            "real_parent",
+            "name",
+            "extinction_date",
+            *extra_leaf_data_properties,
+        ]
+    )
     node_csv = csv.writer(node_file, quoting=csv.QUOTE_MINIMAL, lineterminator="\n")
     node_csv.writerow(
         [
@@ -399,7 +419,11 @@ def write_preorder_to_csv(
             base_output = [
                 node.parent_node.id,
                 # negative real_parent ids if this is a polytomy
-                (-node.real_parent_node.id if node.edge.length == 0 else node.real_parent_node.id),
+                (
+                    -node.real_parent_node.id
+                    if node.edge.length == 0
+                    else node.real_parent_node.id
+                ),
                 node.label,
                 getattr(node, "extinction_date", None),
             ]
@@ -422,7 +446,11 @@ def write_preorder_to_csv(
             base_output = [
                 node.parent_node.id if node.parent_node else root_parent_id,
                 (
-                    (-node.real_parent_node.id if node.edge.length == 0 else node.real_parent_node.id)
+                    (
+                        -node.real_parent_node.id
+                        if node.edge.length == 0
+                        else node.real_parent_node.id
+                    )
                     if hasattr(node, "real_parent_node")
                     else 0
                 ),

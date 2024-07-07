@@ -191,7 +191,8 @@ def get_tree_and_OTT_list(tree_filename, sources):
                     node.data["sources"] = {}
                 elif node.is_leaf():
                     logging.warning(
-                        f"Leaf without an OTT id: '{node.label}'. " "This will not be associated with any other data"
+                        f"Leaf without an OTT id: '{node.label}'. "
+                        "This will not be associated with any other data"
                     )
             # Finally, put underscores at the start or the end of the new label back as these
             # denote "fake" names that are hidden and only used for mapping. We could keep
@@ -325,7 +326,9 @@ def set_wikidata(bz2_filename, source_ptrs, lang):
 def set_wikipedia_pageviews(filenames, WPnames, lang):
     names_found = 0
     for fn in filenames:
-        WPnames_views = OTT_popularity_mapping.pageviews_for_titles(fn, set(WPnames.keys()), lang)
+        WPnames_views = OTT_popularity_mapping.pageviews_for_titles(
+            fn, set(WPnames.keys()), lang
+        )
         for name, n_views in WPnames_views.items():
             if not hasattr(WPnames[name], "pageviews"):
                 names_found += 1
@@ -348,7 +351,9 @@ def supplement_from_wikidata(OTT_ptrs):
     EOLalready = n_eol = n_ipni = n = 0
     for OTTid, data in OTT_ptrs.items():
         if is_unnamed_OTT(OTTid):
-            logging.info(f" unlabelled node (OTT: {OTTid}) when iterating through OTT_ptrs")
+            logging.info(
+                f" unlabelled node (OTT: {OTTid}) when iterating through OTT_ptrs"
+            )
             continue
         n += 1
         if data.get("eol") is None:
@@ -369,7 +374,11 @@ def supplement_from_wikidata(OTT_ptrs):
         f"✔ Out of {n} OTT taxa, {EOLalready} ({(EOLalready/n * 100):.2f}%) already "
         f"have EOL ids from the EOL file. Supplementing these with {n_eol} EOL ids from "
         f"wikidata gives a coverage of {((EOLalready + n_eol)/n * 100):.1f} %."
-        + (f" An addition {n_ipni} IPNI identifiers added via wikidata" if n_ipni else "")
+        + (
+            f" An addition {n_ipni} IPNI identifiers added via wikidata"
+            if n_ipni
+            else ""
+        )
     )
 
 
@@ -395,9 +404,13 @@ def populate_iucn(OTT_ptrs, identifiers_filename, verbosity=0):
         for EOLrow in reader:
             if reader.line_num % 1000000 == 0:
                 logging.info(
-                    f" - {reader.line_num} rows read, {used} used. " f"Mem usage {OTT_popularity_mapping.mem():.1f} Mb"
+                    f" - {reader.line_num} rows read, {used} used. "
+                    f"Mem usage {OTT_popularity_mapping.mem():.1f} Mb"
                 )
-            if int(EOLrow["resource_id"]) == iucn_num and EOLrow["resource_pk"].isdigit():
+            if (
+                int(EOLrow["resource_id"]) == iucn_num
+                and EOLrow["resource_pk"].isdigit()
+            ):
                 # there are lots of non-species IUCN rows with pk == str (e.g. Animalia)
                 try:
                     for ott in eol_mapping[int(EOLrow["page_id"])]:
@@ -426,7 +439,9 @@ def populate_iucn(OTT_ptrs, identifiers_filename, verbosity=0):
                     f'{wd_iucn} (via http://http://wikidata.org/wiki/Q{data["wd"].Q}).'
                 )
         except ValueError:
-            logging.warning(f" Cannot convert wikidata IUCN ID {data['wd'].iucn} to integer.")
+            logging.warning(
+                f" Cannot convert wikidata IUCN ID {data['wd'].iucn} to integer."
+            )
         except (KeyError, AttributeError):
             pass  # can't find a wd instance or an iucn within the wd instance. Oh well.
 
@@ -460,9 +475,9 @@ def popularity_function(
         # may not be mathematically sound
         return sum_of_all_ancestor_popularities + sum_of_all_descendant_popularities
     else:
-        return (sum_of_all_ancestor_popularities + sum_of_all_descendant_popularities) / log(
-            number_of_ancestors + number_of_descendants
-        )
+        return (
+            sum_of_all_ancestor_popularities + sum_of_all_descendant_popularities
+        ) / log(number_of_ancestors + number_of_descendants)
 
 
 def resolve_polytomies_add_popularity(tree, seed):
@@ -480,7 +495,9 @@ def resolve_polytomies_add_popularity(tree, seed):
         if not hasattr(node, "data"):
             # this is a new node - it should always have 2 children
             try:
-                n = ancestor_pop_sum = descendant_pop_sum = n_ancestors_sum = n_descendants_sum = 0
+                n = ancestor_pop_sum = descendant_pop_sum = n_ancestors_sum = (
+                    n_descendants_sum
+                ) = 0
                 for c in node.child_node_iter():
                     n += 1
                     ancestor_pop_sum += c.ancestors_popsum
@@ -524,7 +541,9 @@ def create_leaf_popularity_rankings(tree):
 
 def write_popularity_tree(tree, outdir, filename, version, verbosity=0):
     Node.write_pop_newick = write_pop_newick
-    with open(os.path.join(outdir, f"{filename}_{version}.nwk"), "w+") as popularity_newick:
+    with open(
+        os.path.join(outdir, f"{filename}_{version}.nwk"), "w+"
+    ) as popularity_newick:
         tree.seed_node.write_pop_newick(popularity_newick)
 
 
@@ -591,12 +610,12 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     Tree.set_node_ages = set_node_ages
     Tree.set_real_parent_nodes = set_real_parent_nodes
     Tree.write_preorder_ages = write_preorder_ages
-    Tree.remove_unifurcations_keeping_higher_taxa = remove_unifurcations_keeping_higher_taxa
+    Tree.remove_unifurcations_keeping_higher_taxa = (
+        remove_unifurcations_keeping_higher_taxa
+    )
     Tree.write_preorder_to_csv = write_preorder_to_csv
 
-    Tree.create_leaf_popularity_rankings = (
-        create_leaf_popularity_rankings  # not defined in dendropy_extras, but in this file
-    )
+    Tree.create_leaf_popularity_rankings = create_leaf_popularity_rankings  # not defined in dendropy_extras, but in this file
     Tree.resolve_polytomies_add_popularity = resolve_polytomies_add_popularity
     Node.write_brief_newick = write_brief_newick
 
@@ -637,15 +656,23 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     logging.info(" ✔ real parents and popularity ranks set")
 
     logging.info(" > ladderizing tree (groups with fewer leaves first)")
-    tree.ladderize(ascending=True)  # warning: ladderize ascending is needed for the short OZ newick-like form
+    tree.ladderize(
+        ascending=True
+    )  # warning: ladderize ascending is needed for the short OZ newick-like form
     logging.info(" ✔ ladderized")
 
     logging.info(" > writing tree, dates, and csv to files")
-    with open(os.path.join(outdir, f"ordered_tree_{version}.nwk"), "w+") as condensed_newick, open(
+    with open(
+        os.path.join(outdir, f"ordered_tree_{version}.nwk"), "w+"
+    ) as condensed_newick, open(
         os.path.join(outdir, f"ordered_tree_{version}.poly"), "w+"
-    ) as condensed_poly, open(os.path.join(outdir, f"ordered_dates_{version}.js"), "w+") as json_dates, open(
+    ) as condensed_poly, open(
+        os.path.join(outdir, f"ordered_dates_{version}.js"), "w+"
+    ) as json_dates, open(
         os.path.join(outdir, f"ordered_leaves_{version}.csv"), "w+", encoding="utf-8"
-    ) as leaves, open(os.path.join(outdir, f"ordered_nodes_{version}.csv"), "w+", encoding="utf-8") as nodes:
+    ) as leaves, open(
+        os.path.join(outdir, f"ordered_nodes_{version}.csv"), "w+", encoding="utf-8"
+    ) as nodes:
         tree.seed_node.write_brief_newick(condensed_newick)
         tree.seed_node.write_brief_newick(condensed_poly, "{}")
         tree.write_preorder_ages(json_dates, format="json")
@@ -741,7 +768,9 @@ def map_wiki_info(
         popularity_steps += 1
 
     if len(WP_pageviews_filenames) > 0:
-        logging.info(f" > Adding wikipedia visit counts from {len(WP_pageviews_filenames)} files")
+        logging.info(
+            f" > Adding wikipedia visit counts from {len(WP_pageviews_filenames)} files"
+        )
         set_wikipedia_pageviews(WP_pageviews_filenames, WPnames, lang)
         popularity_steps += 1
 
@@ -761,7 +790,9 @@ def map_wiki_info(
     OTT_popularity_mapping.identify_best_wikidata(OTT_ptrs, lang, source_order)
 
     logging.info(" > Swapping vernacular wikidata items into taxon items")
-    OTT_popularity_mapping.overwrite_wd(WDitems, swap_Qs, only_if_more_popular=(popularity_steps == 2), check_lang=lang)
+    OTT_popularity_mapping.overwrite_wd(
+        WDitems, swap_Qs, only_if_more_popular=(popularity_steps == 2), check_lang=lang
+    )
 
     logging.info(" > Supplementing ids (EOL/IPNI) with ones from wikidata")
     supplement_from_wikidata(OTT_ptrs)
@@ -863,7 +894,9 @@ def process_all(args):
         logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
     elif args.verbosity >= 2:
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-    logging.info(f"OneZoom data generation started on {time.asctime(time.localtime(time.time()))}")
+    logging.info(
+        f"OneZoom data generation started on {time.asctime(time.localtime(time.time()))}"
+    )
     skip_popularity = (
         args.popularity_file is None
     )  # Default is "": None is when popularity_file explictly specified with no name
@@ -915,7 +948,9 @@ def process_all(args):
                 args.info_on_focal_labels,
             )
     else:
-        logging.info("No wikidataDumpFile given: skipping wiki mapping and popularity calc")
+        logging.info(
+            "No wikidataDumpFile given: skipping wiki mapping and popularity calc"
+        )
 
     logging.info("> Populating IUCN IDs using EOL csv file (or if absent, wikidata)")
     populate_iucn(OTT_ptrs, args.EOLidentifiers)
@@ -929,7 +964,9 @@ def process_all(args):
         random_seed_addition,
     )
     t_fmt = "%H hrs %M min %S sec"
-    logging.info(f"✔ ALL DONE IN {time.strftime(t_fmt, time.gmtime(time.time()-start))}")
+    logging.info(
+        f"✔ ALL DONE IN {time.strftime(t_fmt, time.gmtime(time.time()-start))}"
+    )
 
 
 def main():
@@ -946,7 +983,10 @@ def main():
     )
     parser.add_argument(
         "EOLidentifiers",
-        help=("The gzipped EOL identifiers file, from " "https://opendata.eol.org/dataset/identifiers-csv-gz"),
+        help=(
+            "The gzipped EOL identifiers file, from "
+            "https://opendata.eol.org/dataset/identifiers-csv-gz"
+        ),
     )
     parser.add_argument(
         "wikidataDumpFile",
@@ -1037,7 +1077,10 @@ def main():
         "--info_on_focal_labels",
         nargs="*",
         default=[],
-        help=('Output some extra information for these named taxa (e.g. "Canis_lupus"), ' "for debugging purposes"),
+        help=(
+            'Output some extra information for these named taxa (e.g. "Canis_lupus"), '
+            "for debugging purposes"
+        ),
     )
     parser.add_argument(
         "--verbosity",

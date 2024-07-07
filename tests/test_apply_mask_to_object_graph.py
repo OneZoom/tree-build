@@ -45,7 +45,9 @@ def test_complex_objects():
         {"a": {"c": [{"e": KEEP}]}},
         {"a": {"c": [{"e": "foo"}, {"e": "bar"}, {"e": "baz"}]}},
     )
-    run_test(o, {"a": {"c": [{"d": KEEP}]}}, {"a": {"c": [{"d": 2}, {"d": 2}, {"d": 2}]}})
+    run_test(
+        o, {"a": {"c": [{"d": KEEP}]}}, {"a": {"c": [{"d": 2}, {"d": 2}, {"d": 2}]}}
+    )
     run_test(o, {"f": {"h": KEEP}}, {"f": {"h": []}})
 
     # Test the 'ANY' functionality

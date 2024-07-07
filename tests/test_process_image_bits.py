@@ -52,7 +52,21 @@ class TestAPI(BaseDB):
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
         delete_all_by_ott(db, "images_by_ott", ott)
-        test_row = [ott, 20, -3, "foo.jpg", 24000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0]
+        test_row = [
+            ott,
+            20,
+            -3,
+            "foo.jpg",
+            24000,
+            "Unknown",
+            "cc0 (...)",
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ]
         sql = self.set_sql.format(ph)
         db.executesql(sql, [*test_row, datetime.datetime.now()])
         made_changes = process_image_bits.resolve(db, ott)
@@ -79,12 +93,24 @@ class TestAPI(BaseDB):
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
         delete_all_by_ott(db, "images_by_ott", ott)
-        r.append([ott, 99, -91, "A.jpg", 24000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0])
-        r.append([ott, 99, -92, "B.jpg", 44000, "Unknown", "public domain", 0, 0, 0, 0, 0, 0])
-        r.append([ott, 99, -93, "C.jpg", 24000, "Unknown", "cc-by (...)", 0, 0, 1, 0, 0, 0])
-        r.append([ott, 99, -94, "D.jpg", 36000, "Unknown", "cc-by (...)", 0, 0, 1, 0, 0, 0])
-        r.append([ott, 99, -94, "E.jpg", 20000, "Unknown", "cc-by (...)", 0, 0, 1, 0, 0, 0])
-        r.append([ott, 20, -95, "F.jpg", 35000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0])
+        r.append(
+            [ott, 99, -91, "A.jpg", 24000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0]
+        )
+        r.append(
+            [ott, 99, -92, "B.jpg", 44000, "Unknown", "public domain", 0, 0, 0, 0, 0, 0]
+        )
+        r.append(
+            [ott, 99, -93, "C.jpg", 24000, "Unknown", "cc-by (...)", 0, 0, 1, 0, 0, 0]
+        )
+        r.append(
+            [ott, 99, -94, "D.jpg", 36000, "Unknown", "cc-by (...)", 0, 0, 1, 0, 0, 0]
+        )
+        r.append(
+            [ott, 99, -94, "E.jpg", 20000, "Unknown", "cc-by (...)", 0, 0, 1, 0, 0, 0]
+        )
+        r.append(
+            [ott, 20, -95, "F.jpg", 35000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0]
+        )
         sql = self.set_sql.format(ph)
         for row in r:
             db.executesql(sql, [*row, datetime.datetime.now()])
@@ -96,7 +122,14 @@ class TestAPI(BaseDB):
         assert tuple(rows[0]) == (0, 0, 0, 0, 0, 0)
         assert tuple(rows[1]) == (1, 1, 0, 0, 1, 1)
         assert tuple(rows[2]) == (0, 0, 0, 0, 0, 0)
-        assert tuple(rows[3]) == (0, 0, 1, 1, 0, 0)  # best verified & best overall verified
+        assert tuple(rows[3]) == (
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+        )  # best verified & best overall verified
         assert tuple(rows[4]) == (0, 0, 0, 0, 0, 0)
         assert tuple(rows[5]) == (1, 0, 1, 0, 1, 0)
         if not keep_rows:
@@ -164,7 +197,9 @@ class TestCLI(BaseDB):
         # Insert all the test rows
         ph = placeholder(db)
         for test_row in test_rows:
-            db._adapter.execute(self.set_sql.format(ph), [*test_row, datetime.datetime.now()])
+            db._adapter.execute(
+                self.set_sql.format(ph), [*test_row, datetime.datetime.now()]
+            )
         db.commit()
 
         # Run the function and make sure it made changes

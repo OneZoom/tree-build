@@ -23,21 +23,27 @@ def connect_to_database(database=None, conf_file=None):
         # This is running using a test sqlite db, so we need to define the tables
         if not os.path.exists(db._adapter.dbpath):
             logger.info(f"Defining {database} tables.")
-            db.executesql("""CREATE TABLE images_by_ott (
+            db.executesql(
+                """CREATE TABLE images_by_ott (
 id INTEGER PRIMARY KEY AUTOINCREMENT, ott INTEGER, src INTEGER, src_id INTEGER, url TEXT,
 rating INTEGER, rating_confidence INTEGER, rights TEXT,  licence TEXT, updated TIMESTAMP,
 best_any INTEGER, overall_best_any INTEGER, best_verified INTEGER,
-overall_best_verified INTEGER, best_pd INTEGER, overall_best_pd INTEGER);""")
-            db.executesql("""CREATE TABLE vernacular_by_ott (
+overall_best_verified INTEGER, best_pd INTEGER, overall_best_pd INTEGER);"""
+            )
+            db.executesql(
+                """CREATE TABLE vernacular_by_ott (
 id INTEGER PRIMARY KEY AUTOINCREMENT, ott INTEGER, vernacular TEXT,
 lang_primary TEXT, lang_full TEXT, preferred INTEGER, src INTEGER, src_id INTEGER,
-updated TIMESTAMP);""")
-            db.executesql("""CREATE TABLE ordered_leaves (
+updated TIMESTAMP);"""
+            )
+            db.executesql(
+                """CREATE TABLE ordered_leaves (
 id INTEGER PRIMARY KEY AUTOINCREMENT, parent INTEGER, real_parent INTEGER, name TEXT,
 extinction_date DOUBLE, ott INTEGER, wikidata INTEGER, wikipedia_lang_flag INTEGER,
 eol INTEGER, iucn TEXT, raw_popularity DOUBLE, popularity DOUBLE, popularity_rank INTEGER,
 ncbi INTEGER, ifung INTEGER, worms INTEGER, irmng INTEGER, gbif INTEGER, ipni INTEGER,
-price INTEGER);""")
+price INTEGER);"""
+            )
     return db
 
 

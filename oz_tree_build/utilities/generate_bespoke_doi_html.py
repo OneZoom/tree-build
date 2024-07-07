@@ -40,7 +40,10 @@ for filename in file_list:
         clade_search = re.findall(clade_regex, file_contents)
         if clade_search:
             clade_name = clade_search[-1][0]
-            html_content += "  <li><a href='https://www.onezoom.org/life/" f"@{clade_name}'>{clade_name}</a></li>\n"
+            html_content += (
+                "  <li><a href='https://www.onezoom.org/life/"
+                f"@{clade_name}'>{clade_name}</a></li>\n"
+            )
         else:
             # Some newicks don't have a final clade name, so just use the filename instead
             filename_without_extension = os.path.splitext(filename)[0]

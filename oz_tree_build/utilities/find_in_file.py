@@ -50,7 +50,9 @@ def get_matches(chunk_iterator, regex, window_size):
             string_to_return = current_string[window_start:window_end]
             chars_needed_from_pre_string = window_size - (m.start() - window_start)
             if chars_needed_from_pre_string > 0:
-                string_to_return = pre_string[-chars_needed_from_pre_string:] + string_to_return
+                string_to_return = (
+                    pre_string[-chars_needed_from_pre_string:] + string_to_return
+                )
 
             yield (overall_index + m.start(), string_to_return)
 
@@ -88,7 +90,9 @@ def main():
     )
     args = parser.parse_args()
 
-    for index, match in get_matches(chunks_from_file(args.file, args.chunk_size), args.regex, args.window_size):
+    for index, match in get_matches(
+        chunks_from_file(args.file, args.chunk_size), args.regex, args.window_size
+    ):
         print(f"{index}: {match}")
 
 

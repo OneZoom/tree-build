@@ -47,7 +47,9 @@ def generate_and_cache_filtered_file(original_file, context, processing_function
     one_zoom_file_prefix = "OneZoom"
     filtered_file_prefix = (context.clade or one_zoom_file_prefix) + "_"
     if file_name.startswith(filtered_file_prefix):
-        raise Exception(f"Input and output files are the same, with prefix {filtered_file_prefix}")
+        raise Exception(
+            f"Input and output files are the same, with prefix {filtered_file_prefix}"
+        )
 
     # If original file is a OneZoom file, remove the OneZoom prefix to avoid double prefixes
     if file_name.startswith(one_zoom_file_prefix):
@@ -64,9 +66,9 @@ def generate_and_cache_filtered_file(original_file, context, processing_function
 
     # Unless force is set, check we already have a filtered file with the matching timestamp
     if not context.force:
-        if os.path.exists(clade_filtered_file) and os.path.getmtime(clade_filtered_file) == os.path.getmtime(
-            original_file
-        ):
+        if os.path.exists(clade_filtered_file) and os.path.getmtime(
+            clade_filtered_file
+        ) == os.path.getmtime(original_file):
             logging.info(f"Using cached file {clade_filtered_file}")
             return clade_filtered_file
 
@@ -102,7 +104,9 @@ def read_newick_file(newick_file, context):
 
 
 def generate_filtered_taxonomy_file(taxonomy_file, filtered_taxonomy_file, context):
-    with open_file_based_on_extension(filtered_taxonomy_file, "wt") as filtered_taxonomy:
+    with open_file_based_on_extension(
+        filtered_taxonomy_file, "wt"
+    ) as filtered_taxonomy:
         for i, line in enumerate_lines_from_file(taxonomy_file):
             # Always copy the header
             if i == 0:
@@ -192,7 +196,9 @@ def generate_filtered_eol_id_file(eol_id_file, filtered_eol_id_file, context):
     )
 
 
-def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump_file, context):
+def generate_filtered_wikidata_dump(
+    wikipedia_dump_file, filtered_wikipedia_dump_file, context
+):
     # This mask defines which fields we want to keep from the wikidata dump
     # The goal is to keep it structurally the same as the original, but only
     # include the fields we actually consume
@@ -216,8 +222,12 @@ def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump
             "P5055": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # irmng id
             "P830": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # EOL id
             "P961": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # IPNI id
-            "P141": [{"references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}]}],  # IUCN id
-            "P1420": [{"mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}}}],  # taxon synonym
+            "P141": [
+                {"references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}]}
+            ],  # IUCN id
+            "P1420": [
+                {"mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}}}
+            ],  # taxon synonym
             "P18": [
                 {
                     "mainsnak": {"datavalue": {"value": KEEP}},
@@ -244,7 +254,9 @@ def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump
         # (leave out those ending in "wikiquote", "wikivoyage", "wikinews", "wikibooks", etc.)
         if context.dont_trim_sitelinks:
             # Keep the full sitelinks value for all languages if flag is passed
-            json_item["sitelinks"] = {k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")}
+            json_item["sitelinks"] = {
+                k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")
+            }
         else:
             # Otherwise only keep the original value for the language we want, since the
             # rest is just needed to collect the language names into the bit field
@@ -265,7 +277,9 @@ def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump
     # There are only a few hundred, so memory isn't an issue.
     potential_extra_json_items = []
 
-    with open_file_based_on_extension(filtered_wikipedia_dump_file, "wt") as filtered_wiki_f:
+    with open_file_based_on_extension(
+        filtered_wikipedia_dump_file, "wt"
+    ) as filtered_wiki_f:
         filtered_wiki_f.write("[\n")
         preserved_lines = 0
         for line_num, line in enumerate_lines_from_file(wikipedia_dump_file):
@@ -299,7 +313,10 @@ def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump
                         potential_extra_json_items.append(
                             (
                                 "taxon_synonym",
-                                {wikidata_value(i["mainsnak"])["numeric-id"] for i in json_item["claims"]["P1420"]},
+                                {
+                                    wikidata_value(i["mainsnak"])["numeric-id"]
+                                    for i in json_item["claims"]["P1420"]
+                                },
                                 json_item,
                             )
                         )
@@ -307,7 +324,9 @@ def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump
                     # Note: as this is a taxon, we're dealing with synonyms, not vernaculars,
                     # so the variable name is a bit misleading
                     if vernaculars_matches:
-                        potential_extra_json_items.append(("instance_of_synonym", vernaculars_matches, json_item))
+                        potential_extra_json_items.append(
+                            ("instance_of_synonym", vernaculars_matches, json_item)
+                        )
                     continue
 
             if is_taxon:
@@ -318,10 +337,13 @@ def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump
                 preserved_lines += 1
             else:
                 # If it's vernacular, we'll potentially write it out at the end, so save it
-                potential_extra_json_items.append(("vernacular", vernaculars_matches, json_item))
+                potential_extra_json_items.append(
+                    ("vernacular", vernaculars_matches, json_item)
+                )
 
         logging.info(
-            "Writing extra lines at the end of the file " f"(subset of {len(potential_extra_json_items)} lines)"
+            "Writing extra lines at the end of the file "
+            f"(subset of {len(potential_extra_json_items)} lines)"
         )
 
         for desc, linked_qids, json_item in potential_extra_json_items:
@@ -349,18 +371,24 @@ def read_wikidata_dump(wikidata_dump_file, context):
         context.wikidata_ids.add(get_wikipedia_name(json_item))
 
 
-def generate_filtered_wikipedia_sql_dump(wikipedia_sql_dump_file, filtered_wikipedia_sql_dump_file, context):
+def generate_filtered_wikipedia_sql_dump(
+    wikipedia_sql_dump_file, filtered_wikipedia_sql_dump_file, context
+):
     # the column numbers for each datum are specified in the SQL file, and hardcoded here.
     page_table_namespace_column = 2
     page_table_title_column = 3
     page_is_redirect_column = 4
     page_table_pagelen_column = 10
 
-    with open_file_based_on_extension(filtered_wikipedia_sql_dump_file, "wt") as filtered_sql_f:
+    with open_file_based_on_extension(
+        filtered_wikipedia_sql_dump_file, "wt"
+    ) as filtered_sql_f:
         current_output_line_entry_count = 0
         max_entries_per_line = 10
         with open_file_based_on_extension(wikipedia_sql_dump_file, "rt") as sql_f:
-            pagelen_file = csv.reader(sql_f, quotechar="'", escapechar="\\", doublequote=False)
+            pagelen_file = csv.reader(
+                sql_f, quotechar="'", escapechar="\\", doublequote=False
+            )
             match_line = "INSERT INTO `page` VALUES "
             for fields in filter(
                 lambda x: False if len(x) == 0 else x[0].startswith(match_line),
@@ -398,7 +426,9 @@ def generate_filtered_wikipedia_sql_dump(wikipedia_sql_dump_file, filtered_wikip
 
                             # We leave all the other fields empty, as we don't need them
                             # e.g. (,0,'Pan_paniscus',0,,,,,,87,,)
-                            filtered_sql_f.write(f"(,{namespace},'{title}',{is_redirect},,,,,,{field},,)")
+                            filtered_sql_f.write(
+                                f"(,{namespace},'{title}',{is_redirect},,,,,,{field},,)"
+                            )
 
                             current_output_line_entry_count += 1
                             if current_output_line_entry_count == max_entries_per_line:
@@ -468,7 +498,9 @@ def generate_all_filtered_files(
 ):
     if context.clade:
         # If we're filtering by clade, we need to generate a filtered newick
-        filtered_newick_file = generate_and_cache_filtered_file(newick_file, context, generate_filtered_newick)
+        filtered_newick_file = generate_and_cache_filtered_file(
+            newick_file, context, generate_filtered_newick
+        )
         read_newick_file(filtered_newick_file, context)
 
         # We also need to generate a filtered taxonomy file
@@ -482,7 +514,9 @@ def generate_all_filtered_files(
         filtered_taxonomy_file = taxonomy_file
     read_taxonomy_file(filtered_taxonomy_file, context)
 
-    generate_and_cache_filtered_file(eol_id_file, context, generate_filtered_eol_id_file)
+    generate_and_cache_filtered_file(
+        eol_id_file, context, generate_filtered_eol_id_file
+    )
 
     filtered_wikidata_dump_file = generate_and_cache_filtered_file(
         wikidata_dump_file, context, generate_filtered_wikidata_dump
@@ -490,10 +524,14 @@ def generate_all_filtered_files(
 
     read_wikidata_dump(filtered_wikidata_dump_file, context)
 
-    generate_and_cache_filtered_file(wikipedia_sql_dump_file, context, generate_filtered_wikipedia_sql_dump)
+    generate_and_cache_filtered_file(
+        wikipedia_sql_dump_file, context, generate_filtered_wikipedia_sql_dump
+    )
 
     for wikipedia_pageviews_file in wikipedia_pageviews_files:
-        generate_and_cache_filtered_file(wikipedia_pageviews_file, context, generate_filtered_pageviews_file)
+        generate_and_cache_filtered_file(
+            wikipedia_pageviews_file, context, generate_filtered_pageviews_file
+        )
 
 
 def process_args(args):
@@ -537,7 +575,10 @@ def main():
     )
     parser.add_argument(
         "EOLidentifiers",
-        help=("The gzipped EOL identifiers file, from " "https://opendata.eol.org/dataset/identifiers-csv-gz"),
+        help=(
+            "The gzipped EOL identifiers file, from "
+            "https://opendata.eol.org/dataset/identifiers-csv-gz"
+        ),
     )
     parser.add_argument(
         "wikidataDumpFile",
@@ -564,7 +605,9 @@ def main():
             "(e.g. pagecounts-2016-01-views-ge-5-totals.bz2, or pagecounts*totals.bz2)"
         ),
     )
-    parser.add_argument("--clade", "-c", help="The clade for which to generate the files")
+    parser.add_argument(
+        "--clade", "-c", help="The clade for which to generate the files"
+    )
     parser.add_argument(
         "--compress",
         action=argparse.BooleanOptionalAction,

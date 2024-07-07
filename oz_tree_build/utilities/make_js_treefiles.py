@@ -82,7 +82,9 @@ def generate_binary_cut_position_map(newick_str, threshold):
     while len(start_end_arr) > 0:
         start = start_end_arr.pop(0)
         end = start_end_arr.pop(0)
-        build_cut_position_map(start, end, start_end_arr, count_arr, cut_position_map, threshold)
+        build_cut_position_map(
+            start, end, start_end_arr, count_arr, cut_position_map, threshold
+        )
     cut_position_map = json.dumps(cut_position_map)
     cut_position_map = "var cut_position_map_json_str = '" + cut_position_map + "';"
     return cut_position_map
@@ -105,9 +107,13 @@ def generate_polytomy_cut_position_map(newick_str, threshold):
     while len(start_end_arr) > 0:
         start = start_end_arr.pop(0)
         end = start_end_arr.pop(0)
-        cut_position_map[end] = get_polytomy_substring_pos(start, end, start_end_arr, threshold, newick_str)
+        cut_position_map[end] = get_polytomy_substring_pos(
+            start, end, start_end_arr, threshold, newick_str
+        )
     cut_position_map = json.dumps(cut_position_map)
-    cut_position_map = "var polytomy_cut_position_map_json_str = '" + cut_position_map + "';"
+    cut_position_map = (
+        "var polytomy_cut_position_map_json_str = '" + cut_position_map + "';"
+    )
     return cut_position_map
 
 
@@ -115,7 +121,9 @@ def generate_polytomy_cut_position_map(newick_str, threshold):
 # start, end represent indices of a node A on rawData.
 # this function finds cut position of node A on rawData, then store it in cut_position_map
 # and put its children start and end position in start_end_arr
-def build_cut_position_map(start, end, start_end_arr, count_arr, cut_position_map, threshold):
+def build_cut_position_map(
+    start, end, start_end_arr, count_arr, cut_position_map, threshold
+):
     endValue = count_arr[end]
     for index in reversed(range(start, end)):
         if count_arr[index] == endValue:
@@ -131,7 +139,9 @@ def build_cut_position_map(start, end, start_end_arr, count_arr, cut_position_ma
 
 # Find substring start & end position given a string representing a polytomous tree.
 # The start and end position is pushed into start_end_arr if its distance is > than threshold
-def get_polytomy_substring_pos(start, end, start_end_arr, threshold, newick_str, called_by_self=False):
+def get_polytomy_substring_pos(
+    start, end, start_end_arr, threshold, newick_str, called_by_self=False
+):
     res = []
     if end <= start or (called_by_self and newick_str[end] == ")"):
         res += [start, end]
@@ -152,8 +162,12 @@ def get_polytomy_substring_pos(start, end, start_end_arr, threshold, newick_str,
                 cut_point = index - 1
                 break
     if cut_point is not None:
-        res = res + get_polytomy_substring_pos(start + 1, cut_point, start_end_arr, threshold, newick_str, True)
-        res = res + get_polytomy_substring_pos(cut_point + 1, end - 1, start_end_arr, threshold, newick_str, True)
+        res = res + get_polytomy_substring_pos(
+            start + 1, cut_point, start_end_arr, threshold, newick_str, True
+        )
+        res = res + get_polytomy_substring_pos(
+            cut_point + 1, end - 1, start_end_arr, threshold, newick_str, True
+        )
     else:
         res += [start, start, end, end]
     return res
@@ -232,7 +246,10 @@ def main():
         "--threshold",
         default=10000,
         type=int,
-        help=("Threshold for deciding if a node and its descendants needs to be" "recorded in cut_position_map"),
+        help=(
+            "Threshold for deciding if a node and its descendants needs to be"
+            "recorded in cut_position_map"
+        ),
     )
 
     args = parser.parse_args()
@@ -243,13 +260,19 @@ def main():
         args.npath,
     ).group(1)
     print(f"Using version number: {version_number}")
-    treefile_path = os.path.join(args.outdir, args.treefilename.format(version=version_number))
-    cutfile_path = os.path.join(args.outdir, args.cutfilename.format(version=version_number))
+    treefile_path = os.path.join(
+        args.outdir, args.treefilename.format(version=version_number)
+    )
+    cutfile_path = os.path.join(
+        args.outdir, args.cutfilename.format(version=version_number)
+    )
     datefile_inpath = os.path.join(
         os.path.dirname(args.npath),
         datafile_name.format(data="dates", version=version_number, ext="js"),
     )
-    datefile_outpath = os.path.join(args.outdir, args.datefilename.format(version=version_number))
+    datefile_outpath = os.path.join(
+        args.outdir, args.datefilename.format(version=version_number)
+    )
     if parameter_valid(args):
         newick_str = tidy_newick(args.npath)
         treedata_str = generate_rawdata_metadata(newick_str)

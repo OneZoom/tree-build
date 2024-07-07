@@ -93,8 +93,7 @@ def resolve(db, ott):
             images_for_src,
             "best_verified",
             candidate=lambda row, src=src: (
-                src in (src_flags["wiki"], src_flags["onezoom_bespoke"])
-                or row["best_verified"] == 1
+                src in (src_flags["wiki"], src_flags["onezoom_bespoke"]) or row["best_verified"] == 1
             ),
         )
 

@@ -16,6 +16,10 @@ from oz_tree_build.utilities.db_helper import (
     placeholder,
 )
 
+# These need to be real images to make the --real-apis mode work
+first_lion_image_name = "Okonjima_Lioness.jpg"
+second_lion_image_name = "Lioness_12.jpg"
+
 
 class MockResponse:
     def __init__(self, status_code, json_data=None, content=None):
@@ -60,8 +64,8 @@ class RemoteAPIs:
         self.add_mocked_request(
             **self.wikidata_response(
                 image_data=[
-                    {"name": "FirstLionImage.jpg", "rank": "normal"},
-                    {"name": "SecondLionImage.jpg", "rank": "preferred"},
+                    {"name": first_lion_image_name, "rank": "normal"},
+                    {"name": second_lion_image_name, "rank": "preferred"},
                 ],
                 vernacular_data=[
                     {"name": "Löwe", "language": "de", "rank": "normal"},  # -> preferred
@@ -81,8 +85,8 @@ class RemoteAPIs:
             ("Lion d'Afrique", "fr"),
         )
 
-        self.add_mocked_request(**self.wikimedia_response("SecondLionImage.jpg"))
-        self.add_mocked_request(**self.wikimedia_file_response("SecondLionImage.jpg"))
+        self.add_mocked_request(**self.wikimedia_response(second_lion_image_name))
+        self.add_mocked_request(**self.wikimedia_file_response(second_lion_image_name))
         self.add_mocked_request(**self.wikimedia_response("NoArtist.jpg", artist=None))
         self.add_mocked_request(**self.wikimedia_file_response("NoArtist.jpg"))
         self.add_mocked_request(**self.wikimedia_response("PublicDomain.jpg", licence="pd-NOOA"))
@@ -511,7 +515,7 @@ class TestCLI:
         self.tmp_path = tmp_path
         self.real_apis = real_apis
         delete_rows(db, self.ott)
-        self.verify_image_behavior("SecondLionImage.jpg", 42000)
+        self.verify_image_behavior(second_lion_image_name, 42000)
         if not keep_rows:
             delete_rows(db, self.ott)
 
@@ -532,10 +536,10 @@ class TestCLI:
         src_id = get_next_src_id_for_src(self.db, src)
         self.db.executesql(
             "INSERT INTO images_by_ott "
-            "(ott, src, src_id, url, rating, best_any, best_verified, best_pd, "
+            "(ott, src, src_id, url, rating, licence, best_any, best_verified, best_pd, "
             "overall_best_any, overall_best_verified, overall_best_pd) "
-            f"VALUES ({s}, {s}, {s}, {s}, 1234, 1, 1, 1, 1, 1, 1);",
-            (self.ott, src, src_id, "http://example.com/dummy.jpg"),
+            f"VALUES ({s}, {s}, {s}, {s}, 1234, {s}, 1, 1, 1, 1, 1, 1);",
+            (self.ott, src, src_id, "http://example.com/dummy.jpg", "cc0"),
         )
         self.db.commit()
         # Call the method that we want to test

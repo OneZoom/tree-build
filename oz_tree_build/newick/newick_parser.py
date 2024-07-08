@@ -1,17 +1,21 @@
 """
 Lightweight Newick parser that takes a string and enumerates all the nodes in the tree.
 
-It's a very simple one-pass parser that doesn't build any parse tree, and instead processes
-the nodes as they're read. It's designed to be fast.
+It's a very simple one-pass parser that doesn't build any parse tree, and instead
+processes the nodes as they're read. It's designed to be fast.
 
-The nodes are returned in post-order (children before parent), which is the Newick order.
+Nodes are returned in post-order (children before parent), which is the Newick order.
 
 For simplicity, it assumes that the tree string has no spaces.
 
 Here is a trivial example of how to use it:
 
     for node in parse_tree("(A_ott123,B:1.2)C_ott789:5.5;"):
-        print(f"Node: {node['taxon']}, OTT: {node['ott']}, Edge length: {node['edge_length']}")
+        print(
+            f"Node: {node['taxon']},",
+            f"OTT: {node['ott']},",
+            f"Edge length: {node['edge_length']}",
+        )
 
 It produces the following output:
     Node: A, OTT: 123, Edge length: 0.0
@@ -20,7 +24,6 @@ It produces the following output:
 """
 
 import re
-from typing import Set
 
 __author__ = "David Ebbo"
 
@@ -48,7 +51,7 @@ def parse_tree(newick_tree):
         if closed_brace:
             index += 1
 
-            # Set the start index to the beginning of the node (where the open parenthesis is)
+            # Set start index to beginning of the node (where the open parenthesis is)
             node_start_index = index_stack.pop()
         else:
             node_start_index = index
@@ -81,9 +84,7 @@ def parse_tree(newick_tree):
                     edge_length_str = newick_tree[index : match.start()]
                     edge_length = float(edge_length_str)
                 except ValueError:
-                    raise_syntax_error(
-                        f"'{edge_length_str}' is not a valid edge length"
-                    )
+                    raise_syntax_error(f"'{edge_length_str}' is not a valid edge length")
                 index = match.start()
 
         if taxon:
@@ -113,7 +114,7 @@ def parse_tree(newick_tree):
         if newick_tree[index] == ",":
             index += 1
         elif not closed_brace:
-            raise_syntax_error(f"expected ',' or ')'")
+            raise_syntax_error("expected ',' or ')'")
 
     if index == len(newick_tree) or newick_tree[index] != ";":
-        raise_syntax_error(f"expected a semicolon at the end of the tree")
+        raise_syntax_error("expected a semicolon at the end of the tree")

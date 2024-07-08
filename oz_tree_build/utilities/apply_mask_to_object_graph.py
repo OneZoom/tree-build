@@ -10,13 +10,15 @@ def apply_mask_to_object_graph(
     mask,
 ):
     """
-    Takes an object and a mask and remove all the properties from the object that are not in the mask.
+    Takes an object and a mask and remove all the properties from the object
+    that are not in the mask.
     """
 
     if mask is KEEP:
         return
 
-    assert type(obj) == type(mask), "Object and mask must be the same type"
+    if type(obj) != type(mask):
+        raise ValueError("Object and mask must be the same type")
     if isinstance(obj, dict):
         # Loop through all the keys in the object
         # We need to copy the keys into a list because we are going to be deleting some
@@ -32,10 +34,11 @@ def apply_mask_to_object_graph(
                 del obj[key]
     elif isinstance(obj, list):
         # The same list mask is used for all the items in the list
-        assert len(mask) == 1, "List mask must have exactly one element"
+        if len(mask) != 1:
+            raise ValueError("List mask must have exactly one element")
 
         # Loop through all the items in the list
         for element in obj:
             apply_mask_to_object_graph(element, mask[0])
     else:
-        assert False, "Unexpected type"
+        raise ValueError("Unexpected type")

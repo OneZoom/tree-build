@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""
+r"""
 This is free and unencumbered software released into the public domain by the author, Yan Wong, for OneZoom CIO.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or distribute this software, either in source code form or as a compiled binary, for any purpose, commercial or non-commercial, and by any means.
@@ -21,16 +19,17 @@ cd applications/OneZoom/OZ_private/YanTree/BespokeTree/include_noAutoOTT
 cd OZ_yan/user/include_noAutoOTT
 perl -ne 'print if s|(^\$tree.*include_files/([^/\.]*\.phy).*)|$2|i' ../ATlife_selected_tree.js | xargs ../../../server_scripts/Add_OTT_numbers_to_trees.py  --savein ../include_OTT2.9 PasserinesOneZoom.phy PoriferaOneZoom.phy AmphibiansOneZoom.phy > ../include_OTT2.9/ottmatches
 
-"""
+"""  # noqa E501
+
+import argparse
 import json
-from dendropy import Tree
-import urllib
+import os
 import re
 import sys
-import os
+import urllib
 from itertools import islice
-import argparse
 
+from dendropy import Tree
 
 unambiguous = 0
 synonyms = 0
@@ -39,11 +38,19 @@ unidentified = 0
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Read newick files and append OpenTree Taxonomy IDs to the taxa in the style of OToL (e.g. Homo_sapiens becomes Homo_sapiens_ott770315). If --savein dir is given, save a set of equivalent newick files with appended OTT numbers in "dir", and create a symlink to that directory in the parent dir'
+        description=(
+            "Read newick files & append OpenTree Taxonomy IDs to taxa in the style of OToL "
+            "(e.g. Homo_sapiens becomes Homo_sapiens_ott770315). If --savein dir is given, "
+            'save a set of equivalent newick files with appended OTT numbers in "dir", '
+            "and create a symlink to that directory in the parent dir"
+        )
     )
     parser.add_argument(
         "--savein",
-        help="Store replacement newick files in this dir. Without this flag, the script is simply run to produce stats/warnings",
+        help=(
+            "Store replacement newick files in this dir. Without this flag, "
+            "the script is simply run to produce stats/warnings"
+        ),
     )
     parser.add_argument(
         "--output_info",
@@ -53,7 +60,10 @@ def main():
     parser.add_argument(
         "--symlink",
         default="include_files",
-        help="If --savein is a dir, also create a symlink to the new dir in its parent dir (requires permission to create symlinks in windows)",
+        help=(
+            "If --savein is a dir, also create a symlink to the new dir "
+            "in its parent dir (requires permission to create symlinks in windows)"
+        ),
     )
     parser.add_argument(
         "--leavesonly",
@@ -68,28 +78,25 @@ def main():
         if not os.path.isdir(args.savein):
             try:
                 os.makedirs(args.savein)
-            except IOError as e:
+            except OSError as e:
                 print(
-                    "Could not create dir to save files {}: I/O error({}): {}".format(
-                        args.savein, e.errno, e.strerror
-                    ),
+                    f"Could not create dir to save files {args.savein}: " f"I/O error({e.errno}): {e.strerror}",
                     file=sys.stderr,
                 )
         if args.output_info and args.output_info != "":
             outinfo = open(os.path.join(args.savein, args.output_info), mode="w")
 
     def lookup_OTT(name_node_dict, context):
-        """This should process a dictionary of name:<Dendropy_node> items in batches looking up the
-        name in OTT and appending _ottNODENUM to the label for that node. Assumes all nodes have labels, not taxa"""
+        """
+        This should process a dictionary of name:<Dendropy_node> items in batches
+        looking up the name in OTT and appending _ottNODENUM to the label for that node.
+        Assumes all nodes have labels, not taxa
+        """
         batch_size = 995
         global unambiguous
         global synonyms
         global unidentified
-        it = iter(name_node_dict)
-        for s in (
-            islice(name_node_dict, pos, pos + batch_size)
-            for pos in range(0, len(name_node_dict), batch_size)
-        ):
+        for s in (islice(name_node_dict, pos, pos + batch_size) for pos in range(0, len(name_node_dict), batch_size)):
             # print("Next batch includes {}".format([l.label for l in batch][s][:5]))
             params = json.dumps(
                 {
@@ -106,15 +113,13 @@ def main():
             try:
                 response = urllib.request.urlopen(req)
             except:
-                print("Problem with getting {}".format(req))
+                print(f"Problem with getting {req}")
                 raise
             response_string = response.read().decode("utf8")
             OToLdata = json.loads(response_string)
             unambiguous += len(OToLdata["unambiguous_names"])
             unidentified += len(OToLdata["unmatched_names"])
-            synonyms += len(OToLdata["matched_names"]) - len(
-                OToLdata["unambiguous_names"]
-            )
+            synonyms += len(OToLdata["matched_names"]) - len(OToLdata["unambiguous_names"])
             print(
                 " {} names matched unambigously, first 10 are {}".format(
                     len(OToLdata["unambiguous_names"]),
@@ -126,11 +131,7 @@ def main():
                 " ++> {} ambiguous taxa in one batch from {}: {}".format(
                     len(OToLdata["matched_names"]) - len(OToLdata["unambiguous_names"]),
                     f,
-                    [
-                        name
-                        for name in OToLdata["matched_names"]
-                        if name not in OToLdata["unambiguous_names"]
-                    ],
+                    [name for name in OToLdata["matched_names"] if name not in OToLdata["unambiguous_names"]],
                 ),
                 file=outinfo,
             )
@@ -140,56 +141,42 @@ def main():
                 ),
                 file=outinfo,
             )
-            # print({k:v for (k,v) in OToLdata.items() if k.startswith('includes')}, file=sys.stderr) #sanity check
-            multiples = [
-                r["name"]
-                for r in OToLdata["results"]
-                if r["matches"] and len(r["matches"]) > 1
-            ]
+            # print({k:v for (k,v) in OToLdata.items() if k.startswith('includes')}, file=sys.stderr) #sanity check  # noqa E501
+            multiples = [r["name"] for r in OToLdata["results"] if r["matches"] and len(r["matches"]) > 1]
             if len(multiples):
                 print(
-                    " !!> {} taxa from {} have multiple matches (some may be synonyms): {}".format(
-                        len(multiples), f, multiples
-                    ),
+                    f" !!> {len(multiples)} taxa from {f} have multiple matches "
+                    f"(some may be synonyms): {multiples}",
                     file=outinfo,
                 )
             results = {}
             for res in OToLdata["results"]:
-                orig = [
-                    m["taxon"]["ott_id"] for m in res["matches"] if not m["is_synonym"]
-                ]
+                orig = [m["taxon"]["ott_id"] for m in res["matches"] if not m["is_synonym"]]
                 syno = [m["taxon"]["ott_id"] for m in res["matches"] if m["is_synonym"]]
                 if res["name"] in OToLdata["unambiguous_names"]:
                     if len(orig) == 1:
                         results[res["name"]] = orig[0]
                     elif len(orig) > 1:
                         print(
-                            "WARNING: more than one non-synonym for unambiguous taxon {}".format(
-                                res["name"]
-                            ),
+                            "WARNING: more than one non-synonym for" f"unambiguous taxon {res['name']}",
                             file=outinfo,
                         )
                     else:
                         print(
-                            "WARNING: something's wrong for {}: no non-synonyms for unambiguous taxon".format(
-                                res["name"]
-                            ),
+                            f"WARNING: something's wrong for {res['name']}: " "no non-synonyms for unambiguous taxon",
                             file=outinfo,
                         )
                 else:
                     if len(orig) == 1:
                         print(
-                            "WARNING: something's wrong for {}: listed as ambiguous but has single non-synonymous result".format(
-                                res["name"]
-                            ),
+                            f"WARNING: something's wrong for {res['name']}: "
+                            "listed as ambiguous but has single non-synonymous result",
                             file=outinfo,
                         )
                         results[res["name"]] = orig[0]
                     elif len(orig) > 1:
                         print(
-                            "WARNING: more than one non-synonym for ambiguous taxon {}: none taken".format(
-                                res["name"]
-                            ),
+                            "WARNING: more than one non-synonym for " f"ambiguous taxon {res['name']}: none taken",
                             file=outinfo,
                         )
                     else:
@@ -198,9 +185,7 @@ def main():
                             results[res["name"]] = syno[0]
                         elif len(syno) > 1:
                             print(
-                                "WARNING: more than one synonym for ambiguous taxon {}: none taken".format(
-                                    res["name"]
-                                ),
+                                "WARNING: more than one synonym for " f"ambiguous taxon {res['name']}: none taken",
                                 file=outinfo,
                             )
                         else:
@@ -211,9 +196,7 @@ def main():
 
             for k in results.keys():
                 # replace the names - these should by now not contain any '_ottXXX' strings.
-                name_node_dict[k].label = (
-                    name_node_dict[k].label + "_ott" + str(results[k])
-                )
+                name_node_dict[k].label = name_node_dict[k].label + "_ott" + str(results[k])
 
     OTTre = re.compile(r"(_ott\d+|_mrcaott\d+ott\d+)(@\d*)?$")
     context_re = re.compile(r"context=(\w+)\s*]")
@@ -222,14 +205,14 @@ def main():
     # by OneZoom convention, we ignore any names ending in space or underscore
     for f in args.newick_files:
         context_name = "All life"
-        with open(f, "r", encoding="utf-8") as treefile:
+        with open(f, encoding="utf-8") as treefile:
             treestr = treefile.read()
             treestart = treestr.find("]")
             if treestart == -1:
                 treestart = 0
             treestart = treestr.find("(", treestart)
             if treestart == -1:
-                print("No tree in file {}".format(f), file=sys.stderr)
+                print(f"No tree in file {f}", file=sys.stderr)
                 continue
             startstr = treestr[:treestart]
             m = context_re.search(startstr)
@@ -245,15 +228,16 @@ def main():
                     rooting="default-rooted",
                 )
             except:
-                print("WARNING: error reading tree '{}'".format(f))
+                print(f"WARNING: error reading tree '{f}'")
                 raise
             # check for polytomies
             for nd in tree.postorder_internal_node_iter():
                 if len(nd._child_nodes) != 2:
                     if len(nd._child_nodes) == 1:
                         print(
-                            "WARNING: in {} there is a unary node ({}) which may be removed"
-                            " later".format(f, nd.label or "<unnamed>"),
+                            "WARNING: in {} there is a unary node ({}) which may be removed" " later".format(
+                                f, nd.label or "<unnamed>"
+                            ),
                             file=sys.stderr,
                         )
                     else:
@@ -282,21 +266,15 @@ def main():
                 "Myotis_occultus",
             ]
             # these are cases where OneZoom probably has an incorrect species (OpenTree has
-            # them as a synonym of something else) but I can't be bothered to correct the OZ tree
+            # them as a synonym of something else) but I can't be bothered to correct OneZoom
             OZ_spurious_spp = ["Cyclemys_orbiculata", "Cyclemys_ovata"]
             ignore = OTT_wrong_synonyms + OZ_spurious_spp
 
             if args.leavesonly:
-                check = set(
-                    tree.leaf_node_iter(
-                        lambda n: n.label is not None and n.label not in ignore
-                    )
-                )
+                check = set(tree.leaf_node_iter(lambda n, ignore=ignore: n.label is not None and n.label not in ignore))
             else:
                 check = set(
-                    tree.postorder_node_iter(
-                        lambda n: n.label is not None and n.label not in ignore
-                    )
+                    tree.postorder_node_iter(lambda n, ignore=ignore: n.label is not None and n.label not in ignore)
                 )
 
             to_change = {
@@ -309,9 +287,8 @@ def main():
                 and omit.search(n.label) is None
             }
             print(
-                "Parsed {}, looking up {} names out of {} (omitted {})".format(
-                    f, len(to_change), len(check), [n.label for n in check - to_change]
-                ),
+                f"Parsed {f}, looking up {len(to_change)} names out of {len(check)} "
+                f"(omitted {[n.label for n in check - to_change]})",
                 file=outinfo,
             )
 
@@ -332,9 +309,7 @@ def main():
             }
             replacement_species.update(OTT_mistakes)
             replacement_species = {
-                replacement_species[n.label].replace("_", " "): n
-                for n in to_change
-                if n.label in replacement_species
+                replacement_species[n.label].replace("_", " "): n for n in to_change if n.label in replacement_species
             }
 
             remainder = to_change - set(replacement_species.values())
@@ -350,13 +325,12 @@ def main():
                 try:
                     write_filename = os.path.join(args.savein, os.path.basename(f))
                     try:
-                        os.remove(
-                            write_filename
-                        )  # remove the file beforehand if it exists (needed on OS X in case case sensitivity has changed)
+                        # remove file beforehand (needed on OS X if case sensitivity changed)
+                        os.remove(write_filename)
                     except OSError:
                         pass
                     with open(write_filename, "w", encoding="utf-8") as newtreefile:
-                        # override the normal node label writer to allow + and - signs to be unquoted
+                        # override normal node label writer so + and - signs can be unquoted
                         print(
                             startstr
                             + tree.as_string(
@@ -367,11 +341,9 @@ def main():
                             ),
                             file=newtreefile,
                         )
-                except IOError as e:
+                except OSError as e:
                     print(
-                        "Could not save files in {} I/O error({}): {}".format(
-                            args.savein, e.errno, e.strerror
-                        ),
+                        f"Could not save files in {args.savein}. " f"I/O error ({e.errno}): {e.strerror}",
                         file=sys.stderr,
                     )
     tot = unambiguous + synonyms + unidentified or float("NaN")
@@ -380,26 +352,23 @@ def main():
         # save a symlink
         symlink = os.path.join(os.path.dirname(args.savein), args.symlink)
         print(
-            "Creating symlink from '{}' to '{}'".format(
-                symlink, os.path.basename(args.savein)
-            ),
+            f"Creating symlink from '{symlink}' to '{os.path.basename(args.savein)}'",
             file=sys.stderr,
         )
         if os.path.islink(symlink):
             os.unlink(symlink)
         try:
             os.symlink(os.path.basename(args.savein), symlink)
-        except:
+        except OSError:
             print(
-                "Could not create symlink at {}. If you are running windows, you will need to give yourself permission to create symlinks (see https://superuser.com/questions/104845/permission-to-make-symbolic-links-in-windows-7)".format(
-                    symlink
-                )
+                f"Could not create symlink at {symlink}. "
+                "Under windows you will need to give yourself permission to create symlinks "
             )
     for f in (outinfo, sys.stderr):
         print(
-            "Over all input files, {}% names were precisely matched, {}% matched via synonyms, and {}% have no match".format(
-                unambiguous / tot * 100, synonyms / tot * 100, unidentified / tot * 100
-            ),
+            f"Over all input files, {unambiguous / tot * 100:.3f}% names were precisely "
+            f"matched, {synonyms / tot * 100:.3f}% matched via synonyms, "
+            f"and {unidentified / tot * 100:.3f}% have no match",
             file=f,
         )
 

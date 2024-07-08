@@ -3,8 +3,9 @@ Check if a tree is ultrametric, and if not, print the details of the non-ultrame
 """
 
 import argparse
-import dendropy
 import os
+
+import dendropy
 
 
 def get_taxon_name(node):
@@ -15,7 +16,7 @@ def get_taxon_name(node):
         return "Root"
 
     if len(node.child_nodes()) > 0:
-        return f"(Unnamed node)"
+        return "(Unnamed node)"
 
     # If there's no taxon, it's probably an extinct prop-up node,
     # and we get the name from the parent node
@@ -26,7 +27,7 @@ def check_ultrametricity(tree, print_details=False):
     known_total_length = None
     initial_name = None
     non_ultrametric_message = None
-    edge_lengths = []
+    edge_lens = []
     age_instances = {}
 
     def process_node(node):
@@ -46,21 +47,22 @@ def check_ultrametricity(tree, print_details=False):
                 return
 
             # We round up to 10 decimal places, to avoid floating point errors
-            total_length = round(sum(edge_lengths), 10)
+            total_length = round(sum(edge_lens), 10)
 
             # If it's the first one we see, record its total length and name
             if not known_total_length:
                 known_total_length = total_length
                 initial_name = name
             elif not non_ultrametric_message:
-                # For other leaves, check that they have the same total length. If not, record the error
+                # For other leaves, check they have the same total length
                 if known_total_length != total_length:
-                    non_ultrametric_message = f"Not ultrametric! {name} has length {total_length}, but {initial_name} has length {known_total_length}"
+                    non_ultrametric_message = (
+                        f"Not ultrametric! {name} has length {total_length}, "
+                        f"but {initial_name} has length {known_total_length}"
+                    )
 
             if print_details:
-                print(
-                    f"{name}: {total_length}={'+'.join([str(x) for x in edge_lengths])}"
-                )
+                print(f"{name}: {total_length}={'+'.join([str(x) for x in edge_lens])}")
 
             # Count the number of times this length occurs
             if total_length not in age_instances:
@@ -71,9 +73,9 @@ def check_ultrametricity(tree, print_details=False):
             for child in node.child_node_iter():
                 # Treat None as 0
                 # REVIEW: Is this correct? Should it be an error?
-                edge_lengths.append(child.edge_length or 0)
+                edge_lens.append(child.edge_length or 0)
                 process_node(child)
-                edge_lengths.pop()
+                edge_lens.pop()
 
     process_node(tree.seed_node)
 

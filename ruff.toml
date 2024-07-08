@@ -1,0 +1,45 @@
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "*.PHY",
+    "*.md",
+    "*.markdown",
+]
+
+line-length = 120
+
+[lint]
+select = ["E", "F", "B", "W", "I", "N", "UP", "A", "RUF", "PT", "NPY"]
+# N803,806,802 Allow capital varnames
+# N999 Allow caps in module name (for _OZglobals)
+# E741 Allow "l" as var name
+# PT011 allow pytest raises without match
+ignore = ["N803", "N806", "N802", "E741", "PT011", "PT009", "N999"]
+
+[lint.isort]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+

@@ -55,14 +55,15 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
         # If we're printing the file tree, print the current file
         if print_file_tree and expand_nodes:
             print(
-                f"{'  ' * depth}{node_name_in_parent}: {edge_length_in_parent} {mapping_entry['edge_length'] if mapping_entry else 0}"
+                f"{'  ' * depth}{node_name_in_parent}: {edge_length_in_parent} "
+                f"{mapping_entry['edge_length'] if mapping_entry else 0}"
             )
 
         if not os.path.exists(file):
             logging.warning(f"Subtree file {file} does not exist")
             return False
 
-        with open(file, "r", encoding="utf8") as stream:
+        with open(file, encoding="utf8") as stream:
             tree = stream.read()
 
         tree = trim_tree(tree)
@@ -76,25 +77,19 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
 
                 child_full_name = result["full_name"]
 
-                # Check if OneZoom token has a base ott (e.g. 123 in foobar_ott123~456-789-111)
+                # Check if OZ token has a base ott (e.g. 123 in foobar_ott123~456-789)
                 if "base_ott" in result:
                     # It's an extracted Open Tree file, e.g. 123.phy
-                    sub_file = os.path.join(
-                        ot_parts_folder, f'{result["base_ott"]}.phy'
-                    )
+                    sub_file = os.path.join(ot_parts_folder, f'{result["base_ott"]}.phy')
                     if not os.path.exists(sub_file):
                         # Fall back to .nwk, which happens for additional copied files
-                        sub_file = os.path.join(
-                            ot_parts_folder, f'{result["base_ott"]}.nwk'
-                        )
+                        sub_file = os.path.join(ot_parts_folder, f'{result["base_ott"]}.nwk')
                     expand_child_nodes = False
                     child_mapping_entry = None
                 else:
                     # Otherwise, it's a OneZoom file, e.g. AMORPHEA@ --> Amorphea.PHY
                     child_mapping_entry = token_to_file_map[child_full_name]
-                    sub_file = os.path.join(
-                        oz_parts_folder, child_mapping_entry["file"]
-                    )
+                    sub_file = os.path.join(oz_parts_folder, child_mapping_entry["file"])
                     expand_child_nodes = True
 
                 depth += 1
@@ -107,14 +102,15 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
                 ):
                     index = result["end"]
                 else:
-                    # If the child file doesn't exist, we'll need to write the child token as-is
+                    # If child file absent, we'll need to write the child token as-is
                     index = result["start"]
                 depth -= 1
 
         # We've processed all the children, and we need to write the rest of the tree
         last_chunk = tree[index:]
 
-        # Write the last chunk, but exclude the last name:edge_length, which needs special handling
+        # Write the last chunk, but exclude the last name:edge_length,
+        # which needs special handling
         last_closed_bracket = last_chunk.rfind(")")
         output_stream.write(last_chunk[: last_closed_bracket + 1])
 
@@ -122,9 +118,7 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
         last_token = last_chunk[last_closed_bracket + 1 :]
         last_token_segments = last_token.split(":")
         last_token_name = last_token_segments[0]
-        last_token_edge_length = (
-            last_token_segments[1] if len(last_token_segments) > 1 else None
-        )
+        last_token_edge_length = last_token_segments[1] if len(last_token_segments) > 1 else None
 
         # Always favor the length from our mapping, falling back to the last token in the file
         # Note that we never fall back to edge_length_in_parent here, following old code logic
@@ -136,7 +130,7 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
             # Three levels of fallback for .PHY files: mapping, last token, parent
             node_name = mapping_entry["taxon"] or last_token_name or node_name_in_parent
         else:
-            # Note that following old code logic, the parent vs last logic is reversed from above case
+            # NB: following old code logic, the above parent vs last logic is reversed here
             # DISCUSS: is there a logical reason for this?
             node_name = node_name_in_parent or last_token_name
 
@@ -167,9 +161,7 @@ def main():
         help="Print a tree of all the OneZoom included files",
     )
     parser.add_argument("treefile", help="The base tree file in newick form")
-    parser.add_argument(
-        "ot_parts_folder", help="The folder containing the Open Tree parts"
-    )
+    parser.add_argument("ot_parts_folder", help="The folder containing the Open Tree parts")
     parser.add_argument(
         "outfile",
         type=argparse.FileType("w"),

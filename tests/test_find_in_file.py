@@ -12,9 +12,9 @@ def chunks_from_string(s, chunk_size):
 
 def run_get_matches(regex, window_size):
     s = "abcdefghijklmnopqrstuvwxyz" * 3
-    iter = chunks_from_string(s, 26)
+    it = chunks_from_string(s, 26)
 
-    return list(get_matches(iter, regex, window_size))
+    return list(get_matches(it, regex, window_size))
 
 
 def test_no_match():

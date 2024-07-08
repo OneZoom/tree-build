@@ -6,15 +6,14 @@ TODO: Should be moved to a shared location.
 import re
 
 from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
-    wikidata_value,
     match_synonym,
     match_taxa,
     match_vernacular,
+    wikidata_value,
 )
 
-
 regexp_match = "|".join([str(v) for v in list(match_taxa) + list(match_vernacular)])
-quick_byte_match = re.compile('numeric-id":(?:{})\\D'.format(regexp_match))
+quick_byte_match = re.compile(f'numeric-id":(?:{regexp_match})\\D')
 
 
 def find_taxon_and_vernaculars(json_item):

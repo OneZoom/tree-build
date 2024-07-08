@@ -1,9 +1,8 @@
 """
 Extract a minimal tree that includes a set of taxa, and their closest common ancestors.
-"""
 
-"""
-e.g. if called on Panthera_tigris, Panthera_leo, Canis_lupus, Crocodylus niloticus, it returns (without the formatting):
+e.g. if called on Panthera_tigris, Panthera_leo, Canis_lupus, Crocodylus niloticus,
+it returns (without the formatting):
 (
   Crocodylus_niloticus_ott35864:6.819304991155585,
   (
@@ -59,26 +58,23 @@ def extract_minimal_tree(newick_tree, target_taxa: Set[str]):
 
             # Assert that all the children have depth 1 less than this node. This is
             # because any deeper nodes would have been bubbled up
-            assert all(
-                [child_node["depth"] == node["depth"] + 1 for child_node in children]
-            )
+            assert all([child_node["depth"] == node["depth"] + 1 for child_node in children])
 
             # Reduce the depth of the children to bubble them up
             for child_node in children:
                 child_node["depth"] -= 1
 
-            # If we found a taxon, or there are multiple children, we need to add a node to the list
+            # If we found a taxon, or there are multiple children, add a node to the list
             if found_target_taxon or len(children) > 1:
                 # Remove the children from the search list
                 node_list = [n for n in node_list if n not in children]
 
                 # Full name including the edge length
-                tree_string = newick_tree[
-                    node["full_name_start_index"] : node_end_index
-                ]
+                tree_string = newick_tree[node["full_name_start_index"] : node_end_index]
                 if children:
                     # Add the children to the tree string
-                    tree_string = f"({','.join([child_node['tree_string'] for child_node in children])}){tree_string}"
+                    ch = ",".join([child_node["tree_string"] for child_node in children])
+                    tree_string = f"({ch}){tree_string}"
 
                 node_list.append(
                     {
@@ -102,7 +98,7 @@ def extract_minimal_tree(newick_tree, target_taxa: Set[str]):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "treefile",
         type=argparse.FileType("r"),
@@ -117,9 +113,7 @@ def main():
         default=sys.stdout,
         help="The output tree file",
     )
-    parser.add_argument(
-        "--taxa", "-t", nargs="+", required=True, help="the taxa to search for"
-    )
+    parser.add_argument("--taxa", "-t", nargs="+", required=True, help="the taxa to search for")
     args = parser.parse_args()
 
     target_taxa = set(args.taxa)

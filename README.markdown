@@ -17,21 +17,24 @@ The first step to using this repo is to create a Python virtual environment and 
 
 After the first time, you just need to run the `source .venv/bin/activate` each time you want to activate it in a new shell.
 
+If you want to run the test suite, make sure the test requirements are also installed, with:
+
+    pip install -e '.[test]'
+
 ## Testing
 
-To run the test suite, from the root of the repo, and from your activated environment, run
-
-    pytest
-
-This will look for a config file to specify the database to use for testing. By default this will look
-in `../OZtree/private/appconfig.ini`, assuming that this repository is a sibling to a non-live
-[OZtree](https://github.com/OneZoom/OZtree) installation, and that the database used by this OZtree
-installation is active. Alternatively (e.g. if the plain `pytest` command is giving errors, or if you do not
-wish to use your OneZoom database for unit testing purposes), a config file
-that uses a SQLite database is provided in the `tests` directory, and the following command can be used
-which should always work without error.
+Assuming you have installed the test requirements, you shoule be able to run 
 
     pytest --conf-file tests/appconfig.ini
+
+Here we have used a basic conf file to create a fake OneZoom database. However, if you wish to test using the
+real OneZoom database, you can specify a different path to an appconfig.ini file, or omit the `--conf-file`
+option entirely, in which case the test suite will look for `../OZtree/private/appconfig.ini`, which assumes
+hat this repository is a sibling to a non-live
+[OZtree](https://github.com/OneZoom/OZtree) installation, and that the database used by this OZtree
+installation is active.
+
+    pytest  # Uses the "real" OneZoom database - take care!
 
 This uses mocked APIs. You can also run with the real APIs using the `--real-apis` swithc, in whcih case
 you will need a valid Azure Image cropping key in your appconfig.ini.

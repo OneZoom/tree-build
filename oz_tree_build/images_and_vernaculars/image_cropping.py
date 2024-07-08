@@ -19,7 +19,7 @@ logger = logging.getLogger(Path(__file__).name)
 class AzureImageCropper:
     def __init__(self, config):
         """
-        Given a config object, return an Azure Image Analysis client.
+        Given a config object, create an Azure Image Analysis client.
         """
         try:
             azure_vision_endpoint = config.get("azure_vision", "endpoint")

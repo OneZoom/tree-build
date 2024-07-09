@@ -270,7 +270,7 @@ class TestAPI:
         if not self.keep_rows:
             delete_rows(self.db, ott)
 
-    def check_downloaded_wiki_image(self, qid, crop=None, is_wikidata=True):
+    def check_downloaded_wiki_image(self, qid, cropper=None, is_wikidata=True):
         src_dir = str(src_flags["wiki"]) if is_wikidata else str(src_flags["onezoom_bespoke"])
         img_dir = os.path.join(self.tmp_dir, src_dir, str(qid)[-3:])
         if os.path.exists(os.path.join(img_dir, f"{qid}.jpg")):
@@ -283,7 +283,7 @@ class TestAPI:
             assert Image.open(cropped).size == (300, 300)
             cropinfo = os.path.join(img_dir, f"{qid}_cropinfo.txt")
             assert os.path.exists(cropinfo)
-            if crop is None:
+            if cropper is None:
                 # No Azure, so should have taken the default size
                 with open(cropinfo) as f:
                     s = f.read()
@@ -308,7 +308,7 @@ class TestAPI:
         return self.db.executesql(sql, (ott,))
 
     @apis.mock_patch_all_web_request_methods
-    def verify_process_leaf(self, image=None, rating=None, skip_images=None, crop=None, *args):
+    def verify_process_leaf(self, image=None, rating=None, skip_images=None, cropper=None, *args):
         get_wiki_images.process_leaf(
             self.db,
             self.ott or self.taxon_name,
@@ -316,7 +316,7 @@ class TestAPI:
             rating=rating,
             output_dir=self.tmp_dir,
             skip_images=skip_images,
-            crop=crop,
+            cropper=cropper,
         )
 
     @pytest.mark.parametrize("use_ott", [True, False])
@@ -328,14 +328,14 @@ class TestAPI:
         else:
             self.ott = None
             self.taxon_name = sp_name
-        crop = None
+        cropper = None
         image = None  # The name of the image to get or None to use the default WD image
         rating = 40123
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, ott=ott, name=sp_name)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, rating, False, crop)
+            self.verify_process_leaf(image, rating, False, cropper)
         assert caplog.text == ""
-        assert self.check_downloaded_wiki_image(self.qid, crop, image is None)
+        assert self.check_downloaded_wiki_image(self.qid, cropper, image is None)
         assert "Lion" in self.vernaculars_in_db(ott)
         rows = self.image_rows_in_db(ott)
         assert len(rows) == 1
@@ -349,23 +349,23 @@ class TestAPI:
 
     def test_process_default_leaf_skip_images(self, db, tmp_path, keep_rows):
         self.ott = "-552"
-        crop = None
+        cropper = None
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
-        self.verify_process_leaf(None, None, True, crop)
+        self.verify_process_leaf(None, None, True, cropper)
         # Images skipped, so should have no row
         assert "Lion" in self.vernaculars_in_db()
-        assert not self.check_downloaded_wiki_image(self.qid, crop)
+        assert not self.check_downloaded_wiki_image(self.qid, cropper)
         assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups()
 
     def test_alt_cc_license(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-553"
-        crop = None
+        cropper = None
         image = "CC-BY3.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, None, False, crop)
+            self.verify_process_leaf(image, None, False, cropper)
         rows = self.image_rows_in_db()
         assert len(rows) == 1
         assert rows[0][1:] == (
@@ -373,16 +373,16 @@ class TestAPI:
             "© John Doe",
             f"cc-by-3.0 ({self.apis.license_urls['cc-by-3.0']})",
         )
-        assert self.check_downloaded_wiki_image(rows[0][0], crop, image is None)
+        assert self.check_downloaded_wiki_image(rows[0][0], cropper, image is None)
         self.teardown_lookups()
 
     def test_pd_license(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-554"
-        crop = None
+        cropper = None
         image = "PublicDomain.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, None, False, crop)
+            self.verify_process_leaf(image, None, False, cropper)
         rows = self.image_rows_in_db()
         assert len(rows) == 1
         assert rows[0][1:] == (
@@ -390,17 +390,17 @@ class TestAPI:
             "John Doe",
             "Marked as being in the public domain",
         )
-        assert self.check_downloaded_wiki_image(rows[0][0], crop, image is None)
+        assert self.check_downloaded_wiki_image(rows[0][0], cropper, image is None)
         self.teardown_lookups()
 
     def test_flickr_license(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-555"
-        crop = None
+        cropper = None
         rating = 44444
         image = "Flickr.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, rating, False, crop)
+            self.verify_process_leaf(image, rating, False, cropper)
         assert "Lion" in self.vernaculars_in_db()
         rows = self.image_rows_in_db()
         assert len(rows) == 1
@@ -409,18 +409,18 @@ class TestAPI:
             "John Doe",
             "Marked on Flickr commons as being in the public domain",
         )
-        assert self.check_downloaded_wiki_image(rows[0][0], crop, image is None)
+        assert self.check_downloaded_wiki_image(rows[0][0], cropper, image is None)
         self.teardown_lookups()
 
     def test_no_artist(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-556"
-        crop = None
+        cropper = None
         rating = 40123
         image = "NoArtist.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, rating, False, crop)
+            self.verify_process_leaf(image, rating, False, cropper)
         assert "Artist not found" in caplog.text
         assert "Lion" in self.vernaculars_in_db()
         rows = self.image_rows_in_db()
@@ -430,58 +430,58 @@ class TestAPI:
             "Unknown artist",
             "Released into the public domain",
         )
-        assert self.check_downloaded_wiki_image(rows[0][0], crop, image is None)
+        assert self.check_downloaded_wiki_image(rows[0][0], cropper, image is None)
         self.teardown_lookups()
 
     def test_bad_licence(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-557"
-        crop = None
+        cropper = None
         image = "BadLicence.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, None, False, crop)
+            self.verify_process_leaf(image, None, False, cropper)
         assert "Unacceptable license" in caplog.text
         assert "Lion" in self.vernaculars_in_db()
-        assert not self.check_downloaded_wiki_image(self.qid, crop, image is None)
+        assert not self.check_downloaded_wiki_image(self.qid, cropper, image is None)
         assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups()
 
     def test_multiple_ott(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-558"
-        crop = None
+        cropper = None
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, repeat_rows=2)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(None, None, False, crop)
+            self.verify_process_leaf(None, None, False, cropper)
         assert "Multiple" in caplog.text
         assert len(self.vernaculars_in_db()) == 0
-        assert not self.check_downloaded_wiki_image(self.qid, crop)
+        assert not self.check_downloaded_wiki_image(self.qid, cropper)
         assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups()
 
     def test_no_ott(self, db, tmp_path, keep_rows, caplog):
         ordered_leaf_ott = -1111111
         self.ott = "-559"
-        crop = None
+        cropper = None
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, ott=ordered_leaf_ott)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(None, None, False, crop)
+            self.verify_process_leaf(None, None, False, cropper)
         assert "not found in ordered_leaves table" in caplog.text
         assert len(self.vernaculars_in_db()) == 0
-        assert not self.check_downloaded_wiki_image(self.qid, crop)
+        assert not self.check_downloaded_wiki_image(self.qid, cropper)
         assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups(ott=ordered_leaf_ott)
 
     @pytest.mark.skip(reason="https://github.com/OneZoom/tree-build/issues/78")
     def test_existing_image_rating_kept(self, db, keep_rows, tmp_path):
         self.ott = "-560"
-        crop = None
+        cropper = None
         self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
-        self.verify_process_leaf(None, None, None, crop)
+        self.verify_process_leaf(None, None, None, cropper)
         rows = self.image_rows_in_db()
         assert rows[0][1] == default_rating()
-        self.verify_process_leaf(None, 44444, None, crop)
+        self.verify_process_leaf(None, 44444, None, cropper)
         assert rows[0][1] == 44444
-        self.verify_process_leaf(None, None, None, crop)
+        self.verify_process_leaf(None, None, None, cropper)
         assert rows[0][1] == 44444
         self.verify_process_leaf(None, 40123)
         assert rows[0][1] == 40123

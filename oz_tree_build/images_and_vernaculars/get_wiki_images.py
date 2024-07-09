@@ -14,7 +14,6 @@ It can be called in two ways:
 """
 
 import argparse
-import configparser
 import datetime
 import json
 import logging
@@ -22,14 +21,10 @@ import os
 import re
 import sys
 import time
-import types
 import urllib.request
 from pathlib import Path
 
 import requests
-from azure.ai.vision.imageanalysis import ImageAnalysisClient
-from azure.ai.vision.imageanalysis.models import VisualFeatures
-from azure.core.credentials import AzureKeyCredential
 from PIL import Image
 
 from oz_tree_build._OZglobals import src_flags
@@ -41,6 +36,8 @@ from oz_tree_build.utilities.db_helper import (
     read_config,
 )
 from oz_tree_build.utilities.file_utils import enumerate_lines_from_file
+
+from .image_cropping import AzureImageCropper, CenterImageCropper
 
 default_wiki_image_rating = 35000
 bespoke_wiki_image_rating = 40000
@@ -86,46 +83,6 @@ def make_http_request_with_retries(url):
             raise Exception(f"Error requesting {url}: {r.status_code} {r.text}")
 
     raise Exception(f"Failed to get {url} after {retries} attempts")
-
-
-def get_image_analysis_client(config):
-    """
-    Given a config object, return an Azure Image Analysis client.
-    """
-    try:
-        azure_vision_endpoint = config.get("azure_vision", "endpoint")
-        azure_vision_key = config.get("azure_vision", "key")
-    except configparser.NoOptionError:
-        logger.error("Azure Vision API key not found in config file")
-        sys.exit()
-
-    return ImageAnalysisClient(
-        endpoint=azure_vision_endpoint,
-        credential=AzureKeyCredential(azure_vision_key),
-    )
-
-
-def get_image_crop_box(image, crop):
-    """
-    `image` can be a URL or a local file path.
-    Get the crop box for an image. If `crop` is an ImageAnalysisClient
-    use the Azure Vision API.
-    """
-    if hasattr(crop, "analyze_from_url"):
-        if image.startswith("http"):
-            image_analysis_client = crop
-            result = image_analysis_client.analyze_from_url(
-                image,
-                visual_features=[VisualFeatures.SMART_CROPS],
-                smart_crops_aspect_ratios=[1.0],
-            )
-            return result.smart_crops.list[0].bounding_box
-        else:
-            raise ValueError("Azure Vision API can only be used with URLs")
-    else:
-        if len(crop) != 4:
-            raise ValueError("`crop` must be an ImageAnalysisClient or a tuple of 4 integers")
-        return types.SimpleNamespace(x=crop[0], y=crop[1], width=crop[2], height=crop[3])
 
 
 def get_preferred_or_first_image_from_json_item(json_item):
@@ -310,7 +267,7 @@ def get_image_url(escaped_image_name):
     return image_url
 
 
-def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, crop=None, check_if_up_to_date=True):
+def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, cropper, check_if_up_to_date=True):
     """
     Download a Wikimedia image for a given QID and save it to the output directory. We
     keep both the uncropped and cropped versions of the image, along with the crop info.
@@ -380,14 +337,12 @@ def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, crop=None, 
     uncropped_image_path = f"{image_dir}/{src_id}_uncropped.jpg"
     urllib.request.urlretrieve(image_url, uncropped_image_path)
 
-    if crop is None:
+    if cropper is None:
         # Default to centering the crop
-        img = Image.open(uncropped_image_path)
-        w, h = img.size
-        square_dim = min(w, h)
-        crop = ((w - square_dim) // 2, (h - square_dim) // 2, square_dim, square_dim)
+        cropper = CenterImageCropper()
+
     # Get the crop box e.g. using the Azure Vision API
-    crop_box = get_image_crop_box(image_url, crop)
+    crop_box = cropper.crop(image_url, uncropped_image_path)
 
     # Crop and resize the image using PIL
     im = Image.open(uncropped_image_path)
@@ -501,7 +456,7 @@ def process_leaf(
     rating=None,
     skip_images=None,
     output_dir=None,
-    crop=None,
+    cropper=None,
 ):
     """
     If ott_or_taxon is a number it's an ott, otherwise it's a taxon name. `crop` can be
@@ -550,13 +505,13 @@ def process_leaf(
             src = src_flags["wiki"]
             src_id = qid
         if image:
-            save_wiki_image(db, ott, image, src, src_id, rating, output_dir, crop)
+            save_wiki_image(db, ott, image, src, src_id, rating, output_dir, cropper)
 
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
     save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
 
 
-def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=None):
+def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, cropper=None):
     """
     `crop` can be an ImageAnalysisClient, a crop location in the image
     (x, y, width, height), or None to carry out a default (centered) crop.
@@ -609,7 +564,7 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, crop=Non
                 qid,
                 default_wiki_image_rating,
                 output_dir,
-                crop,
+                cropper,
                 check_if_up_to_date=False,
             ):
                 leaves_that_got_images.add(qid)
@@ -647,18 +602,18 @@ def process_args(args):
         return
 
     db = connect_to_database(database)
-    azure = get_image_analysis_client(config)
+    cropper = AzureImageCropper(config)
 
     if args.subcommand == "leaf":
         # Process one leaf at a time
         if len(args.ott_or_taxa) > 1 and args.image is not None:
             raise ValueError("Cannot specify multiple taxa when using a bespoke image")
         for name in args.ott_or_taxa:
-            process_leaf(db, name, args.image, args.rating, args.skip_images, outdir, crop=azure)
+            process_leaf(db, name, args.image, args.rating, args.skip_images, outdir, cropper)
     elif args.subcommand == "clade":
         # Process all the taxa in the passed in clades
         for name in args.ott_or_taxa:
-            process_clade(db, name, args.wd_dump, args.skip_images, outdir, crop=azure)
+            process_clade(db, name, args.wd_dump, args.skip_images, outdir, cropper)
 
 
 def setup_logging(args):

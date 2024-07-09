@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oz_tree_build"
+version = "0.0.2"
+authors = [
+    {name = "OneZoom Developers", email = "mail@onezoom.org"},
+]
+description = "Logic to build the OneZoom tree"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+dependencies = [
+    "pytest>=8.1",
+    "DendroPy>=4.5.0",
+    "pymysql==1.1.0",
+    "azure-ai-vision-imageanalysis==1.0.0b2",
+    "pillow==10.3.0",
+    "pydal>=20240601.1",
+    "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.1",
+    "ruff>=0.5.1",
+]
+
+[project.scripts]
+add_ott_numbers_to_trees = "oz_tree_build.tree_build.ott_mapping.add_ott_numbers_to_trees:main"
+build_oz_tree = "oz_tree_build.tree_build.build_oz_tree:main"
+get_open_trees_from_one_zoom = "oz_tree_build.tree_build.get_open_trees_from_one_zoom:main"
+generate_filtered_files = "oz_tree_build.utilities.generate_filtered_files:main"
+CSV_base_table_creator = "oz_tree_build.taxon_mapping_and_popularity.CSV_base_table_creator:main"
+get_wiki_images = "oz_tree_build.images_and_vernaculars.get_wiki_images:main"
+process_image_bits = "oz_tree_build.images_and_vernaculars.process_image_bits:main"
+make_js_treefiles = "oz_tree_build.utilities.make_js_treefiles:main"
+format_newick = "oz_tree_build.newick.format_newick:main"
+extract_minimal_tree = "oz_tree_build.newick.extract_minimal_tree:main"
+extract_trees = "oz_tree_build.newick.extract_trees:main"
+check_ultrametricity = "oz_tree_build.newick.check_ultrametricity:main"
+fix_ultrametricity = "oz_tree_build.newick.fix_ultrametricity:main"
+find_in_file = "oz_tree_build.utilities.find_in_file:main"
+
+[tool.setuptools]
+packages = ["oz_tree_build"]
+include-package-data = true
+
+[tool.pytest]
+testpaths = ["tests"]

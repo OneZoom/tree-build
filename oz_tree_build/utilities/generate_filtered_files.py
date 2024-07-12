@@ -216,6 +216,8 @@ def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump
             "P5055": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # irmng id
             "P830": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # EOL id
             "P961": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # IPNI id
+            "P9157": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # OTT id
+            "P3151": [{"mainsnak": {"datavalue": {"value": KEEP}}}],  # iNaturalist id
             "P141": [{"references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}]}],  # IUCN id
             "P1420": [{"mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}}}],  # taxon synonym
             "P18": [

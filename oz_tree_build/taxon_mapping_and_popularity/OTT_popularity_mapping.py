@@ -613,6 +613,12 @@ def wikidata_info(
                             f" Cannot convert IPNI property {ipni} to integer"
                             f" in Q{item_instance.Q} ({label(json_item)})."
                         )
+                try:
+                    # Save the ott coming from the wikidata item, if any
+                    item_instance.wd_ott = int(claims["P9157"][0]["mainsnak"]["datavalue"]["value"])
+                except (KeyError, ValueError):
+                    pass
+
                 # Only map alternate Qs if current item has a main language link
                 # Otherwise, it's likely not an interesting item to map to, and it may
                 # end up overridding a better existing mapping

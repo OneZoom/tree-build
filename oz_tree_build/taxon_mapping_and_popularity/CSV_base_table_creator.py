@@ -714,6 +714,35 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
             )
 
 
+def display_WD_ott_stats(OTT_ptrs):
+    """
+    Display some stats about OTTs coming from Wikidata
+    """
+    matching_otts = 0
+    mismatching_otts = 0
+    no_wd_otts = 0
+    for ott in OTT_ptrs:
+        try:
+            if OTT_ptrs[ott]["rank"] == "species":
+                if OTT_ptrs[ott]["wd"].get("wd_ott") is not None:
+                    if ott == OTT_ptrs[ott]["wd"].wd_ott:
+                        matching_otts += 1
+                    else:
+                        logging.debug(
+                            f"Q{OTT_ptrs[ott]['wd'].Q}: OTT {ott} does not match {OTT_ptrs[ott]['wd'].wd_ott}"
+                        )
+                        mismatching_otts += 1
+                else:
+                    no_wd_otts += 1
+        except (KeyError, AttributeError):
+            pass
+
+    logging.info("✔ Stats on Wikidata OTT matching:")
+    logging.info(f"    Leaves where the WD ott matches the ott: {matching_otts}")
+    logging.info(f"    Leaves where the WD ott does not match the wd_ott: {mismatching_otts}")
+    logging.info(f"    Leaves where WD does not have an ott: {no_wd_otts}")
+
+
 def map_wiki_info(
     source_ptrs,
     source_order,
@@ -767,6 +796,8 @@ def map_wiki_info(
     supplement_from_wikidata(OTT_ptrs)
 
     logging.info("✔ Wikidata/wikipedia data mapped")
+
+    display_WD_ott_stats(OTT_ptrs)
 
     return popularity_steps == 2
 

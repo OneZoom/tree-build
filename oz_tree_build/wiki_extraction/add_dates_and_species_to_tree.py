@@ -7,12 +7,13 @@ based on the Wikipedia taxobox, if we don't already have a full species name.
 import argparse
 import json
 import logging
+
 import dendropy
+
 from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
 from oz_tree_build.wiki_extraction.wiki_taxon_page_data import (
     get_taxon_data_from_wikipedia_page,
 )
-
 
 nodes_data = {}
 
@@ -58,9 +59,7 @@ def process_leaf_node_and_get_extinction_date(node):
 
     taxon = node.taxon.label
 
-    node_data = get_taxon_data_from_wikipedia_with_caching(
-        taxon, get_wiki_page_title(taxon, node), is_leaf=True
-    )
+    node_data = get_taxon_data_from_wikipedia_with_caching(taxon, get_wiki_page_title(taxon, node), is_leaf=True)
 
     # If we couldn't get any data (missing page or no taxobox), delete the node,
     # since we won't be able to show anything interesting for it
@@ -107,18 +106,18 @@ def process_interior_node_recursive_and_get_range(node):
     # If we have a taxon name, get data from Wikipedia
     node_data = None
     if taxon:
-        node_data = get_taxon_data_from_wikipedia_with_caching(
-            taxon, get_wiki_page_title(taxon, node), node.is_leaf()
-        )
+        node_data = get_taxon_data_from_wikipedia_with_caching(taxon, get_wiki_page_title(taxon, node), node.is_leaf())
 
     if not node_data:
         node_data = {}
 
-    if "from_date" in node_data and node_data["from_date"]:
+    if node_data.get("from_date"):
         date_range = [node_data["from_date"], node_data["to_date"]]
         if oldest_child_from_date > date_range[0]:
             logging.warning(
-                f"Node '{taxon}' has from_date {node_data['from_date']}, but its child {child_with_oldest_from_date.taxon} has from_date {oldest_child_from_date}"
+                f"Node '{taxon}' has from_date {node_data['from_date']}, "
+                f"but its child {child_with_oldest_from_date.taxon} "
+                f"has from_date {oldest_child_from_date}"
             )
             date_range[0] = round(oldest_child_from_date + 0.001, 10)
     else:
@@ -159,9 +158,7 @@ def main():
     args = parse_args_and_add_logging_switch(parser)
 
     # Parse the input tree
-    tree = dendropy.Tree.get(
-        file=args.treefile, schema="newick", suppress_internal_node_taxa=False
-    )
+    tree = dendropy.Tree.get(file=args.treefile, schema="newick", suppress_internal_node_taxa=False)
 
     # The taxon data cache file has the same name with a .json extension
     cache_filename = args.treefile.name + ".taxondatacache.json"

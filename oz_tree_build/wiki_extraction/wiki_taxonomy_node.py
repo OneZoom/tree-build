@@ -1,4 +1,5 @@
 import mwparserfromhell
+
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
     find_wikicode_node,
     get_taxon_and_page_title,
@@ -38,13 +39,9 @@ class WikiTaxonomyNode:
         )
         if not taxon:
             return None
-        return cls(
-            containing_page_title, wikicode, index, depth, taxon, taxon_page_title
-        )
+        return cls(containing_page_title, wikicode, index, depth, taxon, taxon_page_title)
 
-    def __init__(
-        self, containing_page_title, wikicode, index, depth, taxon, taxon_page_title
-    ):
+    def __init__(self, containing_page_title, wikicode, index, depth, taxon, taxon_page_title):
         self.containing_page_title = containing_page_title
         self.wikicode = wikicode
         self.index = index
@@ -90,8 +87,6 @@ class WikiTaxonomyNode:
             assert colon_count == self.depth + 1
 
             i += 1
-            child_node = WikiTaxonomyNode.create_node(
-                self.containing_page_title, self.wikicode, i, self.depth + 1
-            )
+            child_node = WikiTaxonomyNode.create_node(self.containing_page_title, self.wikicode, i, self.depth + 1)
             if child_node:
                 yield child_node

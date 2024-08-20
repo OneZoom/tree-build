@@ -5,12 +5,12 @@ The output tree is in Newick format.
 """
 
 import argparse
-import json
 import logging
 import os
-import dendropy
-from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
 
+import dendropy
+
+from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
 from oz_tree_build.wiki_extraction.wiki_clade_extractor import (
     get_taxon_tree_from_wiki_page,
 )
@@ -96,9 +96,7 @@ def process_file(
         if extraction_cache_folder:
             cache_filename = f"{extraction_cache_folder}/{source}.phy"
             try:
-                child_tree = dendropy.Tree.get_from_path(
-                    cache_filename, "newick", suppress_internal_node_taxa=False
-                )
+                child_tree = dendropy.Tree.get_from_path(cache_filename, "newick", suppress_internal_node_taxa=False)
                 logging.info(f"Loaded from cache: {cache_filename}")
             except FileNotFoundError:
                 logging.info(f"Cache miss: {cache_filename}")
@@ -110,9 +108,7 @@ def process_file(
             # Save the tree to the cache
             if extraction_cache_folder:
                 os.makedirs(extraction_cache_folder, exist_ok=True)
-                child_tree.write_to_path(
-                    cache_filename, "newick", suppress_item_comments=False
-                )
+                child_tree.write_to_path(cache_filename, "newick", suppress_item_comments=False)
                 logging.info(f"Wrote to cache: {cache_filename}")
 
         if use_line_number_as_edge_length:
@@ -154,9 +150,7 @@ def process_file(
             main_tree = dendropy.Tree()
             main_tree.seed_node = find_node_by_taxon(child_tree, taxon)
         else:
-            insert_child_tree(
-                main_tree, child_tree, taxon, child_taxon, replace_parent_node
-            )
+            insert_child_tree(main_tree, child_tree, taxon, child_taxon, replace_parent_node)
 
     return main_tree
 
@@ -200,9 +194,7 @@ def main():
         taxons.add(node.taxon.label)
 
     # Log the number of nodes and leaves
-    logging.info(
-        f"Tree has {len(tree.nodes())} nodes and {len(tree.leaf_nodes())} leaves"
-    )
+    logging.info(f"Tree has {len(tree.nodes())} nodes and {len(tree.leaf_nodes())} leaves")
 
 
 if __name__ == "__main__":

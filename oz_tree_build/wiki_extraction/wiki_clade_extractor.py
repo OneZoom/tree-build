@@ -16,13 +16,14 @@ The output is a Newick tree, which is printed to stdout.
 
 import argparse
 import logging
+
 import dendropy
+
 from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
     get_wikicode_for_page,
     get_wikicode_for_string,
 )
-
 from oz_tree_build.wiki_extraction.wiki_clade_node import WikiCladeNode
 from oz_tree_build.wiki_extraction.wiki_taxonomy_node import WikiTaxonomyNode
 
@@ -37,9 +38,7 @@ def process_node(node, taxon_set) -> dendropy.Node:
             # In rare cases, the same taxon appears twice in the same tree.
             # e.g. this occurs in the Amniota tree, which has both 'Amniota (total group)'
             # and 'Amniota (crown group)'. To avoid issues, we just ignore the second instance.
-            logging.warning(
-                f"Ignoring taxon {node.taxon}, as it already exists in the same tree"
-            )
+            logging.warning(f"Ignoring taxon {node.taxon}, as it already exists in the same tree")
     for child in node.enumerate_children():
         tree_node.add_child(process_node(child, taxon_set))
 
@@ -49,19 +48,13 @@ def process_node(node, taxon_set) -> dendropy.Node:
     return tree_node
 
 
-def get_taxon_tree_from_wikicode(
-    page_title, wikicode, taxon_tree_location
-) -> dendropy.Tree:
+def get_taxon_tree_from_wikicode(page_title, wikicode, taxon_tree_location) -> dendropy.Tree:
     # If location string is a number, it's a cladogram index
     # If it's a string, it's the wiki header that precedes a taxonomy tree (bullet list)
     if taxon_tree_location.isnumeric():
-        node = WikiCladeNode.create_root_node(
-            page_title, wikicode, int(taxon_tree_location)
-        )
+        node = WikiCladeNode.create_root_node(page_title, wikicode, int(taxon_tree_location))
     else:
-        node = WikiTaxonomyNode.create_root_node(
-            page_title, wikicode, taxon_tree_location
-        )
+        node = WikiTaxonomyNode.create_root_node(page_title, wikicode, taxon_tree_location)
 
     tree = dendropy.Tree()
     taxon_set = set()

@@ -3,6 +3,7 @@ https://en.wikipedia.org/wiki/Template:Clade documents the clade template design
 """
 
 import logging
+
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
     get_taxon_and_page_title,
 )
@@ -15,27 +16,22 @@ def is_clade_template_name(name):
 class WikiCladeNode:
     @classmethod
     def create_root_node(cls, containing_page_title, wikicode, cladogram_index):
-        templates = wikicode.filter_templates(
-            recursive=False, matches=lambda n: is_clade_template_name(n.name)
-        )
+        templates = wikicode.filter_templates(recursive=False, matches=lambda n: is_clade_template_name(n.name))
 
         # We may not find it with recursive=False, e.g. if it's nested in a <div></div>
         # Passing recursive=True is probamatic, as it will find all nested clade templates,
         # so we can only do this if we're looking for the very first cladogram
         # TODO: solve the general case
         if len(templates) == 0 and cladogram_index == 1:
-            templates = wikicode.filter_templates(
-                recursive=True, matches=lambda n: is_clade_template_name(n.name)
-            )
+            templates = wikicode.filter_templates(recursive=True, matches=lambda n: is_clade_template_name(n.name))
             if len(templates) > 0:
-                logging.warning(
-                    f"Found cladogram with recursive=True, but it was nested"
-                )
+                logging.warning("Found cladogram with recursive=True, but it was nested")
 
         # If that index is out of range, raise an error
         if cladogram_index > len(templates):
             raise ValueError(
-                f"Cladogram index {cladogram_index} out of range for page {containing_page_title}: only {len(templates)} found"
+                f"Cladogram index {cladogram_index} out of range for page {containing_page_title}: "
+                f"only {len(templates)} found"
             )
 
         # We subtract one since the argument is 1-based
@@ -44,9 +40,7 @@ class WikiCladeNode:
         # If the template is wrapped in a {{cladogram}} template, use the inner clade template
         if template.name.strip().casefold() == "cladogram".casefold():
             param_name = "clades" if template.has_param("clades") else "cladogram"
-            template = template.get(param_name).value.filter_templates(recursive=False)[
-                0
-            ]
+            template = template.get(param_name).value.filter_templates(recursive=False)[0]
 
         return WikiCladeNode(containing_page_title, None, None, template)
 
@@ -70,12 +64,8 @@ class WikiCladeNode:
             # Look for targets, e.g. |targetA=, |targetB=, ...
             for i in range(65, 91):
                 if template.has_param(f"target{chr(i)}"):
-                    subclade_token_name = str(
-                        template.get(f"target{chr(i)}").value
-                    ).strip()
-                    subclades[subclade_token_name] = template.get(
-                        f"subclade{chr(i)}"
-                    ).value
+                    subclade_token_name = str(template.get(f"target{chr(i)}").value).strip()
+                    subclades[subclade_token_name] = template.get(f"subclade{chr(i)}").value
                 else:
                     break
 
@@ -97,9 +87,7 @@ class WikiCladeNode:
             if sub.strip() in self.subclades:
                 sub = self.subclades[sub.strip()]
 
-            sub_templates = sub.filter_templates(
-                recursive=False, matches=lambda n: n.name.lower().startswith("clade")
-            )
+            sub_templates = sub.filter_templates(recursive=False, matches=lambda n: n.name.lower().startswith("clade"))
             child_is_leaf = len(sub_templates) == 0
 
             taxon = taxon_page_title = ""

@@ -4,9 +4,9 @@ Helper functions for extracting data from Wikipedia using mwparserfromhell
 
 import logging
 import re
+
 import mwparserfromhell
 import requests_cache
-
 
 session = requests_cache.CachedSession("http_cache")
 
@@ -49,10 +49,10 @@ def get_wikicode_for_page(page_title) -> mwparserfromhell.wikicode.Wikicode:
     return get_wikicode_for_string(wiki_string)
 
 
-def find_wikicode_node(wikicode, start_index, type, filter):
+def find_wikicode_node(wikicode, start_index, node_type, node_filter):
     for i, node in enumerate(wikicode.nodes[start_index:], start=start_index):
         assert wikicode.nodes[i] == node
-        if isinstance(node, type) and filter(node):
+        if isinstance(node, node_type) and node_filter(node):
             return i, node
     return None, None
 
@@ -60,8 +60,7 @@ def find_wikicode_node(wikicode, start_index, type, filter):
 # Helper to get a single-instance template, with flexible name matching
 def get_wikicode_template(wikicode, possible_names) -> mwparserfromhell.nodes.Template:
     templates = wikicode.filter_templates(
-        matches=lambda n: n.name.strip().casefold().replace(" ", "").replace("_", "")
-        in possible_names
+        matches=lambda n: n.name.strip().casefold().replace(" ", "").replace("_", "") in possible_names
     )
     if len(templates) == 0:
         return None
@@ -80,15 +79,9 @@ def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     taxon = taxon.replace('"', "")
 
     taxon_for_alphanum_check = taxon.replace(" ", "").replace("-", "")
-    if (
-        allow_shortened_binomial
-        and len(taxon_for_alphanum_check) > 1
-        and taxon_for_alphanum_check[1] == "."
-    ):
+    if allow_shortened_binomial and len(taxon_for_alphanum_check) > 1 and taxon_for_alphanum_check[1] == ".":
         # If we allow shortened binomial names (e.g. "P. Leo"), remove the period if any
-        taxon_for_alphanum_check = (
-            taxon_for_alphanum_check[0] + taxon_for_alphanum_check[2:]
-        )
+        taxon_for_alphanum_check = taxon_for_alphanum_check[0] + taxon_for_alphanum_check[2:]
     if not taxon_for_alphanum_check.replace(" ", "").isalnum():
         return None
 
@@ -120,9 +113,7 @@ def get_taxon_and_page_title(
         # Use the index variable here
         taxon_page_title = None
         using_text_node = False
-        if isinstance(
-            node, mwparserfromhell.nodes.Wikilink
-        ) and not node.title.startswith("File:"):
+        if isinstance(node, mwparserfromhell.nodes.Wikilink) and not node.title.startswith("File:"):
             if node.text:
                 # If the link has a display string, use that
                 taxon = str(node.text)
@@ -133,12 +124,12 @@ def get_taxon_and_page_title(
             # If it's not already binomial, and the next node is text,
             # try to include that in the taxon name. This covers cases like
             # ''[[Mosasaurus]] hoffmannii'' (from https://en.wikipedia.org/wiki/Mosasaurinae)
-            if not " " in taxon and index + 1 < len(wikicode.nodes):
+            if " " not in taxon and index + 1 < len(wikicode.nodes):
                 node = wikicode.nodes[index + 1]
                 if isinstance(node, mwparserfromhell.nodes.Text):
                     taxon2 = validate_clean_taxon(node.value)
                     # Ignore the extra part of it contains a '(', as in |2=[[Serpentes]] (modern snakes)
-                    if taxon2 and not "(" in node.value:
+                    if taxon2 and "(" not in node.value:
                         taxon = taxon + " " + taxon2
         elif isinstance(node, mwparserfromhell.nodes.Text):
             using_text_node = True
@@ -161,10 +152,7 @@ def get_taxon_and_page_title(
             if (
                 using_text_node
                 and link_only
-                and (
-                    not containing_page_title
-                    or not taxon.startswith(containing_page_title)
-                )
+                and (not containing_page_title or not taxon.startswith(containing_page_title))
             ):
                 return None, None
 
@@ -192,9 +180,7 @@ def get_taxon_name(
 # Look for a display string in a wikicode
 def get_display_string_from_wikicode(wikicode, favor_link_title=False):
     for node in wikicode.nodes:
-        if isinstance(
-            node, mwparserfromhell.nodes.Wikilink
-        ) and not node.title.startswith("File:"):
+        if isinstance(node, mwparserfromhell.nodes.Wikilink) and not node.title.startswith("File:"):
             if favor_link_title:
                 display_string = str(node.title) if node.title else str(node.text)
             else:

@@ -20,6 +20,7 @@ dependencies = [
     "pydal>=20240601.1",
     "cryptography>=42.0",
     "mwparserfromhell>=0.6.6",
+    "requests-cache>=1.2.1",
 ]
 
 [project.optional-dependencies]

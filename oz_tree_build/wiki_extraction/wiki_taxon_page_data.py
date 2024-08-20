@@ -5,7 +5,6 @@ page's wikicode and looking for specific templates and patterns. The
 information is returned as a dictionary.
 """
 
-
 import logging
 
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
@@ -47,17 +46,17 @@ def get_date_range_from_taxobox(taxobox):
     if not taxobox.has_param("fossil_range"):
         return None, None
 
-    range = taxobox.get("fossil_range").value
+    fossil_range = taxobox.get("fossil_range").value
     # Template name can randomly be be "fossil range" or "geological range", with or without space/underscores
     fossil_range_template = get_wikicode_template(
-        range,
+        fossil_range,
         ("fossilrange", "geologicalrange", "geologicalrange/linked", "geologicalage"),
     )
 
     if not fossil_range_template:
         # If there is no template, just try to treat it as a string to get a range
         # We favor the link title, as in "Middle Permian" in [[Middle Permian|Middle]]
-        range_string = get_display_string_from_wikicode(range, favor_link_title=True)
+        range_string = get_display_string_from_wikicode(fossil_range, favor_link_title=True)
         if not range_string:
             return None, None
         from_date = get_range_date(range_string, use_start=True)
@@ -68,14 +67,10 @@ def get_date_range_from_taxobox(taxobox):
         param_index = 0
         if fossil_range_template.params[0].name == "earliest":
             param_index = 1
-        from_date = get_range_date(
-            fossil_range_template.params[param_index].value, use_start=True
-        )
+        from_date = get_range_date(fossil_range_template.params[param_index].value, use_start=True)
         # If there is no end date, we fall back to the start date
         to_date = (
-            get_range_date(
-                fossil_range_template.params[param_index + 1].value, use_start=False
-            )
+            get_range_date(fossil_range_template.params[param_index + 1].value, use_start=False)
             if len(fossil_range_template.params) >= param_index + 2
             else from_date
         )
@@ -95,7 +90,7 @@ def get_species_from_taxobox(taxon, taxobox):
         species_name = get_taxon_name(species, allow_shortened_binomial=True)
 
         # If it's already binomial, we're done
-        if species_name and not " " in species_name:
+        if species_name and " " not in species_name:
             species_name = get_taxon_name(genus) + " " + species_name
     elif taxobox.has_param("subdivision"):
         subdivision = taxobox.get("subdivision").value
@@ -109,10 +104,8 @@ def get_species_from_taxobox(taxon, taxobox):
         return None
 
     # Make sure it's a binomial species name
-    if not " " in species_name:
-        logging.warning(
-            f"For {taxon}, found '{species_name}' in taxobox, but it's not binomial"
-        )
+    if " " not in species_name:
+        logging.warning(f"For {taxon}, found '{species_name}' in taxobox, but it's not binomial")
         return None
 
     # Ignore some bogus values that can appear (e.g. see https://en.wikipedia.org/wiki/Protosuchia)
@@ -128,16 +121,14 @@ def get_image_from_page(wikicode, taxobox):
 
     # First, check if we can find a paleoart image anywhere in the page
     # "Life restoration" or "Life reconstruction" are common titles for those
-    paleoart_links = wikicode.filter_wikilinks(
-        matches=lambda l: "Life re" in str(l.text)
-    )
+    paleoart_links = wikicode.filter_wikilinks(matches=lambda l: "Life re" in str(l.text))
     if len(paleoart_links) > 0:
         image_name = str(paleoart_links[0].title)
 
         # In some cases, the link is not directly to the image, but is contained
         # in a parent template with image properties multiple image
         # e.g. this happens for https://en.wikipedia.org/wiki/Tyrannosaurus
-        if not "." in image_name:
+        if "." not in image_name:
             link_parent = wikicode.get_parent(paleoart_links[0])
             # Find the first param that starts with "image". Could be "image1" or just "image"
             image_name = None
@@ -150,7 +141,7 @@ def get_image_from_page(wikicode, taxobox):
     if not image_name and taxobox.has_param("image"):
         image_name = str(taxobox.get("image").value).strip()
 
-    if image_name and not ":" in image_name:
+    if image_name and ":" not in image_name:
         image_name = "File:" + image_name
 
     # The '<' part is to ignore an odd case of HTML for Aves
@@ -168,9 +159,7 @@ def get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf):
     if not wikicode:
         return None
 
-    taxobox = get_wikicode_template(
-        wikicode, ("automatictaxobox", "speciesbox", "taxobox")
-    )
+    taxobox = get_wikicode_template(wikicode, ("automatictaxobox", "speciesbox", "taxobox"))
     if not taxobox:
         logging.warning(f"Could not find taxobox for {taxon}")
         return None

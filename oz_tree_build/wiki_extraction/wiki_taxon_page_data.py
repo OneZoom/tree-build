@@ -120,8 +120,10 @@ def get_image_from_page(wikicode, taxobox):
     image_name = None
 
     # First, check if we can find a paleoart image anywhere in the page
-    # "Life restoration" or "Life reconstruction" are common titles for those
-    paleoart_links = wikicode.filter_wikilinks(matches=lambda l: "Life re" in str(l.text))
+    # "Restoration", "Life restoration" or "Life reconstruction" are common titles for those
+    paleoart_links = wikicode.filter_wikilinks(
+        matches=lambda l: "Life re" in str(l.text) or "Restoration" in str(l.text)
+    )
     if len(paleoart_links) > 0:
         image_name = str(paleoart_links[0].title)
 

@@ -13,7 +13,7 @@ session = requests_cache.CachedSession("http_cache")
 API_URL = "https://en.wikipedia.org/w/api.php"
 
 
-def get_text_from_wiki_page(page_title):
+def get_id_and_text_from_wiki_page(page_title):
     # Doc: https://www.mediawiki.org/wiki/API:Revisions
     params = {
         "action": "query",
@@ -30,11 +30,13 @@ def get_text_from_wiki_page(page_title):
     req = session.get(API_URL, headers=headers, params=params, allow_redirects=True)
     res = req.json()
     try:
-        revision = res["query"]["pages"][0]["revisions"][0]
-        return revision["slots"]["main"]["content"]
+        page = res["query"]["pages"][0]
+        revision = page["revisions"][0]
+        page_id = page["pageid"]
+        return page_id, revision["slots"]["main"]["content"]
     except KeyError:
         logging.warning(f"Could not find page '{page_title}'")
-        return None
+        return None, None
 
 
 def get_wikicode_for_string(wiki_string) -> mwparserfromhell.wikicode.Wikicode:
@@ -42,11 +44,14 @@ def get_wikicode_for_string(wiki_string) -> mwparserfromhell.wikicode.Wikicode:
 
 
 def get_wikicode_for_page(page_title) -> mwparserfromhell.wikicode.Wikicode:
-    wiki_string = get_text_from_wiki_page(page_title)
+    page_id, wiki_string = get_id_and_text_from_wiki_page(page_title)
     if not wiki_string:
         return None
 
-    return get_wikicode_for_string(wiki_string)
+    wikicode = get_wikicode_for_string(wiki_string)
+    # Add the pageid as a wikicode property for convenience
+    wikicode.page_id = page_id
+    return wikicode
 
 
 def find_wikicode_node(wikicode, start_index, node_type, node_filter):

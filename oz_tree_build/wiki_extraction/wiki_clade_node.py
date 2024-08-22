@@ -25,7 +25,7 @@ class WikiCladeNode:
         if len(templates) == 0 and cladogram_index == 1:
             templates = wikicode.filter_templates(recursive=True, matches=lambda n: is_clade_template_name(n.name))
             if len(templates) > 0:
-                logging.warning("Found cladogram with recursive=True, but it was nested")
+                logging.warning(f"{containing_page_title}: Found cladogram with recursive=True, but it was nested")
 
         # If that index is out of range, raise an error
         if cladogram_index > len(templates):

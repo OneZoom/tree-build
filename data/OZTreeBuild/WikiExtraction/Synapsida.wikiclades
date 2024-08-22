@@ -3,12 +3,12 @@ Synapsida FROM Synapsid@2
         Biarmosuchia FROM Burnetiamorpha@1 
         Dinocephalia FROM Anteosauridae@1 
         Anomodontia FROM Anomodont@2 
-            Dicynodontia FROM Eodicynodon@2  # But Therochelonia has a completely different tree!
+            Dicynodontia FROM Eodicynodon@1  # But Therochelonia has a completely different tree!
                 Kannemeyeriiformes FROM Kannemeyeriiformes@1
                     Stahleckeriidae FROM Stahleckeriidae@1
                 #Lystrosauridae is here, but there are is phylogeny on the page
         Gorgonopsia FROM Gorgonopsia@1
-        Therocephalia FROM Therocephalia@2
+        Therocephalia FROM Therocephalia@1
         Cynodontia FROM Cynodont@1 
             Mammaliaformes FROM Mammaliaformes@1
                 Docodonta FROM Docodonta@1

@@ -148,7 +148,9 @@ def process_file(
 
         if not main_tree:
             main_tree = dendropy.Tree()
-            main_tree.seed_node = find_node_by_taxon(child_tree, taxon)
+            root = find_node_by_taxon(child_tree, taxon)
+            root.parent_node = None
+            main_tree.seed_node = root
         else:
             insert_child_tree(main_tree, child_tree, taxon, child_taxon, replace_parent_node)
 

@@ -1,16 +1,16 @@
 Dinosauria-Unenlagiidae FROM Dinosaur@Taxonomy # We get Halszkaraptorinae/Unenlagiinae from Dromaeosauridae
-    Ornithischia-Heterodontosaurus_tucki FROM Ornithischia@1
+    Ornithischia-Heterodontosaurus_tucki FROM Ornithischia@4
         Heterodontosauridae->Ornithischia FROM Heterodontosauridae@1 # Basically replaces Heterodontosaurus_tucki that we removed
-        Stegosauria FROM Stegosauria@2
+        Stegosauria FROM Stegosauria@1
         Ankylosauria-Paw_Paw FROM Ankylosauria@2    # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2205433
         Thescelosauridae-Notohypsilophodon FROM Thescelosauridae@1 # Notohypsilophodon is in Elasmaria
         Ankylopollexia-Fukuisaurus_tetoriensis FROM Ankylopollexia@1 # Fukuisaurus_tetoriensis comes from Hadrosauroidea
             Hadrosauroidea FROM Hadrosauroidea@4
                 Hadrosauridae FROM Hadrosauridae@2
-        Pachycephalosauria FROM Pachycephalosauria@3
+        Pachycephalosauria FROM Pachycephalosauria@1
         Elasmaria FROM Talenkauen@1 
         Ceratopsia FROM Ceratopsia@1
-            Ceratopsidae FROM Ornithischia@1 # Grab back the Ceratopsidae that was reduced when adding Ceratopsia
+            Ceratopsidae FROM Ornithischia@4 # Grab back the Ceratopsidae that was reduced when adding Ceratopsia
                 Chasmosaurinae FROM Chasmosaurinae@1
     #Saurischia Page not used, but shown here is a marker
         Saturnaliinae->Sauropodomorpha FROM Sauropodomorpha@2
@@ -27,19 +27,19 @@ Dinosauria-Unenlagiidae FROM Dinosaur@Taxonomy # We get Halszkaraptorinae/Unenla
         Titanosauria FROM Titanosauria@8
         #Theropoda Page not used, but shown here is a marker
             Coelophysoidea FROM Coelophysoidea@3
-            Ceratosauroidea=>Ceratosauria FROM Ceratosauria@2 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
-            Megalosauroidea FROM Megalosauroidea@2
+            Ceratosauroidea=>Ceratosauria FROM Ceratosauria@3 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
+            Megalosauroidea FROM Megalosauroidea@1
             Megaraptora FROM Megaraptora@3
-            Carnosauria-Spinosauridae-Megalosauridae-Piatnitzkysauridae FROM Carnosauria@2 # These 3 come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
+            Carnosauria-Spinosauridae-Megalosauridae-Piatnitzkysauridae-Monolophosaurus-Xuanhanosaurus FROM Carnosauria@4 # These all come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
             Metriacanthosauridae FROM Metriacanthosauridae@1
-            Compsognathidae FROM Compsognathidae@1
+            #Compsognathidae FROM Compsognathidae@1 # Doesn't seem to exist anymore?
             Tyrannosauroidea FROM Tyrannosauroidea@1 # Seems to hit the Geo clade, so we're not seeing the first two
             Ornithomimosauria FROM Ornithomimosauria@2
             Alvarezsauridae FROM Alvarezsauridae@1
             Therizinosauria FROM Therizinosauria@2
             Oviraptorosauria FROM Oviraptorosauria@1
-            Troodontidae FROM Troodontidae@3
-                Troodontinae-Saurornithoides-Zanabazar->Troodontidae FROM Troodontinae@1
+            Archaeopterygidae FROM Anchiornithidae@2
+            Troodontidae-Anchiornis FROM Troodontidae@4 # We get Anchiornis from Archaeopterygidae
             Dromaeosauridae FROM Dromaeosauridae@2
             Avialae-Scansoriopterygidae FROM Avialae@2 # Exclude Scansoriopterygidae to avoid duplicate
                 Ornithothoraces FROM Ornithothoraces@1

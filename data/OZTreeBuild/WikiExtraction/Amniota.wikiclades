@@ -1,5 +1,5 @@
-Reptiliomorpha FROM Amniota@2
-    Seymouriamorpha FROM Seymouriamorpha@2
+Amniota FROM Amniota@2
+    #Seymouriamorpha FROM Seymouriamorpha@2
     Diadectomorpha FROM Diadectidae@1
     Captorhinidae FROM Captorhinidae@2
     Synapsida FROM Synapsida.wikiclades # Import the whole Synapsida tree
@@ -10,7 +10,7 @@ Reptiliomorpha FROM Amniota@2
         Procolophonia FROM Procolophonia@1
             Pareiasauria FROM Pareiasauria@1
             Procolophonidae FROM Procolophonidae@1
-        Younginiformes FROM Younginiformes@1
+        Younginiformes FROM Younginiformes@2
         # Sauria
             #Lepidosauria
                 Rhynchocephalia->Lepidosauromorpha FROM Rhynchocephalia@1
@@ -21,6 +21,7 @@ Reptiliomorpha FROM Amniota@2
             Drepanosauridae->Drepanosauromorpha FROM Drepanosaur@1
             # Archelosauria
                 Pantestudines-Eosauropterygia FROM Pantestudines@1 # Eosauropterygia comes from Sauropterygia
+                    Placodontia FROM Placodontia@Classification
                 Thalattosauria FROM Thalattosauria@1
                 Hupehsuchia FROM Hupehsuchia@1
                 Ichthyopterygia->Ichthyosauriformes FROM Ichthyopterygia@1
@@ -38,9 +39,9 @@ Reptiliomorpha FROM Amniota@2
                         Aetosauria FROM Aetosaur@2
                         Poposauroidea FROM Poposauroidea@1
                         Crocodylomorpha FROM Crocodylomorpha@1
-                            # TODO: Deal with Protosuchia, which looks paraphyletic
-                            Notosuchia FROM Notosuchia@1
-                            Neosuchia FROM Neosuchia@2
+                            Crocodyliformes-Peirosauridae FROM Crocodyliformes@2 # We get Peirosauridae from Notosuchia, but they're completely diffrent. Need to resolve this!
+                                Notosuchia FROM Notosuchia@2
+                                Neosuchia FROM Neosuchia@2
                     Avemetatarsalia FROM Avemetatarsalia@2
                         Aphanosauria FROM Aphanosauria@1
                         Lagerpetidae FROM Lagerpetidae@1

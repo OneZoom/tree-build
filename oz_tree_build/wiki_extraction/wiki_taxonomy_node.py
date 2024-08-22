@@ -53,6 +53,17 @@ class WikiTaxonomyNode:
         # Loop until we find get back to the starting depth
         i = self.index
         while True:
+            # Taxonomy bullet lists can take two forms that we try to handle:
+            # * Root
+            # ** Middle
+            # *** Leaf
+            #
+            # or
+            #
+            # * Root
+            # :* Middle
+            # ::* Leaf
+
             # Find the next '*' heading
             i, node = find_wikicode_node(
                 self.wikicode,
@@ -65,26 +76,37 @@ class WikiTaxonomyNode:
             if i is None:
                 return
 
-            # Count the number of consecutive colons before the '*' heading
-            colon_count = 0
+            current_depth = 0
+
+            # Colon case: count the number of consecutive colons before the '*' heading
             j = i - 1
             while (
                 isinstance(self.wikicode.nodes[j], mwparserfromhell.nodes.Tag)
                 and self.wikicode.nodes[j].wiki_markup == ":"
             ):
-                colon_count += 1
+                current_depth += 1
                 j -= 1
 
-            # If the number of colons is less than the depth, we're done
-            if colon_count <= self.depth:
+            # Star case: count the number of consecutive stars after the '*' heading
+            j = i + 1
+            while (
+                isinstance(self.wikicode.nodes[j], mwparserfromhell.nodes.Tag)
+                and self.wikicode.nodes[j].wiki_markup == "*"
+            ):
+                current_depth += 1
+                j += 1
+                i += 1
+
+            # If the depth we calculated is less than the current depth, we're done
+            if current_depth <= self.depth:
                 break
 
             # If it's not a direct child, skip it
-            if colon_count > self.depth + 1:
+            if current_depth > self.depth + 1:
                 i += 1
                 continue
 
-            assert colon_count == self.depth + 1
+            assert current_depth == self.depth + 1
 
             i += 1
             child_node = WikiTaxonomyNode.create_node(self.containing_page_title, self.wikicode, i, self.depth + 1)

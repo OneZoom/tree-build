@@ -40,11 +40,15 @@ class AzureImageCropper:
         if not image_url:
             raise ValueError("Azure Vision API can only be used with URLs")
 
+        # Disable logging around this call as it's too verbose
+        logging.disable(logging.CRITICAL)
         result = self.client.analyze_from_url(
             image_url,
             visual_features=[VisualFeatures.SMART_CROPS],
             smart_crops_aspect_ratios=[1.0],
         )
+        logging.disable(logging.NOTSET)
+
         return result.smart_crops.list[0].bounding_box
 
 

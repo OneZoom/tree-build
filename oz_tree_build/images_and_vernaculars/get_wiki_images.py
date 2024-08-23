@@ -267,7 +267,7 @@ def get_image_url(escaped_image_name):
     return image_url
 
 
-def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, cropper, check_if_up_to_date=True):
+def save_wiki_image(db, leaf_data, image, src, src_id, rating, output_dir, cropper):
     """
     Download a Wikimedia image for a given QID and save it to the output directory. We
     keep both the uncropped and cropped versions of the image, along with the crop info.
@@ -278,25 +278,24 @@ def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, cropper, ch
     wiki_image_url_prefix = "https://commons.wikimedia.org/wiki/File:"
     s = placeholder(db)
 
+    ott = leaf_data["ott"]
+
     # Wikimedia uses underscores instead of spaces in URLs
     escaped_image_name = image["name"].replace(" ", "_")
-    image_dir = os.path.join(output_dir, str(src), subdir_name(src_id))
+    image_dir = os.path.normpath(os.path.join(output_dir, str(src), subdir_name(src_id)))
+    image_path = f"{image_dir}/{src_id}.jpg"
 
-    if check_if_up_to_date:
-        # If we already have an image for this taxon, and it's the same as the one
-        # we're trying to download, skip it
-        row = db.executesql(
-            f"SELECT url FROM images_by_ott WHERE src={s} and ott={s};",
-            (src, ott),
-        )
-        if len(row) > 0:
-            url = row[0][0]
-            existing_image_name = url[len(wiki_image_url_prefix) :]
-            if existing_image_name == escaped_image_name:
-                logger.info(
-                    f"Image {image['name']} for {ott} is already up to date: " f"should be at {image_dir}/{src_id}.jpg"
-                )
-                return
+    # If we already have an image for this taxon, and it's the same as the one
+    # we're trying to download, skip it
+    if leaf_data["img"]:
+        assert leaf_data["img"].startswith(wiki_image_url_prefix)
+        existing_image_name = leaf_data["img"][len(wiki_image_url_prefix) :]
+        if existing_image_name == escaped_image_name:
+            if os.path.isfile(image_path):
+                logger.info(f"Image '{image['name']}' for {ott} is in the db, and at {image_path}")
+                return True
+            else:
+                logger.warning(f"{image['name']} for {ott} is in the db, but the " f"file is missing, so re-processing")
 
     logger.info(f"Processing image for ott={ott} (qid={src_id}): {image['name']}")
 
@@ -358,8 +357,13 @@ def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, cropper, ch
             crop_box.y + crop_box.height,
         ),
     )
-    im.save(f"{image_dir}/{src_id}.jpg")
-    logger.info(f"Saved {image['name']} for ott={ott} (Q{src_id}) in {image_dir}/{src_id}.jpg")
+    try:
+        im.save(image_path)
+    except Exception as e:
+        logger.warning(f"Error saving {image_path}: {e}")
+        return False
+
+    logger.info(f"Saved {image['name']} for ott={ott} (Q{src_id}) in {image_path}")
 
     # Save the crop info in a text file next to the image
     crop_info_path = f"{image_dir}/{src_id}_cropinfo.txt"
@@ -373,7 +377,7 @@ def save_wiki_image(db, ott, image, src, src_id, rating, output_dir, cropper, ch
         db.executesql(sql, (ott, src))
 
     # Insert the new image into the database
-    wikimedia_url = f"https://commons.wikimedia.org/wiki/File:{escaped_image_name}"
+    wikimedia_url = f"{wiki_image_url_prefix}{escaped_image_name}"
     db.executesql(
         "INSERT INTO images_by_ott "
         "(ott,src,src_id,url,rating,rating_confidence,best_any,best_verified,best_pd,"
@@ -505,7 +509,8 @@ def process_leaf(
             src = src_flags["wiki"]
             src_id = qid
         if image:
-            save_wiki_image(db, ott, image, src, src_id, rating, output_dir, cropper)
+            leaf_info = {"ott": ott, "taxon": name, "img": None}
+            save_wiki_image(db, leaf_info, image, src, src_id, rating, output_dir, cropper)
 
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
     save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
@@ -533,15 +538,16 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, cropper=
     (leaf_lft, leaf_rgt, ott) = rows[0]
 
     if not skip_images:
-        # Get leaves in the clade with no wiki images, ignoring images from other sources
+        # Get all leaves in the clade along with their wiki image, if any
         sql = f"""
-        SELECT wikidata, ordered_leaves.ott FROM ordered_leaves
+        SELECT wikidata, ordered_leaves.ott, name, url FROM ordered_leaves
         LEFT OUTER JOIN (SELECT ott,src,url FROM images_by_ott
         WHERE src={s}) as wiki_images_by_ott ON ordered_leaves.ott=wiki_images_by_ott.ott
-        WHERE url IS NULL AND ordered_leaves.id >= {s} AND ordered_leaves.id <= {s};
+        WHERE ordered_leaves.id >= {s} AND ordered_leaves.id <= {s};
         """
-        leaves_without_images = dict(db.executesql(sql, (src_flags["wiki"], leaf_lft, leaf_rgt)))
-        logger.info(f"Found {len(leaves_without_images)} taxa without an image in the database")
+        rows = db.executesql(sql, (src_flags["wiki"], leaf_lft, leaf_rgt))
+        leaves_data = {qid: {"ott": ott, "taxon": name, "img": url} for qid, ott, name, url in rows}
+        logger.info(f"Found {len(leaves_data)} leaves in the database")
 
     # Get leaves in the clade with no wiki vernaculars, ignoring verns from other sources
     sql = f"""
@@ -555,17 +561,9 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, cropper=
 
     leaves_that_got_images = set()
     for qid, image, vernaculars in enumerate_dump_items_with_images_or_vernaculars(dump_file):
-        if not skip_images and image and qid in leaves_without_images:
+        if not skip_images and image and qid in leaves_data:
             if save_wiki_image(
-                db,
-                leaves_without_images[qid],
-                image,
-                src_flags["wiki"],
-                qid,
-                default_wiki_image_rating,
-                output_dir,
-                cropper,
-                check_if_up_to_date=False,
+                db, leaves_data[qid], image, src_flags["wiki"], qid, default_wiki_image_rating, output_dir, cropper
             ):
                 leaves_that_got_images.add(qid)
         if vernaculars and qid in leaves_without_vn:
@@ -573,9 +571,9 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, cropper=
 
     # Log the leaves for which we couldn't find images
     info = ""
-    for qid, ott in leaves_without_images.items():
+    for qid, _ in leaves_data.items():
         if qid not in leaves_that_got_images:
-            info += f"\n  ott={ott} qid={qid}"
+            info += f"\n  ott={leaves_data[qid]['ott']} qid={qid} {leaves_data[qid]['taxon']}"
     if len(info) != 0:
         logger.info(f"Taxa for which we couldn't find a proper image:{info}")
 

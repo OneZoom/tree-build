@@ -17,4 +17,5 @@ Synapsida FROM Synapsid@2
                 #Allotheria FROM Multituberculata@1  # Need to add support for case where Allotheria replaces Multituberculata
                 Trechnotheria FROM Mammaliaformes@2 
                     Metatheria FROM Metatheria@1
+                    Eutheria FROM Eutheria@2
     Sphenacodontidae FROM Dimetrodon@2 

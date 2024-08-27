@@ -151,21 +151,20 @@ def get_vernaculars_by_language_from_json_item(json_item):
     return vernaculars_by_language
 
 
-def enumerate_dump_items_with_images_or_vernaculars(wikipedia_dump_file):
+def enumerate_wiki_dump_items(wikidata_dump_file):
     """
     Enumerate the items in a Wikidata JSON dump that have images.
     """
 
-    for _, line in enumerate_lines_from_file(wikipedia_dump_file):
+    for _, line in enumerate_lines_from_file(wikidata_dump_file):
         if not (line.startswith('{"type":')):
             continue
         json_item = json.loads(line.rstrip().rstrip(","))
 
         image = get_preferred_or_first_image_from_json_item(json_item)
         vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
-        if image or vernaculars_by_language:
-            qid = int(json_item["id"][1:])
-            yield qid, image, vernaculars_by_language
+        qid = int(json_item["id"][1:])
+        yield qid, image, vernaculars_by_language
 
 
 def get_wikidata_json_for_qid(qid):
@@ -267,7 +266,7 @@ def get_image_url(escaped_image_name):
     return image_url
 
 
-def save_wiki_image(db, leaf_data, image, src, src_id, rating, output_dir, cropper):
+def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, cropper):
     """
     Download a Wikimedia image for a given QID and save it to the output directory. We
     keep both the uncropped and cropped versions of the image, along with the crop info.
@@ -281,7 +280,7 @@ def save_wiki_image(db, leaf_data, image, src, src_id, rating, output_dir, cropp
     ott = leaf_data["ott"]
 
     # Wikimedia uses underscores instead of spaces in URLs
-    escaped_image_name = image["name"].replace(" ", "_")
+    escaped_image_name = image_name.replace(" ", "_")
     image_dir = os.path.normpath(os.path.join(output_dir, str(src), subdir_name(src_id)))
     image_path = f"{image_dir}/{src_id}.jpg"
 
@@ -292,12 +291,12 @@ def save_wiki_image(db, leaf_data, image, src, src_id, rating, output_dir, cropp
         existing_image_name = leaf_data["img"][len(wiki_image_url_prefix) :]
         if existing_image_name == escaped_image_name:
             if os.path.isfile(image_path):
-                logger.info(f"Image '{image['name']}' for {ott} is in the db, and at {image_path}")
+                logger.info(f"Image '{image_name}' for {ott} is in the db, and at {image_path}")
                 return True
             else:
-                logger.warning(f"{image['name']} for {ott} is in the db, but the " f"file is missing, so re-processing")
+                logger.warning(f"{image_name} for {ott} is in the db, but the " f"file is missing, so re-processing")
 
-    logger.info(f"Processing image for ott={ott} (qid={src_id}): {image['name']}")
+    logger.info(f"Processing image for ott={ott} (qid={src_id}): {image_name}")
 
     license_info = get_image_license_info(escaped_image_name)
     if not license_info:
@@ -363,7 +362,7 @@ def save_wiki_image(db, leaf_data, image, src, src_id, rating, output_dir, cropp
         logger.warning(f"Error saving {image_path}: {e}")
         return False
 
-    logger.info(f"Saved {image['name']} for ott={ott} (Q{src_id}) in {image_path}")
+    logger.info(f"Saved {image_name} for ott={ott} (Q{src_id}) in {image_path}")
 
     # Save the crop info in a text file next to the image
     crop_info_path = f"{image_dir}/{src_id}_cropinfo.txt"
@@ -509,8 +508,8 @@ def process_leaf(
             src = src_flags["wiki"]
             src_id = qid
         if image:
-            leaf_info = {"ott": ott, "taxon": name, "img": None}
-            save_wiki_image(db, leaf_info, image, src, src_id, rating, output_dir, cropper)
+            leaf_data = {"ott": ott, "taxon": name, "img": None}
+            save_wiki_image(db, leaf_data, image["name"], src, src_id, rating, output_dir, cropper)
 
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
     save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
@@ -560,10 +559,13 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, cropper=
     logger.info(f"Found {len(leaves_without_vn)} taxa without a vernacular in the database")
 
     leaves_that_got_images = set()
-    for qid, image, vernaculars in enumerate_dump_items_with_images_or_vernaculars(dump_file):
-        if not skip_images and image and qid in leaves_data:
-            if save_wiki_image(
-                db, leaves_data[qid], image, src_flags["wiki"], qid, default_wiki_image_rating, output_dir, cropper
+    for qid, image, vernaculars in enumerate_wiki_dump_items(dump_file):
+        if not skip_images and qid in leaves_data:
+            image_name = None
+            if image:
+                image_name = image["name"]
+            if image_name and save_wiki_image(
+                db, leaves_data[qid], image_name, src_flags["wiki"], qid, default_wiki_image_rating, output_dir, cropper
             ):
                 leaves_that_got_images.add(qid)
         if vernaculars and qid in leaves_without_vn:

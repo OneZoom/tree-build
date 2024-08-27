@@ -515,7 +515,22 @@ def process_leaf(
     save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
 
 
-def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, cropper=None):
+def get_image_from_taxa_data(taxa_data, taxon):
+    """
+    Get the image for a taxon from the taxa data dictionary.
+    """
+    if taxon in taxa_data:
+        data = taxa_data[taxon]
+        if not data:
+            return None
+        if "redirect" in data:
+            data = taxa_data[data["redirect"]]
+        if "image" in data:
+            return data["image"]
+    return None
+
+
+def process_clade(db, ott_or_taxon, dump_file, taxa_data, skip_images, output_dir, cropper=None):
     """
     `crop` can be an ImageAnalysisClient, a crop location in the image
     (x, y, width, height), or None to carry out a default (centered) crop.
@@ -562,7 +577,11 @@ def process_clade(db, ott_or_taxon, dump_file, skip_images, output_dir, cropper=
     for qid, image, vernaculars in enumerate_wiki_dump_items(dump_file):
         if not skip_images and qid in leaves_data:
             image_name = None
-            if image:
+            if taxa_data:
+                # If the data file has an image for this taxon, use it
+                image_name = get_image_from_taxa_data(taxa_data, leaves_data[qid]["taxon"])
+            if not image_name and image:
+                # Fall back to the image from the dump
                 image_name = image["name"]
             if image_name and save_wiki_image(
                 db, leaves_data[qid], image_name, src_flags["wiki"], qid, default_wiki_image_rating, output_dir, cropper
@@ -604,6 +623,11 @@ def process_args(args):
     db = connect_to_database(database)
     cropper = AzureImageCropper(config)
 
+    taxa_data = {}
+    if args.taxa_data_file:
+        with open(args.taxa_data_file) as f:
+            taxa_data = json.load(f)
+
     if args.subcommand == "leaf":
         # Process one leaf at a time
         if len(args.ott_or_taxa) > 1 and args.image is not None:
@@ -613,7 +637,7 @@ def process_args(args):
     elif args.subcommand == "clade":
         # Process all the taxa in the passed in clades
         for name in args.ott_or_taxa:
-            process_clade(db, name, args.wd_dump, args.skip_images, outdir, cropper)
+            process_clade(db, name, args.wd_dump, taxa_data, args.skip_images, outdir, cropper)
 
 
 def setup_logging(args):
@@ -657,6 +681,11 @@ def main():
             "--skip-images",
             action="store_true",
             help="Only process vernaculars, not images",
+        )
+        parser.add_argument(
+            "--taxa-data-file",
+            default=None,
+            help="JSON file with persisted data about various taxa",
         )
         parser.add_argument(
             "-o",

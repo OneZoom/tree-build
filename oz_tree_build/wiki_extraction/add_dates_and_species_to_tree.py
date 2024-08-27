@@ -15,30 +15,30 @@ from oz_tree_build.wiki_extraction.wiki_taxon_page_data import (
     get_taxon_data_from_wikipedia_page,
 )
 
-nodes_data = {}
+taxa_data = {}
 
 
 def get_taxon_data_from_wikipedia_with_caching(taxon, page_title, is_leaf):
-    if taxon in nodes_data:
-        data = nodes_data[taxon]
+    if taxon in taxa_data:
+        data = taxa_data[taxon]
 
         # Follow the redirect, if any
         if data and "redirect" in data:
-            data = nodes_data[data["redirect"]]
+            data = taxa_data[data["redirect"]]
 
         logging.info(f"Found cached data for {taxon}: '{data}'")
         return data
 
-    nodes_data[taxon] = get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf)
+    taxa_data[taxon] = get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf)
 
     # If there is species name, it means that it is different from the original taxon name
     # Add a redirect to go from the species name to the original taxon name
-    if nodes_data[taxon] and "species_name" in nodes_data[taxon]:
-        nodes_data[nodes_data[taxon]["species_name"]] = {"redirect": taxon}
+    if taxa_data[taxon] and "species_name" in taxa_data[taxon]:
+        taxa_data[taxa_data[taxon]["species_name"]] = {"redirect": taxon}
 
-    logging.info(f"{taxon}: '{nodes_data[taxon]}'")
+    logging.info(f"{taxon}: '{taxa_data[taxon]}'")
 
-    return nodes_data[taxon]
+    return taxa_data[taxon]
 
 
 # If the node has a comment, use that as the page title instead of the taxon
@@ -164,7 +164,7 @@ def main():
     cache_filename = args.treefile.name + ".taxondatacache.json"
     try:
         with open(cache_filename) as f:
-            nodes_data.update(json.load(f))
+            taxa_data.update(json.load(f))
     except FileNotFoundError:
         pass
 
@@ -175,7 +175,7 @@ def main():
 
     # Save the taxon data cache file
     with open(cache_filename, "w") as f:
-        json.dump(nodes_data, f, sort_keys=True, indent=2)
+        json.dump(taxa_data, f, sort_keys=True, indent=2)
 
 
 if __name__ == "__main__":

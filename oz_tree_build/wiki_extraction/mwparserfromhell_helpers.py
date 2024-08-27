@@ -75,12 +75,21 @@ def get_wikicode_template(wikicode, possible_names) -> mwparserfromhell.nodes.Te
     return templates[0]
 
 
-rank_names = ["Class", "Superfamily", "Family", "Superorder", "Order", "Genus", "Species"]
+rank_names = ["Class", "Superfamily", "Family", "Subfamily", "Tribe", "Superorder", "Order", "Genus", "Species"]
 
 
 def validate_clean_taxon(taxon, allow_shortened_binomial=False):
-    # Remove any heading/trailing punctuation
+    # Remove any heading/trailing punctuation/markup
     taxon = taxon.strip().strip("[]()'†?\"")
+
+    # Check if taxon starts with a rank_names, ignore the rank name (e.g. Family [[Cyamodontidae]])
+    for rank_name in rank_names:
+        if taxon.startswith(rank_name):
+            taxon = taxon[len(rank_name) :]
+            taxon = taxon.strip().strip("[]()'†?\"")
+            if not taxon:
+                return None
+            break
 
     # Deal with scenario where one word of the taxon is double-quoted
     # e.g. '"Nanshiungosaurus" bohlini'
@@ -96,14 +105,6 @@ def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     # Some show up as e.g. "Unnamed species", which we ignore
     if taxon.startswith("Unnamed"):
         return None
-
-    # Check if taxon starts with a rank_names, ignore the rank name (e.g. Family [[Cyamodontidae]])
-    for rank_name in rank_names:
-        if taxon.startswith(rank_name):
-            taxon = taxon[len(rank_name) :].strip()
-            if not taxon:
-                return None
-            break
 
     # If it has more than one space, it's probably not a valid taxon
     if taxon.count(" ") > 1:

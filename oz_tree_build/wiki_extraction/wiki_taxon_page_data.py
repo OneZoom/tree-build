@@ -143,12 +143,13 @@ def get_image_from_page(wikicode, taxobox):
     if not image_name and taxobox.has_param("image"):
         image_name = str(taxobox.get("image").value).strip()
 
-    if image_name and ":" not in image_name:
-        image_name = "File:" + image_name
-
     # The '<' part is to ignore an odd case of HTML for Aves
     if not image_name or "<" in image_name:
         return None
+
+    # Remove any leading "File:" or "Image:"
+    if ":" in image_name:
+        image_name = image_name.split(":")[1]
 
     return image_name
 

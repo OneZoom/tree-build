@@ -345,7 +345,7 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
     # Crop and resize the image using PIL
     im = Image.open(uncropped_image_path)
     # Convert to RGB to avoid issues with transparency when working with a png file
-    if im.mode in ("RGBA", "P"):
+    if im.mode in ("RGBA", "P", "LA"):
         im = im.convert("RGB")
     im = im.resize(
         (300, 300),

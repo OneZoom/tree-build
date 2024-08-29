@@ -2,8 +2,6 @@
 https://en.wikipedia.org/wiki/Template:Clade documents the clade template design
 """
 
-import logging
-
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
     get_taxon_and_page_title,
 )
@@ -16,16 +14,17 @@ def is_clade_template_name(name):
 class WikiCladeNode:
     @classmethod
     def create_root_node(cls, containing_page_title, wikicode, cladogram_index):
-        templates = wikicode.filter_templates(recursive=False, matches=lambda n: is_clade_template_name(n.name))
+        # Get all the clade templates, included nested ones that we don't want
+        # We need to do this for cases where top-level clade templates are nested in some other template (e.g. table)
+        all_templates = wikicode.filter_templates(recursive=True, matches=lambda n: is_clade_template_name(n.name))
 
-        # We may not find it with recursive=False, e.g. if it's nested in a <div></div>
-        # Passing recursive=True is probamatic, as it will find all nested clade templates,
-        # so we can only do this if we're looking for the very first cladogram
-        # TODO: solve the general case
-        if len(templates) == 0 and cladogram_index == 1:
-            templates = wikicode.filter_templates(recursive=True, matches=lambda n: is_clade_template_name(n.name))
-            if len(templates) > 0:
-                logging.warning(f"{containing_page_title}: Found cladogram with recursive=True, but it was nested")
+        # Get all the top-level clade templates. We do this by ignoring any templates that is
+        # contained within the last top-level template we found.
+        templates = []
+        for t in all_templates:
+            if len(templates) > 0 and t in templates[len(templates) - 1]:
+                continue
+            templates.append(t)
 
         # If that index is out of range, raise an error
         if cladogram_index > len(templates):

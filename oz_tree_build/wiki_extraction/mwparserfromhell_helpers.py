@@ -75,10 +75,29 @@ def get_wikicode_template(wikicode, possible_names) -> mwparserfromhell.nodes.Te
     return templates[0]
 
 
-rank_names = ["Class", "Superfamily", "Family", "Subfamily", "Tribe", "Superorder", "Order", "Genus", "Species"]
+rank_names = [
+    "Clade",
+    "Class",
+    "Superfamily",
+    "Family",
+    "Subfamily",
+    "Tribe",
+    "Superorder",
+    "Order",
+    "Suborder",
+    "Infraorder",
+    "Parvorder",
+    "Genus",
+    "Species",
+]
 
 
 def validate_clean_taxon(taxon, allow_shortened_binomial=False):
+    # In some cases, the taxon is a combination of two taxa, and we just pick the first one
+    # e.g. "Order Artiodactyla/Clade Cetartiodactyla" from https://en.wikipedia.org/wiki/Artiodactyl
+    if "/" in taxon:
+        taxon = taxon.split("/")[0]
+
     # Remove any heading/trailing punctuation/markup
     taxon = taxon.strip().strip("[]()'†?\"")
 

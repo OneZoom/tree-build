@@ -18,4 +18,23 @@ Synapsida FROM Synapsid@2
                 Trechnotheria FROM Mammaliaformes@2 
                     Metatheria FROM Metatheria@1
                     Eutheria FROM Eutheria@2
+                        Placentalia FROM Placentalia@1
+                            Xenarthra FROM Xenarthra@1
+                                Folivora FROM Template:Phylogeny/Mylodontoidea@1
+                            # Afrotheria
+                                Paenungulatomorpha->Afrotheria FROM Paenungulatomorpha@1
+                                    Proboscidea FROM Proboscidea@1
+                                Hyracoidea FROM Hyracoidea@1
+                            Perissodactyla FROM Perissodactyla@3
+                                Palaeotheriidae FROM Palaeotherium@1
+                                #Equidae FROM Equidae@Classification #Too much junk in there
+                            Artiodactyla-Mysticeti-Odontoceti-Palaeomerycidae-Climacoceratidae-Giraffidae FROM Artiodactyl@Classification
+                                Giraffomorpha->Pecora FROM Giraffidae@2
+                            Caniformia-Hemicyoninae->Carnivora FROM Caniformia@1 # we get Hemicyoninae later from Ursidae
+                                Canidae FROM Borophaginae@1
+                                Ursidae FROM Ursidae@2
+                                    Hemicyoninae FROM Hemicyoninae@Systematics
+                                    Tremarctinae FROM Tremarctinae@Taxonomy
+                            Felidae->Carnivora FROM Felidae@1
+                                Machairodontinae FROM Machairodontinae@1
     Sphenacodontidae FROM Dimetrodon@2 

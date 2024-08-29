@@ -73,8 +73,10 @@ def process_leaf_node_and_get_extinction_date(node):
         if "to_date" in node_data:
             extinction_date = node_data["to_date"] or 0
 
-        if "species_name" in node_data:
-            node.taxon.label = node_data["species_name"]
+        # We used to set the species name as the taxon label, but this was problematic,
+        # as we'd often then fail to get on ott for the taxon, leading to bad results.
+        # if "species_name" in node_data:
+        #     node.taxon.label = node_data["species_name"]
 
     # If it's an extinct leaf, add a nameless prop-up node with the date
     if extinction_date:

@@ -76,6 +76,7 @@ def get_wikicode_template(wikicode, possible_names) -> mwparserfromhell.nodes.Te
 
 
 rank_names = [
+    "Total-group",  # Used in https://en.wikipedia.org/wiki/Artiodactyl for Ruminantia
     "Clade",
     "Class",
     "Superfamily",

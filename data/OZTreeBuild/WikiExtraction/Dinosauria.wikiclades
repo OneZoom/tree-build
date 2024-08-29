@@ -33,7 +33,7 @@ Dinosauria-Unenlagiidae FROM Dinosaur@Taxonomy # We get Halszkaraptorinae/Unenla
             Carnosauria-Spinosauridae-Megalosauridae-Piatnitzkysauridae-Monolophosaurus-Xuanhanosaurus FROM Carnosauria@4 # These all come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
             Metriacanthosauridae FROM Metriacanthosauridae@1
             #Compsognathidae FROM Compsognathidae@1 # Doesn't seem to exist anymore?
-            Tyrannosauroidea FROM Tyrannosauroidea@1 # Seems to hit the Geo clade, so we're not seeing the first two
+            Tyrannosauroidea FROM Tyrannosauroidea@3 # We use the Geo cladogram, which seems quite complete
             Ornithomimosauria FROM Ornithomimosauria@2
             Alvarezsauridae FROM Alvarezsauridae@1
             Therizinosauria FROM Therizinosauria@2

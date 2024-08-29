@@ -31,16 +31,16 @@ Amniota FROM Amniota@2
                 Allokotosauria FROM Allokotosauria@2
                 Rhynchosauria FROM Rhynchosauria@1
                 Archosauriformes FROM Archosauriformes@2
-                    Proterosuchidae FROM Proterosuchidae@1
+                    Proterosuchidae FROM Proterosuchidae@2
                     Erythrosuchidae FROM Erythrosuchidae@2
                     Proterochampsia FROM Proterochampsia@2
                     Pseudosuchia FROM Pseudosuchia@1
                         Ornithosuchidae FROM Dynamosuchus@1
-                        Aetosauria FROM Aetosaur@2
+                        Aetosauria FROM Aetosaur@3
                         Poposauroidea FROM Poposauroidea@1
                         Crocodylomorpha FROM Crocodylomorpha@1
                             Crocodyliformes-Peirosauridae FROM Crocodyliformes@2 # We get Peirosauridae from Notosuchia, but they're completely diffrent. Need to resolve this!
-                                Notosuchia FROM Notosuchia@2
+                                Notosuchia FROM Notosuchia@5
                                 Neosuchia FROM Neosuchia@2
                     Avemetatarsalia FROM Avemetatarsalia@2
                         Aphanosauria FROM Aphanosauria@1

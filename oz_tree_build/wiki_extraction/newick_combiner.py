@@ -94,6 +94,10 @@ def process_file(
 
         # If we have a cache folder, try to load the tree from there
         if extraction_cache_folder:
+            # Replace colons and slashes with underscores, since we can't have slashes in filenames
+            # This covers cases like Template:Phylogeny/Mylodontoidea
+            source = source.replace(":", "_").replace("/", "_")
+
             cache_filename = f"{extraction_cache_folder}/{source}.phy"
             try:
                 child_tree = dendropy.Tree.get_from_path(cache_filename, "newick", suppress_internal_node_taxa=False)

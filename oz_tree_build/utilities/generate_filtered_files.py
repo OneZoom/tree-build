@@ -70,6 +70,18 @@ def generate_and_cache_filtered_file(original_file, context, processing_function
             logging.info(f"Using cached file {clade_filtered_file}")
             return clade_filtered_file
 
+    # If the filtered file already exists, rename it to include the timestamp, so we don't overwrite it
+    if os.path.exists(clade_filtered_file):
+        existing_file_time = os.path.getmtime(clade_filtered_file)
+        renamed_file_name = (
+            os.path.splitext(clade_filtered_file)[0]
+            + "_"
+            + time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(existing_file_time))
+            + os.path.splitext(clade_filtered_file)[1]
+        )
+        os.rename(clade_filtered_file, renamed_file_name)
+        logging.info(f"Renamed existing file to {renamed_file_name}")
+
     logging.info(f"Generating file {clade_filtered_file}")
 
     # Call the processing function to generate the filtered file

@@ -89,6 +89,7 @@ rank_names = [
     "Infraorder",
     "Parvorder",
     "Genus",
+    "Subgenus",
     "Species",
 ]
 

@@ -1,4 +1,4 @@
-Dinosauria-Unenlagiidae FROM Dinosaur@Taxonomy # We get Halszkaraptorinae/Unenlagiinae from Dromaeosauridae
+Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkaraptorinae/Unenlagiinae from Dromaeosauridae, and Megaraptora from Tyrannosauroidea
     Ornithischia-Heterodontosaurus_tucki FROM Ornithischia@4
         Heterodontosauridae->Ornithischia FROM Heterodontosauridae@1 # Basically replaces Heterodontosaurus_tucki that we removed
         Stegosauria FROM Stegosauria@1
@@ -29,11 +29,12 @@ Dinosauria-Unenlagiidae FROM Dinosaur@Taxonomy # We get Halszkaraptorinae/Unenla
             Coelophysoidea FROM Coelophysoidea@3
             Ceratosauroidea=>Ceratosauria FROM Ceratosauria@3 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
             Megalosauroidea FROM Megalosauroidea@1
-            Megaraptora FROM Megaraptora@3
             Carnosauria-Spinosauridae-Megalosauridae-Piatnitzkysauridae-Monolophosaurus-Xuanhanosaurus FROM Carnosauria@4 # These all come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
             Metriacanthosauridae FROM Metriacanthosauridae@1
             #Compsognathidae FROM Compsognathidae@1 # Doesn't seem to exist anymore?
-            Tyrannosauroidea FROM Tyrannosauroidea@3 # We use the Geo cladogram, which seems quite complete
+            Tyrannosauroidea-Teratophoneus FROM Tyrannosauroidea@1 # We get Teratophoneus from Tyrannosauridae
+                Coeluridae FROM Coeluridae@1
+                Tyrannosauridae FROM Tyrannosauridae@1
             Ornithomimosauria FROM Ornithomimosauria@2
             Alvarezsauridae FROM Alvarezsauridae@1
             Therizinosauria FROM Therizinosauria@2

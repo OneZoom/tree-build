@@ -417,13 +417,24 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
     return source_ptrs
 
 
-# numbers to search for
-# See https://en.wikipedia.org/wiki/Module:Taxonbar#L-195 for the full list
+# P31 (instance of) values to search for
+# See https://en.wikipedia.org/wiki/Template:Taxonbar/whitelist for the full list
 match_taxa = {
     16521: "taxon",
     310890: "monotypic taxon",
+    47487597: "monotypic fossil taxon",
+    2568288: "ichnotaxon",
     23038290: "fossil taxon",
+    59278506: "ootaxon",
+    98961713: "extinct taxon",
+    58051350: "paraphyletic group",
+    42621: "hybrid",
+    235536: "incertae sedis",
     713623: "clade",
+    848328: "serotype",
+    857968: "Candidatus",
+    17487588: "unavailable combination",
+    124477390: "taxon hypothesis",
 }
 match_vernacular = {
     502895: "common name",

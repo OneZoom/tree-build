@@ -25,7 +25,7 @@ If you want to run the test suite, make sure the test requirements are also inst
 
 Assuming you have installed the test requirements, you shoule be able to run 
 
-    pytest --conf-file tests/appconfig.ini
+    python -m pytest --conf-file tests/appconfig.ini
 
 Here we have used a basic conf file to create a fake OneZoom database. However, if you wish to test using the
 real OneZoom database, you can specify a different path to an appconfig.ini file, or omit the `--conf-file`
@@ -34,7 +34,7 @@ hat this repository is a sibling to a non-live
 [OZtree](https://github.com/OneZoom/OZtree) installation, and that the database used by this OZtree
 installation is active.
 
-    pytest  # Uses the "real" OneZoom database - take care!
+    python -m pytest  # Uses the "real" OneZoom database - take care!
 
 This uses mocked APIs. You can also run with the real APIs using the `--real-apis` swithc, in whcih case
 you will need a valid Azure Image cropping key in your appconfig.ini.

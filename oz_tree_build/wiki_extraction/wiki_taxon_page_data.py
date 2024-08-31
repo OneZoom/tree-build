@@ -21,7 +21,7 @@ def get_range_date(fossilrange_value, use_start):
         # If it's already a string, use it as is
         date = fossilrange_value
     else:
-        periodstart_template = get_wikicode_template(fossilrange_value, ("periodstart"))
+        periodstart_template = get_wikicode_template(fossilrange_value, ("periodstart",))
         if not periodstart_template:
             date = str(fossilrange_value).strip()
         else:
@@ -116,6 +116,14 @@ def get_species_from_taxobox(taxon, taxobox):
     return species_name
 
 
+def get_qid_from_wikicode(wikicode):
+    taxonbar = get_wikicode_template(wikicode, ("taxonbar",))
+    if not taxonbar or not taxonbar.has_param("from"):
+        return None
+    qid_string = taxonbar.get("from").value.strip()
+    return int(qid_string[1:])
+
+
 def get_image_from_page(wikicode, taxobox):
     image_name = None
 
@@ -172,6 +180,11 @@ def get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf):
     from_date, to_date = get_date_range_from_taxobox(taxobox)
     if not from_date:
         logging.warning(f"Could not find fossil range for {taxon}")
+
+    # Get the Wikidata QID, if any
+    qid = get_qid_from_wikicode(wikicode)
+    if qid:
+        node_data["qid"] = qid
 
     # Note that for species, the end date is the extinction date
     node_data["from_date"] = from_date

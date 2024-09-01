@@ -132,6 +132,8 @@ def get_image_from_page(wikicode, taxobox):
     paleoart_links = wikicode.filter_wikilinks(
         matches=lambda l: "restoration" in str(l.text).lower() or "reconstruction" in str(l.text).lower()
     )
+    # Sort them so that those that contain "restoration" come first, since we prefer those
+    paleoart_links = sorted(paleoart_links, key=lambda l: "restoration" in str(l.text).lower(), reverse=True)
     if len(paleoart_links) > 0:
         image_name = str(paleoart_links[0].title)
 

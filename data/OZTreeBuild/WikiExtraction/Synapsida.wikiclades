@@ -14,7 +14,7 @@ Synapsida FROM Synapsid@2
                 Docodonta FROM Docodonta@1
                 Yinotheria FROM Yinotheria@1
                 Eutriconodonta FROM Eutriconodonta@1
-                #Allotheria FROM Multituberculata@1  # Need to add support for case where Allotheria replaces Multituberculata
+                Multituberculata=>Allotheria FROM Multituberculata@1
                 Trechnotheria FROM Mammaliaformes@2 
                     Metatheria FROM Metatheria@1
                     Eutheria FROM Eutheria@2

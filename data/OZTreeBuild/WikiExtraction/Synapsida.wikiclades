@@ -27,6 +27,17 @@ Synapsida FROM Synapsid@2
                                 Paenungulatomorpha->Afrotheria FROM Paenungulatomorpha@1
                                     Proboscidea FROM Proboscidea@1
                                 Hyracoidea FROM Hyracoidea@1
+                            Euarchonta FROM Euarchonta@1
+                                Dermoptera FROM Colugo@Classification_and_evolution
+                                Primates=>Primate FROM Primates@1
+                                    Lemuriformes FROM Monkey_lemur@1
+                                        Palaeopropithecidae FROM Palaeopropithecidae@1
+                                    Catharrhini=>Catarrhini FROM Ape@1
+                                        Dendropithecidae FROM Dendropithecidae@1
+                                        Proconsulidae FROM Proconsulidae@Taxonomy
+                                        Hominidae FROM Hominidae@2
+                                            Australopithecines=>Ardipithecus FROM Homo@2
+                            Lagomorpha->Glires FROM Lagomorpha@Fossil_genera
                             Perissodactyla FROM Perissodactyla@3
                                 Palaeotheriidae FROM Palaeotherium@1
                                 Equidae-Asinus-Equus_ferus-Equus_quagga-incertae_sedis FROM Equidae@Classification #Too much junk in there

@@ -79,6 +79,7 @@ def get_wikicode_template(wikicode, possible_names) -> mwparserfromhell.nodes.Te
 
 rank_names = [
     "Total-group",  # Used in https://en.wikipedia.org/wiki/Artiodactyl for Ruminantia
+    "Crown",
     "Clade",
     "Class",
     "Superfamily",
@@ -102,12 +103,16 @@ def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     if "/" in taxon:
         taxon = taxon.split("/")[0]
 
+    # If there are parentheses (e.g. Hominidae (18)), get rid of it (and its contents)
+    taxon = re.sub(r"\(.*\)", "", taxon)
+
     # Remove any heading/trailing punctuation/markup
-    taxon = taxon.strip().strip("[]()'†?\"")
+    taxon = taxon.strip("[]()'†?\" \n")
+    # taxon = taxon.strip().strip("[]()'†?\"")
 
     # Check if taxon starts with a rank_names, ignore the rank name (e.g. Family [[Cyamodontidae]])
     for rank_name in rank_names:
-        if taxon.startswith(rank_name):
+        if taxon.casefold().startswith(rank_name.casefold()):
             taxon = taxon[len(rank_name) :]
             taxon = taxon.strip().strip("[]()'†?\"")
             if not taxon:
@@ -169,7 +174,7 @@ def get_taxon_and_page_title(
                 if isinstance(node, mwparserfromhell.nodes.Text):
                     taxon2 = validate_clean_taxon(node.value)
                     # Ignore the extra part of it contains a '(', as in |2=[[Serpentes]] (modern snakes)
-                    if taxon2 and "(" not in node.value:
+                    if taxon2 and " " not in taxon2 and "(" not in node.value:
                         taxon = taxon + " " + taxon2
         elif isinstance(node, mwparserfromhell.nodes.Text):
             using_text_node = True

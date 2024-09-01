@@ -140,14 +140,17 @@ def get_image_from_page(wikicode, taxobox):
         # In some cases, the link is not directly to the image, but is contained
         # in a parent template with image properties multiple image
         # e.g. this happens for https://en.wikipedia.org/wiki/Tyrannosaurus
-        if "." not in image_name:
+        if image_name and "." not in image_name:
             link_parent = wikicode.get_parent(paleoart_links[0])
-            # Find the first param that starts with "image". Could be "image1" or just "image"
-            image_name = None
-            for param in link_parent.params:
-                if param.name.strip().startswith("image"):
-                    image_name = str(param.value).strip()
-                    break
+            if link_parent:
+                # Find the first param that starts with "image". Could be "image1" or just "image"
+                image_name = None
+                for param in link_parent.params:
+                    if param.name.strip().startswith("image"):
+                        image_name = str(param.value).strip()
+                        break
+            else:
+                image_name = None
 
     # Otherwise, just use the taxobox image, if any
     if not image_name and taxobox.has_param("image"):

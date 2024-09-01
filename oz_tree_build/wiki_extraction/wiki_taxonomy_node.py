@@ -9,11 +9,12 @@ from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
 class WikiTaxonomyNode:
     @classmethod
     def create_root_node(cls, page_title, wikicode, header_title):
+        header_title = header_title.replace("_", " ")
         i, _ = find_wikicode_node(
             wikicode,
             0,
             mwparserfromhell.nodes.Heading,
-            lambda node: node.title == header_title,
+            lambda node: node.title.strip() == header_title,
         )
         if i is None:
             raise Exception(f"Could not find header '{header_title}'")

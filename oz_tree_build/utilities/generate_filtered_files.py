@@ -282,13 +282,11 @@ def generate_filtered_wikidata_dump(wikipedia_dump_file, filtered_wikipedia_dump
     with open_file_based_on_extension(filtered_wikipedia_dump_file, "wt") as filtered_wiki_f:
         filtered_wiki_f.write("[\n")
         preserved_lines = 0
-        for line_num, line in enumerate_lines_from_file(wikipedia_dump_file):
-            if line_num > 0 and line_num % 100000 == 0:
-                logging.info(
-                    f"Kept {preserved_lines} out of {line_num} processed "
-                    f"lines ({preserved_lines / line_num * 100:.2f}%))"
-                )
 
+        def get_line_message(line_num):
+            return f"Kept {preserved_lines}/{line_num} lines ({preserved_lines / line_num * 100:.2f}%)"
+
+        for _, line in enumerate_lines_from_file(wikipedia_dump_file, 100000, get_line_message):
             if not (line.startswith('{"type":') and quick_byte_match.search(line)):
                 continue
 

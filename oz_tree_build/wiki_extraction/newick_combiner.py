@@ -41,7 +41,9 @@ def insert_child_tree(parent_tree, child_tree, taxon, child_taxon, replace_paren
     if not replace_parent_node:
         node_in_parent_tree.add_child(node_in_child_tree)
     else:
-        node_in_parent_tree.set_child_nodes(node_in_child_tree.child_nodes())
+        # We remove the original parent, and replace it with the child
+        node_in_parent_tree.parent_node.add_child(node_in_child_tree)
+        node_in_parent_tree.parent_node.remove_child(node_in_parent_tree)
 
 
 def process_file(

@@ -280,7 +280,9 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
     ott = leaf_data["ott"]
 
     # Wikimedia uses underscores instead of spaces in URLs
-    escaped_image_name = image_name.replace(" ", "_")
+    escaped_image_name = image_name.replace(" ", "_").replace("&", "%26").replace("+", "%2B")
+    # Also escape the ampersand and plus signs in the image name
+    escaped_image_name = escaped_image_name.replace("&", "%26").replace("+", "%2B")
     image_dir = os.path.normpath(os.path.join(output_dir, str(src), subdir_name(src_id)))
     image_path = f"{image_dir}/{src_id}.jpg"
 

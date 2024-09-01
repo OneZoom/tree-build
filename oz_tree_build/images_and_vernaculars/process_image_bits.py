@@ -130,7 +130,7 @@ def resolve(db, ott):
             )
         db.commit()
     else:
-        logger.info(f"No changes to make to the database for ott {ott}")
+        logger.debug(f"No changes to make to the database for ott {ott}")
 
     return made_changes
 

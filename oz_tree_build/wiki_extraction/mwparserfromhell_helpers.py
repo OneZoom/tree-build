@@ -27,6 +27,8 @@ def get_id_and_text_from_wiki_page(page_title):
         "redirects": "1",
     }
     headers = {"User-Agent": "My-Bot-Name/1.0"}
+    # Use this line to avoid caching when testing
+    # headers["Cache-Control"] = "no-cache"
     req = session.get(API_URL, headers=headers, params=params, allow_redirects=True)
     res = req.json()
     try:

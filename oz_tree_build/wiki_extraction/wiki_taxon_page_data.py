@@ -118,10 +118,16 @@ def get_species_from_taxobox(taxon, taxobox):
 
 def get_qid_from_wikicode(wikicode):
     taxonbar = get_wikicode_template(wikicode, ("taxonbar",))
-    if not taxonbar or not taxonbar.has_param("from"):
+    if not taxonbar:
         return None
-    qid_string = taxonbar.get("from").value.strip()
-    return int(qid_string[1:])
+
+    # Normally, the QID is in the "from" param. But in cases like https://en.wikipedia.org/wiki/Miopanthera,
+    # there are multiple QIDs, and the params are named "from1", "from2", etc.
+    if taxonbar.has_param("from"):
+        qid_string = taxonbar.get("from")
+    elif taxonbar.has_param("from1"):
+        qid_string = taxonbar.get("from1")
+    return int(qid_string.value.strip()[1:])
 
 
 def get_image_from_page(wikicode, taxobox):
@@ -154,7 +160,14 @@ def get_image_from_page(wikicode, taxobox):
 
     # Otherwise, just use the taxobox image, if any
     if not image_name and taxobox.has_param("image"):
-        image_name = str(taxobox.get("image").value).strip()
+        image = taxobox.get("image")
+
+        # If it's a multiple image template, we use the first image
+        multiple_image = get_wikicode_template(image.value, ("multipleimage",))
+        if multiple_image:
+            image = multiple_image.get("image1")
+
+        image_name = str(image.value).strip()
 
     # The '<' part is to ignore an odd case of HTML for Aves
     if not image_name or "<" in image_name:

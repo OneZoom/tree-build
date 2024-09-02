@@ -278,6 +278,9 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
     s = placeholder(db)
 
     ott = leaf_data["ott"]
+    if not ott:
+        logger.warning(f"No OTT for Q{src_id}. Can't save {image_name}")
+        return False
 
     # Wikimedia uses underscores instead of spaces in URLs
     escaped_image_name = image_name.replace(" ", "_").replace("&", "%26").replace("+", "%2B")

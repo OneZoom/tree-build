@@ -46,13 +46,8 @@ def insert_child_tree(parent_tree, child_tree, taxon, child_taxon, replace_paren
         node_in_parent_tree.parent_node.remove_child(node_in_parent_tree)
 
 
-def process_file(
-    filename,
-    use_line_number_as_edge_length,
-    extraction_cache_folder,
-    main_tree=None,
-):
-    for line_number, line in enumerate(open(filename)):
+def process_file(filename, extraction_cache_folder, node_to_source_map, main_tree=None):
+    for _, line in enumerate(open(filename)):
         # Ignore # comments
         if "#" in line:
             line = line[: line.index("#")]
@@ -80,12 +75,7 @@ def process_file(
         if source.endswith(".wikiclades"):
             # Make the file name relative to the current .wikiclades file
             source = os.path.join(os.path.dirname(filename), source)
-            process_file(
-                source,
-                use_line_number_as_edge_length,
-                extraction_cache_folder,
-                main_tree,
-            )
+            process_file(source, extraction_cache_folder, node_to_source_map, main_tree)
             continue
 
         page_name, location = source.split("@")
@@ -98,9 +88,8 @@ def process_file(
         if extraction_cache_folder:
             # Replace colons and slashes with underscores, since we can't have slashes in filenames
             # This covers cases like Template:Phylogeny/Mylodontoidea
-            source = source.replace(":", "_").replace("/", "_")
-
-            cache_filename = f"{extraction_cache_folder}/{source}.phy"
+            escaped_file_name = source.replace(":", "_").replace("/", "_")
+            cache_filename = f"{extraction_cache_folder}/{escaped_file_name}.phy"
             try:
                 child_tree = dendropy.Tree.get_from_path(cache_filename, "newick", suppress_internal_node_taxa=False)
                 logging.info(f"Loaded from cache: {cache_filename}")
@@ -117,12 +106,10 @@ def process_file(
                 child_tree.write_to_path(cache_filename, "newick", suppress_item_comments=False)
                 logging.info(f"Wrote to cache: {cache_filename}")
 
-        if use_line_number_as_edge_length:
-            # Go through all the nodes and set the edge lengths to be the line number.
-            # This is useful for debugging. Add 1 to it, since editors are 1 based
-            for node in child_tree.nodes():
-                if node.taxon:
-                    node.edge_length = line_number + 1
+        # Go through all the nodes and keep track of the wiki page and cladogram index/location
+        for node in child_tree.nodes():
+            if node.taxon:
+                node_to_source_map[node] = (page_name, location)
 
         replace_parent_node = True
         if "->" in taxon:
@@ -176,17 +163,25 @@ def main():
         help="Folder to cache wiki page extractions to, in newick format",
     )
     parser.add_argument(
-        "--use_line_number_as_edge_length",
-        action="store_true",
-        help="Use line number as edge length",
+        "--source_mapping_file",
+        type=argparse.FileType("w"),
+        help="File to write the mapping of nodes to their source wiki page and location",
     )
     args = parse_args_and_add_logging_switch(parser)
 
-    tree = process_file(
-        args.wikiclades_file,
-        args.use_line_number_as_edge_length,
-        args.extraction_cache_folder,
-    )
+    node_to_source_map = {}
+    tree = process_file(args.wikiclades_file, args.extraction_cache_folder, node_to_source_map)
+
+    # Write all the tree nodes and their source wiki page and location
+    if args.source_mapping_file:
+        nodes_in_tree = set(tree.nodes())
+        for node, source in sorted(node_to_source_map.items(), key=lambda item: item[0].taxon.label):
+            if node in nodes_in_tree:
+                args.source_mapping_file.write(f"- {node.taxon.label}: https://en.wikipedia.org/wiki/{source[0]}")
+                if source[1].isnumeric():
+                    args.source_mapping_file.write(f" @{source[1]}\n")
+                else:
+                    args.source_mapping_file.write(f"#{source[1]}\n")
 
     # Print the combined tree
     print(tree.as_string(schema="newick", suppress_item_comments=False))

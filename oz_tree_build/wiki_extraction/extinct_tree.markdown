@@ -1,0 +1,1 @@
+This content was moved to https://github.com/OneZoom/tree-build/wiki/Extinct-Species-Tree.

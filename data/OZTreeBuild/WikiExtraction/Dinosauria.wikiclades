@@ -39,8 +39,11 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
             Tyrannosauroidea-Teratophoneus FROM Tyrannosauroidea@1 # We get Teratophoneus from Tyrannosauridae
                 Coeluridae FROM Coeluridae@1
                 Tyrannosauridae FROM Tyrannosauridae@1
+                Megaraptora-Vayuraptor-Phuwiangvenator FROM Maip@1
+                    Siats->Megaraptora FROM Siats@2
+                    Aniksosaurus->Megaraptora FROM Siats@2
             Ornithomimosauria FROM Aviatyrannis@1
-            Alvarezsauridae FROM Alvarezsauridae@1
+            Alvarezsauria=>Alvarezsauridae FROM Jaculinykus@1
             Therizinosauria FROM Therizinosauria@2
             Oviraptorosauria FROM Oviraptorosauria@1
             Archaeopterygidae FROM Anchiornithidae@2

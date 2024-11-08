@@ -26,6 +26,8 @@ Amniota FROM Amniota@2
                 Hupehsuchia FROM Hupehsuchia@1
                 Ichthyopterygia->Ichthyosauriformes FROM Ichthyopterygia@1
                 Sauropterygia FROM Sauropterygia@1
+                    Plesiosauria FROM Plesiosaur@1
+                        Thalassophonea FROM Thalassophonea@1
                 Tanystropheidae FROM Tanystropheidae@1
                 Prolacertidae FROM Prolacertidae@1
                 Allokotosauria FROM Allokotosauria@2

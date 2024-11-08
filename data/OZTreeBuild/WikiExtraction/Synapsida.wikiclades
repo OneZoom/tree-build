@@ -38,7 +38,7 @@ Synapsida FROM Synapsid@2
                                         Hominidae FROM Hominidae@2
                                             Australopithecines=>Ardipithecus FROM Homo@2
                             Lagomorpha->Glires FROM Lagomorpha@Fossil_genera
-                            Perissodactyla FROM Perissodactyla@3
+                            Perissodactyla-Lambdotheriidae FROM Perissodactyla@3 #Lambdotheriidae seems the same as Brontotheriidae
                                 Palaeotheriidae FROM Palaeotherium@1
                                 Equidae-Asinus-Equus_ferus-Equus_quagga-incertae_sedis FROM Equidae@Classification #Too much junk in there
                             Artiodactyla-Mysticeti-Odontoceti-Palaeomerycidae-Climacoceratidae-Giraffidae FROM Artiodactyl@Classification

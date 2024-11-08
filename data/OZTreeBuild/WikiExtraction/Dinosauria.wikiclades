@@ -14,20 +14,21 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
                 Chasmosaurinae FROM Chasmosaurinae@1
                 Centrosaurinae-Diabloceratops_eatoni FROM Diabloceratops@1
         Rhabdodontomorpha->Iguanodontia FROM Rhabdodontidae@1
-    #Saurischia Page not used, but shown here is a marker
-        Saturnaliinae->Sauropodomorpha FROM Sauropodomorpha@2
+    #Saurischia
         Herrerasauridae FROM Herrerasauridae@2
-        Massospondylidae FROM Massospondylidae@1
-        Lessemsauridae FROM Antetonitrus@1
-        Mamenchisauridae->Eusauropoda FROM Mamenchisauridae@4 # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2171818
-        Turiasauria FROM Mierasaurus@1 
-        Rebbachisauridae FROM Rebbachisauridae@2
-        Dicraeosauridae FROM Dicraeosauridae@1
-        Diplodocidae FROM Diplodocidae@1
-        Brachiosauridae FROM Brachiosauridae@2
-        Euhelopodidae FROM Euhelopodidae@2
-        Titanosauria FROM Titanosauria@8
-        #Theropoda Page not used, but shown here is a marker
+        #Sauropodomorpha
+            Massopoda-Antetonitrus FROM Massopoda@1
+                Sauropoda FROM Sauropoda@1
+                    Mamenchisauridae FROM Mamenchisauridae@4 # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2171818
+                    Rebbachisauridae FROM Rebbachisauridae@2
+                    Dicraeosauridae FROM Dicraeosauridae@1
+                    Diplodocidae FROM Diplodocidae@1
+                    Brachiosauridae=>Brachiosaurus FROM Brachiosauridae@2
+                    Titanosauria FROM Titanosauria@8
+                    Turiasauria->Sauropoda FROM Mierasaurus@1 # Unclear placement
+                    Euhelopodidae-Phuwiangosaurus->Sauropoda FROM Euhelopodidae@2 # Unclear placement
+            Saturnaliinae->Sauropodomorpha FROM Sauropodomorpha@2
+        #Theropoda
             Coelophysoidea FROM Coelophysoidea@3
             Ceratosauroidea=>Ceratosauria FROM Ceratosauria@3 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
             Megalosauroidea FROM Megalosauroidea@1

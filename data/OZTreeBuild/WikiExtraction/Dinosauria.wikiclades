@@ -31,9 +31,10 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
         #Theropoda
             Coelophysoidea FROM Coelophysoidea@3
             Ceratosauroidea=>Ceratosauria FROM Ceratosauria@3 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
-            Megalosauroidea FROM Megalosauroidea@1
-            Carnosauria-Spinosauridae-Megalosauridae-Piatnitzkysauridae-Monolophosaurus-Xuanhanosaurus FROM Carnosauria@4 # These all come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
-                Carcharodontosauridae->Carcharodontosauria FROM Carcharodontosauridae@2
+            Megalosauroidea-Monolophosaurus FROM Megalosauroidea@1
+            Carnosauria-Spinosauridae-Megalosauridae-Monolophosaurus FROM Carnosauria@4 # These all come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
+                Allosauroidea FROM Carnosauria@6
+                Carcharodontosauridae-Neovenator FROM Carcharodontosauridae@2
             Metriacanthosauridae FROM Metriacanthosauridae@1
             #Compsognathidae FROM Compsognathidae@1 # Doesn't seem to exist anymore?
             Tyrannosauroidea-Teratophoneus FROM Tyrannosauroidea@1 # We get Teratophoneus from Tyrannosauridae
@@ -43,7 +44,7 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
                     Siats->Megaraptora FROM Siats@2
                     Aniksosaurus->Megaraptora FROM Siats@2
             Ornithomimosauria FROM Aviatyrannis@1
-            Alvarezsauria=>Alvarezsauridae FROM Jaculinykus@1
+            Alvarezsauria-Aorun=>Alvarezsauridae FROM Jaculinykus@1
             Therizinosauria FROM Therizinosauria@2
             Oviraptorosauria FROM Oviraptorosauria@1
             Archaeopterygidae FROM Anchiornithidae@2

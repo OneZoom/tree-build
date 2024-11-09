@@ -32,6 +32,7 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
             Coelophysoidea FROM Coelophysoidea@3
             Ceratosauroidea=>Ceratosauria FROM Ceratosauria@3 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
             Megalosauroidea-Monolophosaurus FROM Megalosauroidea@1
+            Compsognathidae->Coelurosauria FROM Compsognathidae@1
             Carnosauria-Spinosauridae-Megalosauridae-Monolophosaurus FROM Carnosauria@4 # These all come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
                 Allosauroidea FROM Carnosauria@6
                 Carcharodontosauridae-Neovenator FROM Carcharodontosauridae@2
@@ -50,6 +51,7 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
             Archaeopterygidae FROM Anchiornithidae@2
             Troodontidae-Anchiornis FROM Troodontidae@4 # We get Anchiornis from Archaeopterygidae
             Dromaeosauridae FROM Dromaeosauridae@2
+            #Compsognathidae->Coelurosauria FROM 
             Avialae-Scansoriopterygidae FROM Avialae@2 # Exclude Scansoriopterygidae to avoid duplicate
                 Scansoriopterygidae FROM Epidexipteryx@1
                 Ornithothoraces FROM Ornithothoraces@1

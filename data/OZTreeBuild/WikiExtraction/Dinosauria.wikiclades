@@ -17,6 +17,8 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
     #Saurischia
         Herrerasauridae FROM Herrerasauridae@2
         #Sauropodomorpha
+            Unaysauridae FROM Jaklapallisaurus@1
+            Plateosauridae->Plateosauria FROM Jaklapallisaurus@1
             Massopoda-Antetonitrus FROM Massopoda@1
                 Sauropoda FROM Sauropoda@1
                     Mamenchisauridae FROM Mamenchisauridae@4 # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2171818

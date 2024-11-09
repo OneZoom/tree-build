@@ -115,7 +115,9 @@ def process_interior_node_recursive_and_get_range(node):
 
     if node_data.get("from_date"):
         date_range = [node_data["from_date"], node_data["to_date"]]
-        if oldest_child_from_date > date_range[0]:
+        # If the oldest child's date is later or the same as this node's date, adjust this node's date
+        # to be just after the oldest child's date
+        if oldest_child_from_date >= date_range[0]:
             logging.warning(
                 f"Node '{taxon}' has from_date {node_data['from_date']}, "
                 f"but its child {child_with_oldest_from_date.taxon} "

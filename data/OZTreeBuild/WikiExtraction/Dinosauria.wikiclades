@@ -50,6 +50,7 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
             Troodontidae-Anchiornis FROM Troodontidae@4 # We get Anchiornis from Archaeopterygidae
             Dromaeosauridae FROM Dromaeosauridae@2
             Avialae-Scansoriopterygidae FROM Avialae@2 # Exclude Scansoriopterygidae to avoid duplicate
+                Scansoriopterygidae FROM Epidexipteryx@1
                 Ornithothoraces FROM Ornithothoraces@1
                     Pengornithidae FROM Pengornithidae@1
                     Bohaiornithidae FROM Bohaiornithidae@1

@@ -32,6 +32,7 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
             Saturnaliinae->Sauropodomorpha FROM Sauropodomorpha@2
         #Theropoda
             Coelophysoidea FROM Coelophysoidea@3
+            Dilophosauridae->Neotheropoda FROM Dilophosaurus@1 # Exact placement unclear
             Ceratosauroidea=>Ceratosauria FROM Ceratosauria@3 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
             Megalosauroidea-Monolophosaurus FROM Megalosauroidea@1
             Compsognathidae->Coelurosauria FROM Compsognathidae@1

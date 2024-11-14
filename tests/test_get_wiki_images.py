@@ -137,7 +137,7 @@ class RemoteAPIs:
         url = (
             "https://api.wikimedia.org/w/api.php"
             f"?action=query&titles=File%3a{image_name}&format=json&prop=imageinfo"
-            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseUrl|Artist"
+            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
         )
         response = {
             "query": {
@@ -222,6 +222,7 @@ def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, co
         skip_images=None,
         output_dir=output_dir,
         conf_file=conf_file,
+        taxa_data_file=None,
     )
 
 

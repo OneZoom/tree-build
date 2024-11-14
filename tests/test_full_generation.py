@@ -39,6 +39,7 @@ def test_full_felidae_generation():
     args.wikilang = "en"
     args.popularity_file = ""
     args.extra_source_file = None
+    args.taxa_data_file = None
     args.exclude = []
     args.info_on_focal_labels = []
 

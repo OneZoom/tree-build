@@ -73,6 +73,7 @@ currently results in:
 
 import argparse
 import csv
+import json
 import logging
 import os.path
 import random
@@ -84,6 +85,7 @@ from math import log
 
 from dendropy import Node, Tree
 
+from oz_tree_build.images_and_vernaculars.get_wiki_images import get_qid_from_taxa_data
 from oz_tree_build.utilities.file_utils import open_file_based_on_extension
 
 from . import OTT_popularity_mapping
@@ -528,7 +530,7 @@ def write_popularity_tree(tree, outdir, filename, version, verbosity=0):
         tree.seed_node.write_pop_newick(popularity_newick)
 
 
-def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=True):
+def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=True, extinct_tree_mode=False):
     """
     We should now have leaf entries attached to each node in the tree like
     data = {
@@ -600,16 +602,18 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     Tree.resolve_polytomies_add_popularity = resolve_polytomies_add_popularity
     Node.write_brief_newick = write_brief_newick
 
-    logging.info(f" > removing children labeled species in '{taxonomy_file}'")
-    n = len(tree.prune_children_of_otts(get_OTT_species(taxonomy_file)))
-    logging.info(f" ✔ removed all children of {n} nodes")
+    # For the extinct tree, we don't want to remove any species
+    if not extinct_tree_mode:
+        logging.info(f" > removing children labeled species in '{taxonomy_file}'")
+        n = len(tree.prune_children_of_otts(get_OTT_species(taxonomy_file)))
+        logging.info(f" ✔ removed all children of {n} nodes")
 
     logging.info(" > removing tips that appear not to be species")
     # species names containing these (even initially) are discarded
     bad_sp = ["cf.", "aff.", "subsp.", "environmental sample"]
     # species names containing these within the name are discarded:
     bad_sp += [" cv.", " sp."]
-    n = {k: len(v) for k, v in tree.prune_non_species(bad_matches=bad_sp).items()}
+    n = {k: len(v) for k, v in tree.prune_non_species(bad_matches=bad_sp, extinct_tree_mode=extinct_tree_mode).items()}
     logging.info(
         f" ✔ removed {n['unlabelled']} blank leaves, {n['no_space']} lacking a space, "
         f"& {n['bad_match']} containing {bad_sp} (assumed bad tips)"
@@ -885,6 +889,37 @@ def percolate_popularity(
             logging.warning(f"Problem reporting on focal taxon '{focal_taxon}': {e}")
 
 
+def switch_otts_to_qids(taxa_data_file, tree):
+    """
+    For the extinct tree, OTTs don't work well, as many species don't have one, or have the wrong one.
+    However, we trust the QIDs that we got from the previous extinct tree building phase.
+    So we switch all the OTTs to QIDs, and essentially pretend that they are OTTs. This works
+    because OneZoom doesn't actually rely on the ID being an OTT, just that it is unique.
+    """
+    taxa_data = {}
+    with open(taxa_data_file) as f:
+        taxa_data = json.load(f)
+
+    for node in tree.preorder_node_iter():
+        try:
+            # Get the QID for this node's taxon
+            qid = get_qid_from_taxa_data(taxa_data, node.label)
+            if qid:
+                # Replace the node's OTT with the QID
+                node.data["ott"] = qid
+                # Also, update the QID in the wikidata item, as it may not have
+                # one at all, or the one it has may be wrong
+                if "wd" in node.data:
+                    if isinstance(node.data["wd"], dict):
+                        node.data["wd"]["Q"] = qid
+                    else:
+                        node.data["wd"].Q = qid
+                else:
+                    node.data["wd"] = OTT_popularity_mapping.WikidataItem({"id": f"Q{qid}"})
+        except Exception as e:
+            logging.warning(f"switch_otts_to_qids error: {node.label} qid={qid} Error: {e}")
+
+
 def process_all(args):
     random_seed_addition = 42
     start = time.time()
@@ -951,6 +986,14 @@ def process_all(args):
     logging.info("> Populating IUCN IDs using EOL csv file (or if absent, wikidata)")
     populate_iucn(OTT_ptrs, args.EOLidentifiers)
 
+    # If a taxa_data_file is passed in (typically for the extinct tree), we use it to
+    # switch the OTTs to QIDs, which work more reliably for the extinct tree
+    extinct_tree_mode = False
+    if args.taxa_data_file:
+        extinct_tree_mode = True
+        logging.info("> Switching OTTs to QIDs, which works better for the extinct tree")
+        switch_otts_to_qids(args.taxa_data_file, tree)
+
     logging.info(f"> Writing out results to {args.output_location}/xxx")
     output_simplified_tree(
         tree,
@@ -958,6 +1001,7 @@ def process_all(args):
         args.output_location,
         args.version,
         random_seed_addition,
+        extinct_tree_mode=extinct_tree_mode,
     )
     t_fmt = "%H hrs %M min %S sec"
     logging.info(f"✔ ALL DONE IN {time.strftime(t_fmt, time.gmtime(time.time()-start))}")
@@ -1069,6 +1113,12 @@ def main():
         nargs="*",
         default=[],
         help=('Output some extra information for these named taxa (e.g. "Canis_lupus"), ' "for debugging purposes"),
+    )
+    parser.add_argument(
+        "--taxa-data-file",
+        default=None,
+        type=str,
+        help="JSON file with persisted data about taxa, typically used for the extinct tree",
     )
     parser.add_argument(
         "--verbosity",

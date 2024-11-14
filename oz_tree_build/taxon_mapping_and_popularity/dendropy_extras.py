@@ -28,7 +28,7 @@ def prune_children_of_otts(self, ott_species_list):
                 for sub_nd in nd.postorder_internal_node_iter():
                     if sub_nd in to_trim:
                         logging.warning(
-                            f"Species {sub_nd.label} is contained within another " "species {nd.label}: not trimming it"
+                            f"Species {sub_nd.label} is contained within another species {nd.label}: not trimming it"
                         )
                         trim_me = False
                 if trim_me:
@@ -45,6 +45,7 @@ def prune_non_species(
     recursive=True,
     bad_matches=None,  # any strings in here indicate non-species (e.g. ' cf.')
     update_bipartitions=False,
+    extinct_tree_mode=False,
 ):
     """
     Removes all terminal nodes whose name is '' or does not contain a space.
@@ -70,13 +71,15 @@ def prune_non_species(
                     # node is a named unifurcation
                     pass
                 else:
-                    nodes_to_remove["no_space"].append(nd)
-            elif " " not in nd.label:
+                    nodes_to_remove["unlabelled"].append(nd)
+            elif " " not in nd.label and not extinct_tree_mode:
+                # For the extinct tree, we allow tips with no spaces, as we often end up with genera as tips
+
                 # num_spaces is 0: a leaf, but prob not a species. Also catches label==''
                 logging.info(
                     f"Removing '{nd.label}' since it does not seem to be a species " "(it does not contain a space)"
                 )
-                nodes_to_remove["unlabelled"].append(nd)
+                nodes_to_remove["no_space"].append(nd)
             elif any(match in nd.label for match in bad_matches):
                 logging.info(f"Removing '{nd.label}' since it contains one of {bad_matches}")
                 nodes_to_remove["bad_match"].append(nd)

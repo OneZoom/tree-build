@@ -87,8 +87,9 @@
 - Allodaposuchus precedens: https://en.wikipedia.org/wiki/Neosuchia @2
 - Allokotosauria: https://en.wikipedia.org/wiki/Allokotosauria @2
 - Alloptox: https://en.wikipedia.org/wiki/Lagomorpha#Fossil_genera
-- Allosauridae: https://en.wikipedia.org/wiki/Carnosauria @4
-- Allosauroidea: https://en.wikipedia.org/wiki/Carnosauria @4
+- Allosauria: https://en.wikipedia.org/wiki/Carnosauria @6
+- Allosauroidea: https://en.wikipedia.org/wiki/Carnosauria @6
+- Allosaurus: https://en.wikipedia.org/wiki/Carnosauria @6
 - Almadasuchus: https://en.wikipedia.org/wiki/Crocodylomorpha @1
 - Alphadon: https://en.wikipedia.org/wiki/Metatheria @1
 - Alticonodon: https://en.wikipedia.org/wiki/Eutriconodonta @1
@@ -185,7 +186,7 @@
 - Anurognathus ammoni: https://en.wikipedia.org/wiki/Anurognathus @1
 - Anzu wyliei: https://en.wikipedia.org/wiki/Oviraptorosauria @1
 - Aoniraptor: https://en.wikipedia.org/wiki/Maip @1
-- Aorun: https://en.wikipedia.org/wiki/Jaculinykus @1
+- Aorun: https://en.wikipedia.org/wiki/Carnosauria @6
 - Apachesuchus heckerti: https://en.wikipedia.org/wiki/Aetosaur @3
 - Apatosaurinae: https://en.wikipedia.org/wiki/Diplodocidae @1
 - Apatosaurus ajax: https://en.wikipedia.org/wiki/Diplodocidae @1
@@ -263,7 +264,6 @@
 - Artiofabula: https://en.wikipedia.org/wiki/Artiodactyl#Classification
 - Arundelconodon: https://en.wikipedia.org/wiki/Eutriconodonta @1
 - Asfaltomylos: https://en.wikipedia.org/wiki/Yinotheria @1
-- Asfaltovenator: https://en.wikipedia.org/wiki/Carnosauria @4
 - Asiaceratops salsopaludalis: https://en.wikipedia.org/wiki/Ceratopsia @1
 - Asiatherium: https://en.wikipedia.org/wiki/Metatheria @1
 - Asilisaurus: https://en.wikipedia.org/wiki/Silesauridae @1
@@ -473,7 +473,6 @@
 - Canthumerycinae: https://en.wikipedia.org/wiki/Giraffidae @2
 - Captorhinidae: https://en.wikipedia.org/wiki/Captorhinidae @2
 - Captorhinus aguti: https://en.wikipedia.org/wiki/Captorhinidae @2
-- Carcharodontosauria: https://en.wikipedia.org/wiki/Carnosauria @4
 - Carcharodontosauridae: https://en.wikipedia.org/wiki/Carcharodontosauridae @2
 - Carcharodontosaurus iguidensis: https://en.wikipedia.org/wiki/Carcharodontosauridae @2
 - Carcharodontosaurus saharicus: https://en.wikipedia.org/wiki/Carcharodontosauridae @2
@@ -638,6 +637,8 @@
 - Coloradisaurus: https://en.wikipedia.org/wiki/Massopoda @1
 - Comahuesaurus: https://en.wikipedia.org/wiki/Rebbachisauridae @2
 - Comahuesuchus: https://en.wikipedia.org/wiki/Notosuchia @5
+- Compsognathidae: https://en.wikipedia.org/wiki/Compsognathidae @1
+- Compsognathus: https://en.wikipedia.org/wiki/Compsognathidae @1
 - Concavenator: https://en.wikipedia.org/wiki/Carcharodontosauridae @2
 - Concavispina: https://en.wikipedia.org/wiki/Thalattosauria @1
 - Conchoraptor gracilis: https://en.wikipedia.org/wiki/Oviraptorosauria @1
@@ -778,6 +779,8 @@
 - Diictodon: https://en.wikipedia.org/wiki/Eodicynodon @1
 - Dilong: https://en.wikipedia.org/wiki/Tyrannosauroidea @1
 - Dilophosaur-grade neotheropods: https://en.wikipedia.org/wiki/Dinosaur#Taxonomy
+- Dilophosauridae: https://en.wikipedia.org/wiki/Dilophosaurus @1
+- Dilophosaurus: https://en.wikipedia.org/wiki/Dilophosaurus @1
 - Dimetrodon borealis: https://en.wikipedia.org/wiki/Dimetrodon @2
 - Dimetrodon grandis: https://en.wikipedia.org/wiki/Dimetrodon @2
 - Dimetrodon limbatus: https://en.wikipedia.org/wiki/Dimetrodon @2
@@ -821,6 +824,7 @@
 - Dracontolestes aphantus: https://en.wikipedia.org/wiki/Colugo#Classification_and_evolution
 - Dracopelta: https://en.wikipedia.org/wiki/Ankylosauria @2
 - Dracoraptor: https://en.wikipedia.org/wiki/Coelophysoidea @3
+- Dracovenator: https://en.wikipedia.org/wiki/Dilophosaurus @1
 - Dreadnoughtus: https://en.wikipedia.org/wiki/Titanosauria @8
 - Drepanosauridae: https://en.wikipedia.org/wiki/Drepanosaur @1
 - Drepanosauromorpha: https://en.wikipedia.org/wiki/Amniota @2
@@ -1284,6 +1288,7 @@
 - Huanansaurus ganzhouensis: https://en.wikipedia.org/wiki/Oviraptorosauria @1
 - Huanghetitan ruyangensis: https://en.wikipedia.org/wiki/Euhelopodidae @2
 - Huanhepterus: https://en.wikipedia.org/wiki/Ctenochasmatoidea @2
+- Huaxiagnathus: https://en.wikipedia.org/wiki/Compsognathidae @1
 - Huaxiapterus: https://en.wikipedia.org/wiki/Azhdarchoidea @3
 - Huayangosauridae: https://en.wikipedia.org/wiki/Stegosauria @1
 - Huayangosaurus taibaii: https://en.wikipedia.org/wiki/Stegosauria @1
@@ -1349,6 +1354,7 @@
 - Isectolophidae: https://en.wikipedia.org/wiki/Perissodactyla @3
 - Isisaurus: https://en.wikipedia.org/wiki/Titanosauria @8
 - Isisfordia duncani: https://en.wikipedia.org/wiki/Neosuchia @2
+- Issi: https://en.wikipedia.org/wiki/Jaklapallisaurus @1
 - Istiodactylidae: https://en.wikipedia.org/wiki/Istiodactylidae @1
 - Istiodactylus latidens: https://en.wikipedia.org/wiki/Istiodactylidae @1
 - Istiodactylus sinensis: https://en.wikipedia.org/wiki/Istiodactylidae @1
@@ -1359,6 +1365,7 @@
 - Jachaleria: https://en.wikipedia.org/wiki/Stahleckeriidae @1
 - Jaculinykus: https://en.wikipedia.org/wiki/Jaculinykus @1
 - Jaikosuchus: https://en.wikipedia.org/wiki/Proterosuchidae @2
+- Jaklapallisaurus: https://en.wikipedia.org/wiki/Jaklapallisaurus @1
 - Jaskhadelphys: https://en.wikipedia.org/wiki/Metatheria @1
 - Jaxartosaurus: https://en.wikipedia.org/wiki/Hadrosauridae @2
 - Jaxtasuchus salomoni: https://en.wikipedia.org/wiki/Proterochampsia @2
@@ -1382,6 +1389,7 @@
 - Junggarsuchus: https://en.wikipedia.org/wiki/Crocodylomorpha @1
 - Juramaia: https://en.wikipedia.org/wiki/Eutheria @2
 - Juratyrant: https://en.wikipedia.org/wiki/Tyrannosauroidea @1
+- Juravenator: https://en.wikipedia.org/wiki/Compsognathidae @1
 - Kaatedocus siberi: https://en.wikipedia.org/wiki/Diplodocidae @1
 - Kadimakara: https://en.wikipedia.org/wiki/Prolacertidae @1
 - Kalisuchus rewanensis: https://en.wikipedia.org/wiki/Archosauriformes @2
@@ -1553,6 +1561,7 @@
 - Lotheridium: https://en.wikipedia.org/wiki/Metatheria @1
 - Lotosauridae: https://en.wikipedia.org/wiki/Poposauroidea @1
 - Lotosaurus: https://en.wikipedia.org/wiki/Poposauroidea @1
+- Lourinhanosaurus: https://en.wikipedia.org/wiki/Carnosauria @6
 - Loxodonta africana: https://en.wikipedia.org/wiki/Proboscidea @1
 - Luangwa: https://en.wikipedia.org/wiki/Cynodont @1
 - Lucasuchus hunti: https://en.wikipedia.org/wiki/Aetosaur @3
@@ -1588,6 +1597,7 @@
 - Macrochorobates: https://en.wikipedia.org/wiki/Dasypodidae#Classification
 - Macrocnemus bassanii: https://en.wikipedia.org/wiki/Tanystropheidae @1
 - Macrocnemus fuyuanensis: https://en.wikipedia.org/wiki/Tanystropheidae @1
+- Macrocollum: https://en.wikipedia.org/wiki/Jaklapallisaurus @1
 - Macrogryphosaurus: https://en.wikipedia.org/wiki/Talenkauen @1
 - Macronaria: https://en.wikipedia.org/wiki/Sauropoda @1
 - Macronychoptera: https://en.wikipedia.org/wiki/Pterosaur @1
@@ -1735,7 +1745,7 @@
 - Moganopterus: https://en.wikipedia.org/wiki/Ctenochasmatoidea @2
 - Moghreberia: https://en.wikipedia.org/wiki/Stahleckeriidae @1
 - Mojoceratops perifania: https://en.wikipedia.org/wiki/Chasmosaurinae @1
-- Monolophosaurus: https://en.wikipedia.org/wiki/Megalosauroidea @1
+- Monolophosaurus: https://en.wikipedia.org/wiki/Carnosauria @6
 - Mononykus: https://en.wikipedia.org/wiki/Jaculinykus @1
 - Monotremata: https://en.wikipedia.org/wiki/Yinotheria @1
 - Montanalestes: https://en.wikipedia.org/wiki/Eutheria @2
@@ -1822,7 +1832,7 @@
 - Neosphenodontia: https://en.wikipedia.org/wiki/Rhynchocephalia @1
 - Neosuchia: https://en.wikipedia.org/wiki/Neosuchia @2
 - Neotheropoda: https://en.wikipedia.org/wiki/Dinosaur#Taxonomy
-- Neovenator: https://en.wikipedia.org/wiki/Carcharodontosauridae @2
+- Neovenator: https://en.wikipedia.org/wiki/Carnosauria @6
 - Neptunidraco ammoniticus: https://en.wikipedia.org/wiki/Neosuchia @2
 - Nesodactylus hesperius: https://en.wikipedia.org/wiki/Rhamphorhynchidae @1
 - Neuquenornis: https://en.wikipedia.org/wiki/Ornithothoraces @1
@@ -2138,6 +2148,8 @@
 - Planocephalosaurus robinsonae: https://en.wikipedia.org/wiki/Rhynchocephalia @1
 - Plataleorhynchus: https://en.wikipedia.org/wiki/Ctenochasmatoidea @2
 - Plateosauria: https://en.wikipedia.org/wiki/Dinosaur#Taxonomy
+- Plateosauridae: https://en.wikipedia.org/wiki/Jaklapallisaurus @1
+- Plateosaurus trossingensis: https://en.wikipedia.org/wiki/Jaklapallisaurus @1
 - Platycraniellus: https://en.wikipedia.org/wiki/Cynodont @1
 - Platysuchus multiscrobiculatus: https://en.wikipedia.org/wiki/Neosuchia @2
 - Plesiopterys: https://en.wikipedia.org/wiki/Plesiosaur @1
@@ -2453,6 +2465,7 @@
 - Schizooura: https://en.wikipedia.org/wiki/Ornithothoraces @1
 - Schleitheimia: https://en.wikipedia.org/wiki/Massopoda @1
 - Scincogekkonomorpha: https://en.wikipedia.org/wiki/Liushusaurus @1
+- Scipionyx: https://en.wikipedia.org/wiki/Compsognathidae @1
 - Scleroglossa: https://en.wikipedia.org/wiki/Liushusaurus @1
 - Sclerosaurus armatus: https://en.wikipedia.org/wiki/Procolophonidae @1
 - Sclerostropheus: https://en.wikipedia.org/wiki/Tanystropheidae @1
@@ -2538,6 +2551,7 @@
 - Simosuchus: https://en.wikipedia.org/wiki/Notosuchia @5
 - Simurghia: https://en.wikipedia.org/wiki/Pteranodontia @3
 - Sineleutherus: https://en.wikipedia.org/wiki/Mammaliaformes @1
+- Sinocalliopteryx: https://en.wikipedia.org/wiki/Compsognathidae @1
 - Sinoceratops zhuchengensis: https://en.wikipedia.org/wiki/Diabloceratops @1
 - Sinoconodon: https://en.wikipedia.org/wiki/Mammaliaformes @1
 - Sinocyamodus: https://en.wikipedia.org/wiki/Placodontia#Classification
@@ -2552,6 +2566,7 @@
 - Sinornithoides: https://en.wikipedia.org/wiki/Troodontidae @4
 - Sinornithomimus: https://en.wikipedia.org/wiki/Aviatyrannis @1
 - Sinornithosaurus: https://en.wikipedia.org/wiki/Dromaeosauridae @2
+- Sinosauropteryx: https://en.wikipedia.org/wiki/Compsognathidae @1
 - Sinosaurosphargis: https://en.wikipedia.org/wiki/Pantestudines @1
 - Sinotyrannus: https://en.wikipedia.org/wiki/Tyrannosauroidea @1
 - Sinovenator: https://en.wikipedia.org/wiki/Troodontidae @4
@@ -2869,7 +2884,8 @@
 - Uktenadactylus: https://en.wikipedia.org/wiki/Anhangueridae @3
 - Ulemica: https://en.wikipedia.org/wiki/Anomodont @2
 - Ulemosaurus svijagensis: https://en.wikipedia.org/wiki/Anteosauridae @1
-- Unaysauridae: https://en.wikipedia.org/wiki/Dinosaur#Taxonomy
+- Unaysauridae: https://en.wikipedia.org/wiki/Jaklapallisaurus @1
+- Unaysaurus: https://en.wikipedia.org/wiki/Jaklapallisaurus @1
 - Unenlagia comahuensis: https://en.wikipedia.org/wiki/Dromaeosauridae @2
 - Unenlagia paynemili: https://en.wikipedia.org/wiki/Dromaeosauridae @2
 - Unenlagiinae: https://en.wikipedia.org/wiki/Dromaeosauridae @2

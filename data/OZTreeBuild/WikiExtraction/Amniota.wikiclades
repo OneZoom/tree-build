@@ -10,6 +10,7 @@ Amniota FROM Amniota@2
         Procolophonia FROM Procolophonia@1
             Pareiasauria FROM Pareiasauria@1
             Procolophonidae FROM Procolophonidae@1
+            Owenettidae FROM Owenettidae@1
         Younginiformes FROM Younginiformes@2
         # Sauria
             #Lepidosauria
@@ -25,9 +26,16 @@ Amniota FROM Amniota@2
                 Thalattosauria FROM Thalattosauria@1
                 Hupehsuchia FROM Hupehsuchia@1
                 Ichthyopterygia->Ichthyosauriformes FROM Ichthyopterygia@1
+                    Parvipelvia FROM Eurhinosaurus@1
                 Sauropterygia FROM Sauropterygia@1
                     Plesiosauria FROM Plesiosaur@1
                         Thalassophonea FROM Thalassophonea@1
+                        Rhomaleosauridae FROM Rhomaleosauridae@1
+                        Microcleididae FROM Microcleididae@1
+                        Cryptoclididae FROM Cryptoclididae@1
+                        Elasmosauridae FROM Elasmosauridae@2
+                        Leptocleididae FROM Leptocleididae@2
+                        Polycotylidae FROM Polycotylidae@3
                 Tanystropheidae FROM Tanystropheidae@1
                 Prolacertidae FROM Prolacertidae@1
                 Allokotosauria FROM Allokotosauria@2

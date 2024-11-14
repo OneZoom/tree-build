@@ -130,8 +130,8 @@ def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     if not taxon_for_alphanum_check.replace(" ", "").isalnum():
         return None
 
-    # Some show up as e.g. "Unnamed species", which we ignore
-    if taxon.startswith("Unnamed"):
+    # Some show up as e.g. "Unnamed species", or "incertae sedis", which we ignore
+    if taxon.startswith("Unnamed") or taxon.startswith("incertae"):
         return None
 
     # If it has more than one space, it's probably not a valid taxon

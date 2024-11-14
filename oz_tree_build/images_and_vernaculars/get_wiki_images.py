@@ -190,7 +190,7 @@ def get_image_license_info(escaped_image_name):
     image_metadata_url = (
         "https://api.wikimedia.org/w/api.php"
         f"?action=query&titles=File%3a{escaped_image_name}&format=json&prop=imageinfo"
-        "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseUrl|Artist"
+        "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
     )
     r = make_http_request_with_retries(image_metadata_url)
     try:
@@ -231,15 +231,22 @@ def get_image_license_info(escaped_image_name):
         # }
         if license_info["license_url"] == "https://www.flickr.com/commons/usage/":
             license_info["license"] = "flickr_commons"
-        if license_info["license_url"] == "http://artlibre.org/licence/lal/en":
+        elif license_info["license_url"] == "http://artlibre.org/licence/lal/en":
             # See https://en.wikipedia.org/wiki/Free_Art_License
             license_info["license"] = "cc-by-sa-4.0"
-        else:
+        elif "License" in extmetadata:
             license_info["license"] = extmetadata["License"]["value"]
+        else:
+            # Some images have a LicenseShortName but not a License field
+            license_info["license"] = extmetadata["LicenseShortName"]["value"]
 
-        # If the license doesn't start with "cc" or "pd", we can't use it
+        # If the license doesn't match what we deem acceptable, we can't use the image
         li = license_info["license"].lower()
-        if not li.startswith("cc") and not li.startswith("pd") and not li == "flickr_commons":
+        if (
+            not li.startswith("cc")
+            and not li.startswith("pd")
+            and li not in ["flickr_commons", "copyrighted free use", "gfdl 1.2", "attribution", "no restrictions"]
+        ):
             logger.warning(f"Unacceptable license for '{escaped_image_name}': {li}")
             return None
     except KeyError:

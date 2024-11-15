@@ -86,6 +86,7 @@ rank_names = [
     "Family",
     "Subfamily",
     "Tribe",
+    "Subtribe",
     "Superorder",
     "Order",
     "Suborder",
@@ -114,7 +115,8 @@ def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     for rank_name in rank_names:
         if taxon.casefold().startswith(rank_name.casefold()):
             taxon = taxon[len(rank_name) :]
-            taxon = taxon.strip().strip("[]()'†?\"")
+            # The colon lstrip is for cases like "Family: Cyamodontidae"
+            taxon = taxon.lstrip(":").strip().strip("[]()'†?\"")
             if not taxon:
                 return None
             break

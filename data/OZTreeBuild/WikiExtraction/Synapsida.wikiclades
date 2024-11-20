@@ -48,7 +48,7 @@ Synapsida FROM Synapsid@2
                             Lagomorpha->Glires FROM Lagomorpha@Fossil_genera
                             Perissodactyla-Lambdotheriidae FROM Perissodactyla@3 #Lambdotheriidae seems the same as Brontotheriidae
                                 Palaeotheriidae FROM Palaeotherium@1
-                                Equidae-Asinus-Equus_ferus-Equus_quagga-incertae_sedis FROM Equidae@Classification #Too much junk in there
+                                Equidae FROM Equidae@Classification
                                 Tapiroidea FROM Tapiroidea@Taxonomy
                                 Rhinocerotidae FROM Rhinoceros@Rhinocerotidae
                                 Amynodontinae->Amynodontidae FROM Amynodontidae@Taxonomy

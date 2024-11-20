@@ -43,7 +43,7 @@ Amniota FROM Amniota@2
                 Archosauriformes FROM Archosauriformes@2
                     Proterosuchidae FROM Proterosuchidae@2
                     Erythrosuchidae FROM Erythrosuchidae@2
-                    Proterochampsia FROM Proterochampsia@2
+                    Proterochampsia FROM Proterochampsia@1
                     Pseudosuchia FROM Pseudosuchia@1
                         Ornithosuchidae FROM Dynamosuchus@1
                         Aetosauria FROM Aetosaur@3

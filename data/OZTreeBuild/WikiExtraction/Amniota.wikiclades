@@ -1,5 +1,5 @@
 Amniota FROM Amniota@2
-    #Seymouriamorpha FROM Seymouriamorpha@2
+    #Seymouriamorpha FROM Seymouriamorpha@2 # stem-amniotes, maybe leave out for now?
     Diadectomorpha FROM Diadectidae@1
     Captorhinidae FROM Captorhinidae@2
     Synapsida FROM Synapsida.wikiclades # Import the whole Synapsida tree

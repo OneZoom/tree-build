@@ -17,7 +17,7 @@ class WikiTaxonomyNode:
             lambda node: node.title.strip() == header_title,
         )
         if i is None:
-            raise Exception(f"Could not find header '{header_title}'")
+            raise Exception(f"Could not find header '{header_title}' in page '{page_title}'")
 
         i, _ = find_wikicode_node(
             wikicode,

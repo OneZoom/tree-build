@@ -50,7 +50,7 @@ Synapsida FROM Synapsid@2
                                 Palaeotheriidae FROM Palaeotherium@1
                                 Equidae FROM Equidae@Classification
                                 Tapiroidea FROM Tapiroidea@Taxonomy
-                                Rhinocerotidae FROM Rhinoceros@Rhinocerotidae
+                                Rhinocerotidae FROM Rhinoceros@Evolution
                                 Amynodontinae->Amynodontidae FROM Amynodontidae@Taxonomy
                             Artiodactyla-Mysticeti-Odontoceti-Palaeomerycidae-Climacoceratidae-Giraffidae FROM Artiodactyl@Classification
                                 Giraffomorpha->Pecora FROM Giraffidae@2
@@ -68,5 +68,5 @@ Synapsida FROM Synapsid@2
                                     Tremarctinae FROM Tremarctinae@Taxonomy
                                 Ailuridae FROM Ailuridae@Classification
                             Felidae->Carnivora FROM Felidae@1
-                                Machairodontinae FROM Machairodontinae@1
+                                Machairodontinae FROM Machairodontinae@2
     Sphenacodontidae FROM Dimetrodon@2 

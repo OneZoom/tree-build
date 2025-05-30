@@ -1,7 +1,7 @@
 Amniota FROM Amniota@2
     #Seymouriamorpha FROM Seymouriamorpha@2 # stem-amniotes, maybe leave out for now?
     Diadectomorpha FROM Diadectidae@1
-    Captorhinidae FROM Captorhinidae@2
+    Captorhinidae FROM Captorhinidae@1
     Synapsida FROM Synapsida.wikiclades # Import the whole Synapsida tree
     # Sauropsida
         Lanthanosuchoidea=>Acleistorhinidae FROM Lanthanosuchoidea@2 # They seem mostly the same?
@@ -60,13 +60,17 @@ Amniota FROM Amniota@2
                             Rhamphorhynchidae FROM Rhamphorhynchidae@1
                             Darwinoptera FROM Kunpengopterus@1
                             Anurognathidae FROM Anurognathus@1
-                            Germanodactylidae FROM Germanodactylidae@1
-                            Ctenochasmatoidea FROM Ctenochasmatoidea@2
-                            Azhdarchoidea FROM Azhdarchoidea@3
-                            Pteranodontoidea-Ornithocheiridae-Cearadactylus-Ludodactylus-Guidraco FROM Ornithocheiromorpha@1 # Removed things come from Anhangueridae below
+                            Archaeopterodactyloidea-Lophocratia FROM Archaeopterodactyloidea@1
+                                Germanodactylidae->Archaeopterodactyloidea FROM Germanodactylidae@1
+                                Ctenochasmatidae->Archaeopterodactyloidea FROM Pterodaustro@1
+                                    Gallodactylidae->Ctenochasmatidae FROM Gallodactylidae@1
+                            Azhdarchoidea FROM Azhdarchoidea@2
+                                Azhdarchidae FROM Azhdarchidae@2
+                            Pteranodontoidea-Lanceodontia FROM Pteranodontoidea@2
+                                Ornithocheiromorpha-Cearadactylus->Pteranodontoidea FROM Ornithocheiromorpha@2
+                                    Boreopteridae FROM Boreopteridae@2
+                                    Istiodactylidae FROM Istiodactylidae@1
+                                    Anhangueridae FROM Anhangueridae@2
                                 Pteranodontia FROM Pteranodontia@3
-                                Istiodactylidae FROM Istiodactylidae@1
-                                Boreopteridae FROM Boreopteridae@2
-                                Anhangueridae FROM Anhangueridae@3
                         Silesauridae FROM Silesauridae@1
                         Dinosauria FROM Dinosauria.wikiclades # Import the whole Dinosauria tree

@@ -21,7 +21,7 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
             Plateosauridae->Plateosauria FROM Jaklapallisaurus@1
             Massopoda-Antetonitrus FROM Massopoda@1
                 Sauropoda FROM Sauropoda@1
-                    Mamenchisauridae FROM Mamenchisauridae@4 # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2171818
+                    Mamenchisauridae FROM Mamenchisauridae@1 # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2171818
                     Rebbachisauridae FROM Rebbachisauridae@2
                     Dicraeosauridae FROM Dicraeosauridae@1
                     Diplodocidae FROM Diplodocidae@1
@@ -31,13 +31,13 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
                     Euhelopodidae-Phuwiangosaurus->Sauropoda FROM Euhelopodidae@2 # Unclear placement
             Saturnaliinae->Sauropodomorpha FROM Sauropodomorpha@2
         #Theropoda
-            Coelophysoidea FROM Coelophysoidea@3
+            Coelophysoidea FROM Coelophysoidea@1
             Dilophosauridae->Neotheropoda FROM Dilophosaurus@1 # Exact placement unclear
             Ceratosauroidea=>Ceratosauria FROM Ceratosauria@3 # Dino tree doesn't have Ceratosauroidea, so we add it as a child
             Megalosauroidea-Monolophosaurus FROM Megalosauroidea@1
             Compsognathidae->Coelurosauria FROM Compsognathidae@1
-            Carnosauria-Spinosauridae-Megalosauridae-Monolophosaurus FROM Carnosauria@4 # These all come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
-                Allosauroidea FROM Carnosauria@6
+            Carnosauria-Spinosauridae-Megalosauridae FROM Carnosauria@3 # These all come from the Megalosauroidea insert above. Maybe removing them here is not correct, as Megalosauroidea may be paraphyletic
+                Allosauroidea FROM Allosauridae@1
                 Carcharodontosauridae-Neovenator FROM Carcharodontosauridae@2
             Metriacanthosauridae FROM Metriacanthosauridae@1
             #Compsognathidae FROM Compsognathidae@1 # Doesn't seem to exist anymore?
@@ -48,7 +48,7 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
                     Siats->Megaraptora FROM Siats@2
                     Aniksosaurus->Megaraptora FROM Siats@2
             Ornithomimosauria FROM Aviatyrannis@1
-            Alvarezsauria-Aorun=>Alvarezsauridae FROM Jaculinykus@1
+            Alvarezsauria=>Alvarezsauridae FROM Jaculinykus@1
             Therizinosauria FROM Therizinosauria@2
             Oviraptorosauria FROM Oviraptorosauria@1
             Archaeopterygidae FROM Anchiornithidae@2

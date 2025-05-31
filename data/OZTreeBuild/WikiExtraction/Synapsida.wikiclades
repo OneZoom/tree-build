@@ -26,11 +26,10 @@ Synapsida FROM Synapsid@2
                             Xenarthra FROM Xenarthra@1
                                 Dasypodidae FROM Dasypodidae@Classification
                                 Chlamyphoridae FROM Glyptodon@2
-                                Folivora FROM Template:Phylogeny/Mylodontoidea@1
-                                    Megalocnidae FROM Megalocnidae@1
+                                Folivora FROM Megatheriidae@1
                             # Afrotheria
                                 Paenungulatomorpha->Afrotheria FROM Paenungulatomorpha@1
-                                    Proboscidea FROM Proboscidea@1
+                                    Proboscidea FROM Proboscidea@Classification
                                     Sirenia FROM Sirenia@1
                                         #Trichechidae FROM Trichechidae@Systematics Need code fixes to consume this taxonomy
                                         Dugongidae FROM Dugongidae@Taxonomy
@@ -50,8 +49,8 @@ Synapsida FROM Synapsid@2
                                 Palaeotheriidae FROM Palaeotherium@1
                                 Equidae FROM Equidae@Classification
                                 Tapiroidea FROM Tapiroidea@Taxonomy
-                                Rhinocerotidae FROM Rhinoceros@Evolution
-                                Amynodontinae->Amynodontidae FROM Amynodontidae@Taxonomy
+                                Rhinocerotoidea FROM Rhinocerotoidea@1
+                                    Rhinocerotidae-Teletaceras-Uintaceras FROM Rhinoceros@Evolution
                             Artiodactyla-Mysticeti-Odontoceti-Palaeomerycidae-Climacoceratidae-Giraffidae FROM Artiodactyl@Classification
                                 Giraffomorpha->Pecora FROM Giraffidae@2
                                 Merycoidodontidae FROM Merycoidodontidae@Classification

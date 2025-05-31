@@ -114,9 +114,18 @@ def validate_clean_taxon(taxon, allow_shortened_binomial=False):
     # Check if taxon starts with a rank_names, ignore the rank name (e.g. Family [[Cyamodontidae]])
     for rank_name in rank_names:
         if taxon.casefold().startswith(rank_name.casefold()):
+            # Remove the rank name
             taxon = taxon[len(rank_name) :]
+
             # The colon lstrip is for cases like "Family: Cyamodontidae"
-            taxon = taxon.lstrip(":").strip().strip("[]()'†?\"")
+            taxon = taxon.lstrip(":")
+
+            # Only keep the first word after the rank name. This covers cases like "Order Proboscidea Illiger, 1811"
+            split_taxon = taxon.split()
+            if split_taxon:
+                taxon = split_taxon[0]
+
+            taxon = taxon.strip().strip("[]()'†?\"")
             if not taxon:
                 return None
             break

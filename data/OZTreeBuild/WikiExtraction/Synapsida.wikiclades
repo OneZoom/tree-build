@@ -57,15 +57,20 @@ Synapsida FROM Synapsid@2
                                 Basilosauridae FROM Basilosauridae@Systematics
                                 Pakicetidae FROM Pakicetidae@Subtaxa
                             Pholidota FROM Pangolin@Taxonomy
-                            Caniformia-Hemicyoninae->Carnivora FROM Caniformia@1 # we get Hemicyoninae later from Ursidae
-                                Canidae FROM Borophaginae@2
-                                Ursidae FROM Ursidae@2
-                                    Ursinae FROM Ursinae@Classification
-                                    Ailuropodinae FROM Ailuropodinae@Taxonomy
-                                    Amphicynodontidae=>Amphicynodontinae FROM Amphicynodontidae@Systematics
-                                    Hemicyoninae FROM Hemicyoninae@Systematics
-                                    Tremarctinae FROM Tremarctinae@Taxonomy
-                                Ailuridae FROM Ailuridae@Classification
-                            Felidae->Carnivora FROM Felidae@1
-                                Machairodontinae FROM Machairodontinae@2
+                            # Carnivora
+                                Caniformia-Hemicyoninae->Carnivora FROM Caniformia@1 # we get Hemicyoninae later from Ursidae
+                                    Canidae FROM Borophaginae@2
+                                    Ursidae FROM Ursidae@2
+                                        Ursinae FROM Ursinae@Classification
+                                        Ailuropodinae FROM Ailuropodinae@Taxonomy
+                                        Amphicynodontidae=>Amphicynodontinae FROM Amphicynodontidae@Systematics
+                                        Hemicyoninae FROM Hemicyoninae@Systematics
+                                        Tremarctinae FROM Tremarctinae@Taxonomy
+                                    Ailuridae FROM Ailuridae@Classification
+                                Feliformia->Carnivora FROM Feliformia@1
+                                    Nimravidae FROM Nimravidae@1
+                                    Lophocyonidae FROM Lophocyonidae@1
+                                    Barbourofelidae FROM Barbourofelidae@1
+                                    Felidae FROM Felidae@1
+                                        Machairodontinae FROM Machairodontinae@2
     Sphenacodontidae FROM Dimetrodon@2 

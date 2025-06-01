@@ -18,7 +18,8 @@ Amniota FROM Amniota@2
                 #Squamata. TODO: we need to get a Squamata node here! And probably missing lots of good stuff under here
                     Mosasaurinae->Lepidosauria FROM Mosasaurinae@1
                     Scincogekkonomorpha->Lepidosauria FROM Liushusaurus@1
-                    Ophidia->Lepidosauria FROM Ophidia@2
+                    Ophidia-Dinilysia->Lepidosauria FROM Ophidia@2 # We get Dinilysia from Madtsoiidae
+                        $ROOT->Madtsoiidae FROM Madtsoiidae@1
             Drepanosauridae->Drepanosauromorpha FROM Drepanosaur@1
             # Archelosauria
                 Pantestudines-Eosauropterygia FROM Pantestudines@1 # Eosauropterygia comes from Sauropterygia

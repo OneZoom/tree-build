@@ -5,7 +5,7 @@ TODO: Should be moved to a shared location.
 
 import re
 
-from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
+from ..taxon_mapping_and_popularity.OTT_popularity_mapping import (
     match_synonym,
     match_taxa,
     match_vernacular,

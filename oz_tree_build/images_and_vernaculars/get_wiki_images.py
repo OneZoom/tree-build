@@ -1,15 +1,31 @@
 """
 This utility retrieves images and vernacular names from Wikidata for a given set
-of taxa or tips in a clade.
+of taxa or tips in a clade. Either install the entire oz_tree_build package using
+`python -m pip install oz_tree_build` or call the script directly as
+`python -m oz_tree_build.images_and_vernaculars.get_wiki_images ...`. Images are
+cropped to a 300x300 square using the Microsoft Azure Vision API, or
+centered if no cropper is available.
 
-It can be called in two ways:
+The script can be used in two ways:
 - To process a single taxon, use the 'leaf' subcommand. This will get the image and
-  vernaculars for the given taxon. e.g.
-    * get_wiki_images.py leaf "Panthera leo"
-    * get_wiki_images.py leaf "Panthera leo" "Panthera leo.jpg"
-    * get_wiki_images.py leaf "Panthera leo" "Panthera leo.jpg" 42000
+  vernaculars for the given taxon, specified by OTT (e.g. 563151) or scientific name
+  ('name') in the ordered_leaves or ordered_nodes tables e.g.
+    * get_wiki_images.py leaf 563151
+    * get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg"
+    * get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg" 42000
+  If no image is specified, a default one will be picked from the P18 field of the
+  wikidata entry (e.g. see https://www.wikidata.org/wiki/Q140#P18), the image will
+  be given a src of `src_flags["wiki"]` (20) and a src_id of the QID (e.g. 140 for lions),
+  and the rating will default to 35000 (of a maximum of 50000).
+  Alternatively, if an image name is passed in, it will be treated as a bespoke image,
+  given a src of `src_flags["onezoom_bespoke"]` (2) and the next available src_id
+  (src_ids will therefore be incremented for each bespoke image processed), and a default
+  rating of 40000.
+
 - To process a full clade, use the 'clade' subcommand. This will get the images and
-  vernaculars for all the taxa in the clade, e.g.
+  vernaculars for all the taxa in the clade. A wikidata JSON dump file is required
+  to find appropriate images for all the taxa: ideally this should be a filtered one
+  such as OneZoom_latest-all.json. For example, to get images for all Panthera:
     * get_wiki_images.py clade "Panthera" OneZoom_latest-all.json
 """
 
@@ -670,7 +686,8 @@ def process_args(args):
         return
 
     db = connect_to_database(database)
-    cropper = AzureImageCropper(config)
+
+    cropper = None if args.no_azure_crop else AzureImageCropper(config)
 
     taxa_data = {}
     if args.taxa_data_file:
@@ -735,6 +752,14 @@ def main():
             "--taxa-data-file",
             default=None,
             help="JSON file with persisted data about various taxa",
+        )
+        parser.add_argument(
+            "--no-azure-crop",
+            action="store_true",
+            help=(
+                "Do not use the Azure Vision API to crop images: instead, use a centered crop. "
+                "Useful for testing or if you don't have an Azure Vision API key."
+            ),
         )
         parser.add_argument(
             "-o",

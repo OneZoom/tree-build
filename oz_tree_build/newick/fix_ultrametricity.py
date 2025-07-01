@@ -7,7 +7,7 @@ import argparse
 
 import dendropy
 
-from oz_tree_build.newick.check_ultrametricity import get_taxon_name
+from ..newick.check_ultrametricity import get_taxon_name
 
 
 def fix_ultrametricity(tree, expected_length, max_adjustment):

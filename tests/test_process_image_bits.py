@@ -54,7 +54,7 @@ class TestAPI(BaseDB):
         delete_all_by_ott(db, "images_by_ott", ott)
         test_row = [ott, 20, -3, "foo.jpg", 24000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0]
         sql = self.set_sql.format(ph)
-        db.executesql(sql, [*test_row, datetime.datetime.now()])
+        db.executesql(sql, [*test_row, datetime.datetime.now().isoformat()])
         made_changes = process_image_bits.resolve(db, ott)
         assert made_changes
         sql = self.get_sql.format(ph)
@@ -87,7 +87,7 @@ class TestAPI(BaseDB):
         r.append([ott, 20, -95, "F.jpg", 35000, "Unknown", "cc0 (...)", 0, 0, 0, 0, 0, 0])
         sql = self.set_sql.format(ph)
         for row in r:
-            db.executesql(sql, [*row, datetime.datetime.now()])
+            db.executesql(sql, [*row, datetime.datetime.now().isoformat()])
         made_changes = process_image_bits.resolve(db, ott)
         assert made_changes
         sql = self.get_sql.format(ph)
@@ -164,7 +164,7 @@ class TestCLI(BaseDB):
         # Insert all the test rows
         ph = placeholder(db)
         for test_row in test_rows:
-            db._adapter.execute(self.set_sql.format(ph), [*test_row, datetime.datetime.now()])
+            db._adapter.execute(self.set_sql.format(ph), [*test_row, datetime.datetime.now().isoformat()])
         db.commit()
 
         # Run the function and make sure it made changes

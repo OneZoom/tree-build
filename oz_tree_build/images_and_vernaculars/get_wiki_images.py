@@ -27,16 +27,15 @@ from pathlib import Path
 import requests
 from PIL import Image
 
-from oz_tree_build._OZglobals import src_flags
-from oz_tree_build.images_and_vernaculars import process_image_bits
-from oz_tree_build.utilities.db_helper import (
+from .._OZglobals import src_flags
+from ..utilities.db_helper import (
     connect_to_database,
     get_next_src_id_for_src,
     placeholder,
     read_config,
 )
-from oz_tree_build.utilities.file_utils import enumerate_lines_from_file
-
+from ..utilities.file_utils import enumerate_lines_from_file
+from . import process_image_bits
 from .image_cropping import AzureImageCropper, CenterImageCropper
 
 default_wiki_image_rating = 35000
@@ -411,7 +410,7 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
             1,  # These will need to be adjusted based on all images for the taxon
             license_info["artist"],
             license_string,
-            datetime.datetime.now(),
+            datetime.datetime.now().isoformat(),
         ),
     )
     db.commit()
@@ -460,7 +459,7 @@ def save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
                     vernacular["preferred"],
                     src_flags["wiki"],
                     qid,
-                    datetime.datetime.now(),
+                    datetime.datetime.now().isoformat(),
                 ),
             )
 

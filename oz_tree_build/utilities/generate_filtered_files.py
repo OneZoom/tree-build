@@ -14,16 +14,15 @@ import sys
 import time
 from collections import defaultdict
 
-from oz_tree_build._OZglobals import wikiflags
-from oz_tree_build.newick.extract_trees import get_taxon_subtree_from_newick_file
-from oz_tree_build.newick.newick_parser import parse_tree
-from oz_tree_build.taxon_mapping_and_popularity.CSV_base_table_creator import iucn_num
-from oz_tree_build.taxon_mapping_and_popularity.OTT_popularity_mapping import (
+from .._OZglobals import wikiflags
+from ..newick.extract_trees import get_taxon_subtree_from_newick_file
+from ..newick.newick_parser import parse_tree
+from ..taxon_mapping_and_popularity.CSV_base_table_creator import iucn_num
+from ..taxon_mapping_and_popularity.OTT_popularity_mapping import (
     JSON_contains_known_dbID,
     Qid,
     label,
 )
-
 from .apply_mask_to_object_graph import ANY, KEEP, apply_mask_to_object_graph
 from .file_utils import enumerate_lines_from_file, open_file_based_on_extension
 from .temp_helpers import (

@@ -142,8 +142,8 @@ import sys
 from collections import OrderedDict, defaultdict
 from statistics import StatisticsError, mean
 
-from oz_tree_build._OZglobals import wikiflags
-from oz_tree_build.utilities.file_utils import open_file_based_on_extension
+from .._OZglobals import wikiflags
+from ..utilities.file_utils import open_file_based_on_extension
 
 __author__ = "Yan Wong"
 __license__ = """This is free and unencumbered software released into the public domain by the author, Yan Wong, for OneZoom CIO.

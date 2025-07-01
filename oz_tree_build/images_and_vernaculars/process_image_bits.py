@@ -1,8 +1,8 @@
 import argparse
 import logging
 
-from oz_tree_build._OZglobals import src_flags
-from oz_tree_build.utilities.db_helper import (
+from .._OZglobals import src_flags
+from ..utilities.db_helper import (
     connect_to_database,
     placeholder,
     read_config,

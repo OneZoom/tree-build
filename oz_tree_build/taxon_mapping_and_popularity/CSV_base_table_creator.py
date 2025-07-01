@@ -85,9 +85,8 @@ from math import log
 
 from dendropy import Node, Tree
 
-from oz_tree_build.images_and_vernaculars.get_wiki_images import get_qid_from_taxa_data
-from oz_tree_build.utilities.file_utils import open_file_based_on_extension
-
+from ..images_and_vernaculars.get_wiki_images import get_qid_from_taxa_data
+from ..utilities.file_utils import open_file_based_on_extension
 from . import OTT_popularity_mapping
 
 # local packages

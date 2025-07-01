@@ -326,6 +326,8 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
     else:
         is_public_domain = False
         license_string = license_info["license"]
+        if license_string.startswith("cc-"):
+            license_string = license_string.upper()
         if license_info.get("license_url"):
             license_string += f" ({license_info['license_url']})"
         # prefix a copyright symbol to the artist

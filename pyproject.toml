@@ -27,6 +27,11 @@ test = [
     "ruff>=0.5.1",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "skip_real_apis: Mark test to be skipped if real APIs are not available",
+]
+
 [project.scripts]
 add_ott_numbers_to_trees = "oz_tree_build.tree_build.ott_mapping.add_ott_numbers_to_trees:main"
 build_oz_tree = "oz_tree_build.tree_build.build_oz_tree:main"

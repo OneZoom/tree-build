@@ -223,6 +223,7 @@ def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, co
         output_dir=output_dir,
         conf_file=conf_file,
         taxa_data_file=None,
+        no_azure_crop=False,
     )
 
 

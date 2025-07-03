@@ -10,8 +10,7 @@ import logging
 import os
 import sys
 
-from oz_tree_build.utilities.debug_util import parse_args_and_add_logging_switch
-
+from ..utilities.debug_util import parse_args_and_add_logging_switch
 from .oz_tokens import enumerate_one_zoom_tokens
 from .token_to_oz_tree_file_mapping import token_to_file_map
 

@@ -1,0 +1,76 @@
+Synapsida FROM Synapsid@2 
+    Therapsida FROM Therapsid@1 
+        Biarmosuchia FROM Burnetiamorpha@1 
+        Dinocephalia FROM Anteosauridae@1 
+        Anomodontia FROM Anomodont@2 
+            Dicynodontia FROM Eodicynodon@1  # But Therochelonia has a completely different tree!
+                Kannemeyeriiformes FROM Kannemeyeriiformes@1
+                    Stahleckeriidae FROM Stahleckeriidae@1
+                #Lystrosauridae is here, but there are is phylogeny on the page
+        Gorgonopsia FROM Gorgonopsia@1
+        Therocephalia FROM Therocephalia@1
+            Akidnognathidae FROM Akidnognathidae@1
+            Bauriidae FROM Bauriidae@1
+        Cynodontia FROM Cynodont@1 
+            Mammaliaformes FROM Mammaliaformes@1
+                Docodonta FROM Docodonta@1
+                Yinotheria FROM Yinotheria@1
+                Eutriconodonta FROM Eutriconodonta@1
+                Multituberculata=>Allotheria FROM Multituberculata@1
+                    Paulchoffatiidae FROM Paulchoffatiidae@Taxonomy
+                Trechnotheria FROM Mammaliaformes@2 
+                    Metatheria FROM Metatheria@1
+                        Borhyaenidae FROM Borhyaenidae@Classification
+                    Eutheria FROM Eutheria@2
+                        Placentalia FROM Placentalia@1
+                            Xenarthra FROM Xenarthra@1
+                                Dasypodidae FROM Dasypodidae@Classification
+                                Chlamyphoridae FROM Glyptodon@2
+                                Folivora FROM Megatheriidae@1
+                            # Afrotheria
+                                Paenungulatomorpha->Afrotheria FROM Paenungulatomorpha@1
+                                    Proboscidea FROM Proboscidea@Classification
+                                    Sirenia FROM Sirenia@1
+                                        #Trichechidae FROM Trichechidae@Systematics Need code fixes to consume this taxonomy
+                                        Dugongidae FROM Dugongidae@Taxonomy
+                                Hyracoidea FROM Hyracoidea@1
+                            Euarchonta FROM Euarchonta@1
+                                Dermoptera FROM Colugo@Classification_and_evolution
+                                Primates=>Primate FROM Primates@1
+                                    Lemuriformes FROM Monkey_lemur@1
+                                        Palaeopropithecidae FROM Palaeopropithecidae@1
+                                    Catharrhini=>Catarrhini FROM Ape@1
+                                        Dendropithecidae FROM Dendropithecidae@1
+                                        Proconsulidae FROM Proconsulidae@Taxonomy
+                                        Hominidae FROM Hominidae@2
+                                            Australopithecines=>Ardipithecus FROM Homo@2
+                            Lagomorpha->Glires FROM Lagomorpha@Fossil_genera
+                            Perissodactyla-Lambdotheriidae FROM Perissodactyla@3 #Lambdotheriidae seems the same as Brontotheriidae
+                                Palaeotheriidae FROM Palaeotherium@1
+                                Equidae FROM Equidae@Classification
+                                Tapiroidea FROM Tapiroidea@Taxonomy
+                                Rhinocerotoidea FROM Rhinocerotoidea@1
+                                    Rhinocerotidae-Teletaceras-Uintaceras FROM Rhinoceros@Evolution
+                            Artiodactyla-Mysticeti-Odontoceti-Palaeomerycidae-Climacoceratidae-Giraffidae FROM Artiodactyl@Classification
+                                Giraffomorpha->Pecora FROM Giraffidae@2
+                                Merycoidodontidae FROM Merycoidodontidae@Classification
+                                Basilosauridae FROM Basilosauridae@Systematics
+                                Pakicetidae FROM Pakicetidae@Subtaxa
+                            Pholidota FROM Pangolin@Taxonomy
+                            # Carnivora
+                                Caniformia-Hemicyoninae->Carnivora FROM Caniformia@1 # we get Hemicyoninae later from Ursidae
+                                    Canidae FROM Borophaginae@2
+                                    Ursidae FROM Ursidae@2
+                                        Ursinae FROM Ursinae@Classification
+                                        Ailuropodinae FROM Ailuropodinae@Taxonomy
+                                        Amphicynodontidae=>Amphicynodontinae FROM Amphicynodontidae@Systematics
+                                        Hemicyoninae FROM Hemicyoninae@Systematics
+                                        Tremarctinae FROM Tremarctinae@Taxonomy
+                                    Ailuridae FROM Ailuridae@Classification
+                                Feliformia->Carnivora FROM Feliformia@1
+                                    Nimravidae FROM Nimravidae@1
+                                    Lophocyonidae FROM Lophocyonidae@1
+                                    Barbourofelidae FROM Barbourofelidae@1
+                                    Felidae FROM Felidae@1
+                                        Machairodontinae FROM Machairodontinae@2
+    Sphenacodontidae FROM Dimetrodon@2 

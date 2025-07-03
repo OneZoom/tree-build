@@ -26,7 +26,8 @@ from ..tree_build.build_oz_tree import trim_tree
 
 __author__ = "David Ebbo"
 
-whole_token_regex = re.compile("[^(),;]+")
+# Token may be quoted or not
+whole_token_regex = re.compile("('[^']*'|[^(),;[]+)(:[0-9.]+)?")
 
 
 def format_nwk(newick_tree, output_stream, indent_spaces=2):
@@ -61,6 +62,13 @@ def format_nwk(newick_tree, output_stream, indent_spaces=2):
             if not closed_brace:
                 output_stream.write(indent_string * depth)
             output_stream.write(match_full_name.group())
+
+            # If the token is followed by a comment, write it out
+            # Note that we only support comments at the end of a token
+            if newick_tree[index] == "[":
+                end_comment_index = newick_tree.index("]", index)
+                output_stream.write(newick_tree[index : end_comment_index + 1])
+                index = end_comment_index + 1
 
         # If we've reached a comma, write it out and start a new line
         if newick_tree[index] == ",":
@@ -97,7 +105,12 @@ def main():
         help="the number of spaces for each indentation level",
     )
     args = parser.parse_args()
-    format_nwk(args.treefile.read(), args.outputfile, args.indent_spaces)
+    try:
+        format_nwk(args.treefile.read(), args.outputfile, args.indent_spaces)
+    except BrokenPipeError:
+        # This can happen when piping the output.
+        # Just ignore it
+        pass
 
 
 if __name__ == "__main__":

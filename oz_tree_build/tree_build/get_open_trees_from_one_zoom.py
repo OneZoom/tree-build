@@ -37,8 +37,7 @@ import os
 import sys
 import time
 
-from oz_tree_build.newick.extract_trees import extract_trees
-
+from ..newick.extract_trees import extract_trees
 from .oz_tokens import enumerate_one_zoom_tokens
 
 __author__ = "David Ebbo"

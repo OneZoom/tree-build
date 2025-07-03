@@ -22,7 +22,7 @@ import argparse
 import re
 import sys
 
-from oz_tree_build.tree_build.build_oz_tree import trim_tree
+from ..tree_build.build_oz_tree import trim_tree
 
 __author__ = "David Ebbo"
 

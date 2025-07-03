@@ -223,6 +223,7 @@ def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, co
         output_dir=output_dir,
         conf_file=conf_file,
         taxa_data_file=None,
+        no_azure_crop=False,
     )
 
 
@@ -367,12 +368,16 @@ class TestAPI:
         # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
         with caplog.at_level(logging.WARNING):
             self.verify_process_leaf(image, None, False, cropper)
+        response = self.apis.mocked_requests[self.apis.wikimedia_response(image)["url"]]
+        # Check response is lowercase
+        assert response["query"]["pages"]["-1"]["imageinfo"][0]["extmetadata"]["License"]["value"].startswith("cc-by")
         rows = self.image_rows_in_db()
         assert len(rows) == 1
         assert rows[0][1:] == (
             default_rating(image),
             "© John Doe",
-            f"cc-by-3.0 ({self.apis.license_urls['cc-by-3.0']})",
+            # License should be capitalised
+            f"CC-BY-3.0 ({self.apis.license_urls['cc-by-3.0']})",
         )
         assert self.check_downloaded_wiki_image(rows[0][0], cropper, image is None)
         self.teardown_lookups()

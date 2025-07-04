@@ -26,7 +26,8 @@ The script can be used in two ways:
   vernaculars for all the taxa in the clade. A wikidata JSON dump file is required
   to find appropriate images for all the taxa: ideally this should be a filtered one
   such as OneZoom_latest-all.json. For example, to get images for all Panthera:
-    * get_wiki_images.py clade "Panthera" OneZoom_latest-all.json
+    * get_wiki_images.py clade OneZoom_latest-all.json 563151   # or
+    * get_wiki_images.py clade OneZoom_latest-all.json "Panthera"
 """
 
 import argparse

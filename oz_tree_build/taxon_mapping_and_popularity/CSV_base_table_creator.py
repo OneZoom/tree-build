@@ -475,6 +475,10 @@ def resolve_polytomies_add_popularity(tree, seed):
     """
     prev_num_nodes = sum(1 for i in tree.postorder_node_iter())
     random.seed(seed)  # so we get the same bifurcations each time
+
+    # We implement a slightly non-random resolution to group nodes with the same genus together
+    # See https://github.com/OneZoom/OZtree/issues/958
+    tree.group_genera_in_polytomies()
     tree.resolve_polytomies(rng=random)
     num_new_nodes = sum(1 for i in tree.postorder_node_iter()) - prev_num_nodes
     for node in tree.postorder_node_iter():
@@ -576,6 +580,7 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     Removes non-species from tips, outputs simplified versions.
     """
     from .dendropy_extras import (
+        group_genera_in_polytomies,
         prune_children_of_otts,
         prune_non_species,
         remove_unifurcations_keeping_higher_taxa,
@@ -594,6 +599,7 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     Tree.write_preorder_ages = write_preorder_ages
     Tree.remove_unifurcations_keeping_higher_taxa = remove_unifurcations_keeping_higher_taxa
     Tree.write_preorder_to_csv = write_preorder_to_csv
+    Tree.group_genera_in_polytomies = group_genera_in_polytomies
 
     Tree.create_leaf_popularity_rankings = (
         create_leaf_popularity_rankings  # not defined in dendropy_extras, but in this file
@@ -627,7 +633,7 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     # see https://github.com/jeetsukumaran/DendroPy/issues/75
     logging.info(f" ✔ removed {n_deleted_nodes} unifurcations")
 
-    logging.info(" > splitting polytomies and assigning popularities to new nodes")
+    logging.info(" > splitting polytomies by genera and assigning popularities to new nodes")
     n_new = tree.resolve_polytomies_add_popularity(seed)
     tree.create_leaf_popularity_rankings()
     logging.info(f" ✔ polytomies split with seed={seed}: {n_new} extra nodes created")

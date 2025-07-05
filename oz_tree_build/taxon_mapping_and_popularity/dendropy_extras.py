@@ -7,8 +7,11 @@ These all assume that the tree has been loaded with suppress_leaf_node_taxa=True
 #
 # To be patched into the Tree object
 #
+import collections
 import itertools
 import logging
+
+import dendropy
 
 
 def prune_children_of_otts(self, ott_species_list):
@@ -526,6 +529,40 @@ def write_pop_newick(self, out):
                 out.write(f":{s}")
 
 
+def group_genera_in_polytomies(self):
+    """
+    Group together nodes in a polytomy whose
+    tips have the same genus name.
+    """
+    polytomies = []
+    for node in self.postorder_node_iter():
+        if len(node._child_nodes) > 2:
+            polytomies.append(node)
+    for node in polytomies:
+        # New code here to group children by genus
+        child_genera = collections.defaultdict(list)
+        for child in node._child_nodes:
+            genus = None
+            for leaf in child.leaf_iter():
+                g = (leaf.label or "").split(" ")[0]
+                if genus is None:
+                    genus = g
+                elif g != genus:
+                    genus = ""
+                    break
+            if genus:  # ignore if None or empty string
+                child_genera[genus].append(child)
+        # first group children by genus
+        for _, children in child_genera.items():
+            if len(children) > 1 and len(children) < len(node._child_nodes):
+                new_node = dendropy.Node()
+                node.add_child(new_node)
+                new_node.edge.length = 0.0
+                for child in children:
+                    node.remove_child(child)
+                    new_node.add_child(child)
+
+
 if __name__ == "__main__":
     # test
     import sys
@@ -535,6 +572,7 @@ if __name__ == "__main__":
 
     Tree.write_preorder_to_csv = write_preorder_to_csv
     Tree.set_node_ages = set_node_ages
+    Tree.group_genera_in_polytomies = group_genera_in_polytomies
     t = Tree.get_from_path(
         sys.argv[1],
         schema="newick",

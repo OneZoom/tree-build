@@ -23,7 +23,7 @@ If you want to run the test suite, make sure the test requirements are also inst
 
 ## Testing
 
-Assuming you have installed the test requirements, you shoule be able to run 
+Assuming you have installed the test requirements, you should be able to run
 
     python -m pytest --conf-file tests/appconfig.ini
 

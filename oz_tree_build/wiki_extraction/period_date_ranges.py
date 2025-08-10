@@ -101,6 +101,7 @@ PERIOD_LOOKUP = {
     "burdigalian": [20.44, 15.97],
     "middle miocene": [15.97, 11.63],
     "langhian": [15.97, 13.82],
+    "barstovian": [16.3, 13.6],
     "serravallian": [13.82, 11.63],
     "late miocene": [11.63, 5.333],
     "tortonian": [11.63, 7.246],

@@ -9,6 +9,7 @@ import logging
 
 from oz_tree_build.wiki_extraction.mwparserfromhell_helpers import (
     get_display_string_from_wikicode,
+    get_qid_from_wiki_page_props,
     get_taxon_name,
     get_wikicode_for_page,
     get_wikicode_template,
@@ -50,7 +51,7 @@ def get_date_range_from_taxobox(taxobox):
     # Template name can randomly be be "fossil range" or "geological range", with or without space/underscores
     fossil_range_template = get_wikicode_template(
         fossil_range,
-        ("fossilrange", "geologicalrange", "geologicalrange/linked", "geologicalage"),
+        ("fossilrange", "geologicalrange", "geologicalrange/linked", "geologicalage", "temporalrange"),
     )
 
     if not fossil_range_template:
@@ -62,16 +63,27 @@ def get_date_range_from_taxobox(taxobox):
         from_date = get_range_date(range_string, use_start=True)
         to_date = get_range_date(range_string, use_start=False)
     else:
-        # If the first param is "earliest", we skip it.
+        # Skip params that look like "earliest"
         # e.g. Stegosauria has {{fossilrange|earliest=174|169|100|latest=66}}
-        param_index = 0
-        if fossil_range_template.params[0].name == "earliest":
-            param_index = 1
+        # Note that they're not always the first one listed
+        def skip_earliest(idx):
+            if idx < len(fossil_range_template.params) and str(fossil_range_template.params[idx].name).startswith(
+                "earliest"
+            ):
+                idx += 1
+            return idx
+
+        param_index = skip_earliest(0)
+
         from_date = get_range_date(fossil_range_template.params[param_index].value, use_start=True)
+        param_index += 1
+
+        param_index = skip_earliest(param_index)
+
         # If there is no end date, we fall back to the start date
         to_date = (
-            get_range_date(fossil_range_template.params[param_index + 1].value, use_start=False)
-            if len(fossil_range_template.params) >= param_index + 2
+            get_range_date(fossil_range_template.params[param_index].value, use_start=False)
+            if len(fossil_range_template.params) >= param_index + 1
             else from_date
         )
 
@@ -199,8 +211,15 @@ def get_taxon_data_from_wikipedia_page(taxon, page_title, is_leaf):
     if not from_date:
         logging.warning(f"Could not find fossil range for {taxon}")
 
-    # Get the Wikidata QID, if any
-    qid = get_qid_from_wikicode(wikicode)
+    # 1. We first try to get the Wikidata QID from the page props, ignoring redirects. e.g. in a case like Averostra,
+    # which has no actual wikipedia page and redirects to Theropoda, this will give us the correct Averostra QID.
+    # 2. If that fails, we try to get the QID from the taxobox.
+    # 3. If that fails, we try to get the QID from the page props, following redirects.
+    qid = get_qid_from_wiki_page_props(page_title, False)
+    if not qid:
+        qid = get_qid_from_wikicode(wikicode)
+    if not qid:
+        qid = get_qid_from_wiki_page_props(page_title, True)
     if qid:
         node_data["qid"] = qid
 

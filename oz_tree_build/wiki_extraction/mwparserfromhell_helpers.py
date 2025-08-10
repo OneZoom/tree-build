@@ -41,6 +41,29 @@ def get_id_and_text_from_wiki_page(page_title):
         return None, None
 
 
+def get_qid_from_wiki_page_props(page_title, redirect):
+    # Doc: https://www.mediawiki.org/wiki/API:Pageprops
+    params = {
+        "action": "query",
+        "prop": "pageprops",
+        "titles": page_title,
+        "format": "json",
+        "formatversion": "2",
+    }
+    if redirect:
+        params["redirects"] = "1"
+    headers = {"User-Agent": "My-Bot-Name/1.0"}
+    req = session.get(API_URL, headers=headers, params=params, allow_redirects=True)
+    res = req.json()
+    try:
+        page = res["query"]["pages"][0]
+        qid_string = page["pageprops"].get("wikibase_item")
+        return int(qid_string.strip()[1:])
+    except (KeyError, AttributeError):
+        logging.info(f"Could not find QID from page props for page '{page_title}' (redirect={redirect})")
+        return None
+
+
 def get_wikicode_for_string(wiki_string) -> mwparserfromhell.wikicode.Wikicode:
     return mwparserfromhell.parse(wiki_string, skip_style_tags=True)
 

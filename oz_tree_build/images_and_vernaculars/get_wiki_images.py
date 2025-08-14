@@ -47,6 +47,7 @@ from PIL import Image
 from .._OZglobals import src_flags
 from ..utilities.db_helper import (
     connect_to_database,
+    default_appconfig,
     get_next_src_id_for_src,
     placeholder,
     read_config,
@@ -59,6 +60,16 @@ default_wiki_image_rating = 35000
 bespoke_wiki_image_rating = 40000
 
 logger = logging.getLogger(Path(__file__).name)
+
+default_outdir = os.path.join(
+    os.pardir,
+    os.pardir,
+    os.pardir,
+    "OZtree",
+    "static",
+    "FinalOutputs",
+    "img",
+)
 
 
 # Copied from OZTree/OZprivate/ServerScripts/Utilities/getEOL_crops.py
@@ -502,8 +513,10 @@ def process_leaf(
     s = placeholder(db)
     sql = "SELECT ott,wikidata,name FROM ordered_leaves WHERE "
     if ott_or_taxon.lstrip("-").isnumeric():
+        ott_or_taxon_type = "ott"
         sql += f"ott={s};"
     else:
+        ott_or_taxon_type = "name"
         sql += f"name={s};"
 
     result = db.executesql(sql, (ott_or_taxon,))
@@ -511,7 +524,7 @@ def process_leaf(
         logger.error(f"Multiple results for '{ott_or_taxon}'")
         return
     if len(result) == 0:
-        logger.error(f"'{ott_or_taxon}' not found in ordered_leaves table")
+        logger.error(f"{ott_or_taxon_type} '{ott_or_taxon}' not found in ordered_leaves table")
         return
 
     (ott, qid, name) = result[0]
@@ -672,16 +685,7 @@ def process_args(args):
 
     # Default to the static folder in the OZtree repo
     if outdir is None:
-        outdir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            os.pardir,
-            os.pardir,
-            os.pardir,
-            "OZtree",
-            "static",
-            "FinalOutputs",
-            "img",
-        )
+        outdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), default_outdir)
     if not os.path.exists(outdir):
         logger.error(f"Output directory '{outdir}' does not exist")
         return
@@ -768,7 +772,7 @@ def main():
             default=None,
             help=(
                 "The location to save the image files (e.g. 'FinalOutputs/img'). "
-                "Defaults to ../../../static/FinalOutputs/img (relative to the script "
+                f"Defaults to {default_outdir} (relative to the script "
                 "location). Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
             ),
         )
@@ -776,7 +780,7 @@ def main():
             "-c",
             "--conf-file",
             default=None,
-            help=("The configuration file to use. " "Defaults to ../../../OZtree/private/appconfig.ini"),
+            help=(f"The configuration file to use. Defaults to {default_appconfig}"),
         )
 
     parser_leaf = subparsers.add_parser("leaf", help="Process a single ott")

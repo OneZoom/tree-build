@@ -34,6 +34,8 @@ from .temp_helpers import (
 
 __author__ = "David Ebbo"
 
+one_zoom_file_prefix = "OneZoom"
+
 
 def generate_and_cache_filtered_file(original_file, context, processing_function):
     """
@@ -43,7 +45,6 @@ def generate_and_cache_filtered_file(original_file, context, processing_function
     dirname = os.path.dirname(original_file)
     file_name = os.path.basename(original_file)
 
-    one_zoom_file_prefix = "OneZoom"
     filtered_file_prefix = (context.clade or one_zoom_file_prefix) + "_"
     if file_name.startswith(filtered_file_prefix):
         raise Exception(f"Input and output files are the same, with prefix {filtered_file_prefix}")
@@ -495,10 +496,12 @@ def generate_all_filtered_files(
 
     generate_and_cache_filtered_file(eol_id_file, context, generate_filtered_eol_id_file)
 
-    filtered_wikidata_dump_file = generate_and_cache_filtered_file(
-        wikidata_dump_file, context, generate_filtered_wikidata_dump
-    )
-
+    if os.path.basename(wikidata_dump_file).startswith(one_zoom_file_prefix):
+        filtered_wikidata_dump_file = wikidata_dump_file
+    else:
+        filtered_wikidata_dump_file = generate_and_cache_filtered_file(
+            wikidata_dump_file, context, generate_filtered_wikidata_dump
+        )
     read_wikidata_dump(filtered_wikidata_dump_file, context)
 
     generate_and_cache_filtered_file(wikipedia_sql_dump_file, context, generate_filtered_wikipedia_sql_dump)
@@ -555,7 +558,10 @@ def main():
         nargs="?",
         help=(
             "The b2zipped >4GB wikidata JSON dump, "
-            "from https://dumps.wikimedia.org/wikidatawiki/entities/ (latest-all.json.bz2) "
+            "from https://dumps.wikimedia.org/wikidatawiki/entities/ (latest-all.json.bz2). "
+            f"If this starts with '{one_zoom_file_prefix}', it is assumed to be filtered "
+            "already, which is useful if the original dumpfile is missing and additional "
+            "pageview files require filtering."
         ),
     )
     parser.add_argument(

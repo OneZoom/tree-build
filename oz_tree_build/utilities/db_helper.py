@@ -10,6 +10,8 @@ from pydal import DAL
 
 logger = logging.getLogger(__name__)
 
+default_appconfig = "../../../OZtree/private/appconfig.ini"
+
 
 def is_sqlite(db):
     return db._adapter.driver_name.startswith("sqlite")
@@ -70,7 +72,7 @@ def read_config(conf_file=None):
     if conf_file is None:
         conf_file = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
-            "../../../OZtree/private/appconfig.ini",
+            default_appconfig,
         )
     if not os.path.exists(conf_file):
         raise ValueError(f"Appconfig file {conf_file} cannot be found.")

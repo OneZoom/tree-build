@@ -63,13 +63,13 @@ or with OTTs
 
 ===================Overall tree====================
 
-The Chaetognaths are placed as a outgroup to all other protostomes
+The Chaetognaths are placed within the Gnathifera (see Laumer et al 2019 10.1098/rspb.2019.0831 and Martelaz et al 2019 10.1016/j.cub.2018.11.042)
 
 
-(((((((Nemertea,(((Bryozoa,(Entoprocta,Cycliophora)Polyzoa),Phoronida),Brachiopoda)Lophophorata),Annelida),Mollusca)Trochozoa,(Gastrotricha,Platyhelminthes)),(((Rotifera,Acanthocephala)Syndermata,Micrognathozoa),Gnathostomulida)Gnathifera)Spiralia,((((Onychophora,Arthropoda),Tardigrada),(Nematoda,Nematomorpha)),Scalidophora)Ecdysozoa),Chaetognatha)Protostomia
+((((((Nemertea,(((Bryozoa,(Entoprocta,Cycliophora)Polyzoa),Phoronida),Brachiopoda)Lophophorata),Annelida),Mollusca)Trochozoa,(Gastrotricha,Platyhelminthes)),((((Rotifera,Acanthocephala)Syndermata,Micrognathozoa),Gnathostomulida),Chaetognatha)Gnathifera)Spiralia,((((Onychophora,Arthropoda),Tardigrada),(Nematoda,Nematomorpha)),Scalidophora)Ecdysozoa)Protostomia
 
 
-OpenTree v6 onwards has a slighly improved phylogenetic structure for pancrustacea (including insects), so we simply take this from the OpenTree.
+OpenTree v6 onwards has a slightly improved phylogenetic structure for pancrustacea (including insects), so we simply take that from the OpenTree.
 
 from https://github.com/OpenTreeOfLife/opentree/wiki/Open-Tree-of-Life-APIs#contexts to help add OTTids: context=Animals]
-(((((((Nemertea_ott445195@,(((Bryozoa_ott442934@,(Entoprocta_ott362916@,Cycliophora_ott41147@))Polyzoa,Phoronida_ott612209@),Brachiopoda_ott826261~-612209@)Lophophorata),Annelida_ott941620@),Mollusca_ott802117@)Trochozoa,(Gastrotricha_ott29723@,Platyhelminthes_ott555379@)),(((Rotifera_ott471706@,Acanthocephala_ott49622@)Syndermata,Micrognathozoa_ott435981@),Gnathostomulida_ott242963@)Gnathifera)Spiralia,((((Onychophora_ott1072433@,Arthropoda_ott632179~-5008315-6293460-4387124@),Tardigrada_ott111438~-2943021@),(Nematoda_ott395057@,Nematomorpha_ott189836@)),Scalidophora_ott434620@)Ecdysozoa),Chaetognatha_ott570366@)Protostomia;
+((((((Nemertea_ott445195@,(((Bryozoa_ott442934@,(Entoprocta_ott362916@,Cycliophora_ott41147@))Polyzoa,Phoronida_ott612209@),Brachiopoda_ott826261~-612209@)Lophophorata),Annelida_ott941620@),Mollusca_ott802117@)Trochozoa,(Gastrotricha_ott29723@,Platyhelminthes_ott555379@)),((((Rotifera_ott471706@,Acanthocephala_ott49622@)Syndermata,Micrognathozoa_ott435981@),Gnathostomulida_ott242963@),Chaetognatha_ott570366@)Gnathifera)Spiralia,((((Onychophora_ott1072433@,Arthropoda_ott632179~-5008315-6293460-4387124@),Tardigrada_ott111438~-2943021@),(Nematoda_ott395057@,Nematomorpha_ott189836@)),Scalidophora_ott434620@)Ecdysozoa)Protostomia;

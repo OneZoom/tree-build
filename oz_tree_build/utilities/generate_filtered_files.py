@@ -496,7 +496,7 @@ def generate_all_filtered_files(
 
     generate_and_cache_filtered_file(eol_id_file, context, generate_filtered_eol_id_file)
 
-    if os.path.basename(wikidata_dump_file).startswith(one_zoom_file_prefix):
+    if os.path.basename(wikidata_dump_file).startswith(one_zoom_file_prefix) and not context.clade:
         filtered_wikidata_dump_file = wikidata_dump_file
     else:
         filtered_wikidata_dump_file = generate_and_cache_filtered_file(

@@ -1,11 +1,10 @@
 import logging
 import os
-import shutil
-import urllib.request
 from types import SimpleNamespace
 from unittest import mock
 
 import pytest
+import requests
 from PIL import Image
 
 from oz_tree_build._OZglobals import src_flags
@@ -57,7 +56,9 @@ class RemoteAPIs:
         self.temp_image_path = "/tmp/mocked_urlretrieve_image.jpg"
         if not os.path.exists(self.temp_image_path):
             image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Lion_waiting_in_Namibia.jpg/500px-Lion_waiting_in_Namibia.jpg"
-            urllib.request.urlretrieve(image_url, self.temp_image_path)
+            response = requests.get(image_url, headers=get_wiki_images.wiki_http_headers)
+            with open(self.temp_image_path, "wb") as f:
+                f.write(response.content)
         with open(self.temp_image_path, "rb") as f:
             self.temp_image_content = f.read()
 
@@ -107,12 +108,6 @@ class RemoteAPIs:
             content = self.temp_image_content if args[0].endswith(".jpg") else None
             return MockResponse(200, self.mocked_requests[args[0]], content)
         return MockResponse(404)
-
-    def mocked_urlretrieve(self, *args, **kwargs):
-        # Instead of actually downloading, just copy the test image to the destination
-        if not args[0].startswith("http"):
-            raise ValueError("Only HTTP URLs are supported in these tests")
-        shutil.copyfile(self.temp_image_path, args[1])
 
     # Mock the Azure Vision API smart crop response
     def mocked_analyze_from_url(self, *args, **kwargs):
@@ -194,7 +189,6 @@ class RemoteAPIs:
 
     def mock_patch_all_web_request_methods(self, f):
         @mock.patch("requests.get", side_effect=self.mocked_requests_get)
-        @mock.patch("urllib.request.urlretrieve", side_effect=self.mocked_urlretrieve)
         @mock.patch(
             "azure.ai.vision.imageanalysis.ImageAnalysisClient.analyze_from_url",
             side_effect=self.mocked_analyze_from_url,

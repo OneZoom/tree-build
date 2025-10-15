@@ -38,7 +38,6 @@ import os
 import re
 import sys
 import time
-import urllib.request
 from pathlib import Path
 
 import requests
@@ -71,6 +70,9 @@ default_outdir = os.path.join(
     "img",
 )
 
+# See https://meta.wikimedia.org/wiki/User-Agent_policy
+wiki_http_headers = {"User-Agent": "OneZoomBot/0.1 (https://www.onezoom.org/; " "mail@onezoom.org) get-wiki-images/0.1"}
+
 
 # Copied from OZTree/OZprivate/ServerScripts/Utilities/getEOL_crops.py
 def subdir_name(doID):
@@ -89,11 +91,6 @@ def make_http_request_with_retries(url):
     Make an HTTP GET request to the given URL with the given headers,
     retrying if we get a 429 rate limit error.
     """
-
-    # See https://meta.wikimedia.org/wiki/User-Agent_policy
-    wiki_http_headers = {
-        "User-Agent": "OneZoomBot/0.1 (https://www.onezoom.org/; " "mail@onezoom.org) get-wiki-images/0.1"
-    }
 
     retries = 6
     delay = 1
@@ -374,7 +371,12 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
 
     # Download the uncropped image
     uncropped_image_path = f"{image_dir}/{src_id}_uncropped.jpg"
-    urllib.request.urlretrieve(image_url, uncropped_image_path)
+    try:
+        response = requests.get(image_url, headers=wiki_http_headers)
+        with open(uncropped_image_path, "wb") as f:
+            f.write(response.content)
+    except Exception as e:
+        logger.warning(f"Error downloading {image_url}: {e}")
 
     if cropper is None:
         # Default to centering the crop

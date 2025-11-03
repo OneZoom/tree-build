@@ -63,6 +63,13 @@ class MockResponse:
     def json(self):
         return self.json_data
 
+    def raise_for_status(self):
+        if self.status_code != 200:
+            raise ValueError("status = %d" % self.status_code)
+
+    def iter_content(self, chunk_size):
+        return [self.content]  # NB: Ignoring chunk size
+
 
 class RemoteAPIs:
     """
@@ -124,6 +131,10 @@ class RemoteAPIs:
             # This should not be called: if license is bad => don't download
             **self.wikimedia_file_response("BadLicence.jpg", "xxx")
         )
+        self.add_mocked_request(
+            url="https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg",
+            response=None,  # NB: This maps to MockResponse.json_data, we have none, but content is replaced later
+        )
 
     # Mock the requests.get function
     def mocked_requests_get(self, *args, **kwargs):
@@ -131,13 +142,6 @@ class RemoteAPIs:
             content = TINY_JPEG if args[0].endswith(".jpg") else None
             return MockResponse(200, self.mocked_requests[args[0]], content)
         return MockResponse(404)
-
-    def mocked_urlretrieve(self, *args, **kwargs):
-        # Instead of actually downloading, just copy the test image to the destination
-        if not args[0].startswith("http"):
-            raise ValueError("Only HTTP URLs are supported in these tests")
-        with open(args[1], "wb") as f:
-            f.write(TINY_JPEG)
 
     # Mock the Azure Vision API smart crop response
     def mocked_analyze_from_url(self, *args, **kwargs):
@@ -219,7 +223,6 @@ class RemoteAPIs:
 
     def mock_patch_all_web_request_methods(self, f):
         @mock.patch("requests.get", side_effect=self.mocked_requests_get)
-        @mock.patch("urllib.request.urlretrieve", side_effect=self.mocked_urlretrieve)
         @mock.patch(
             "azure.ai.vision.imageanalysis.ImageAnalysisClient.analyze_from_url",
             side_effect=self.mocked_analyze_from_url,

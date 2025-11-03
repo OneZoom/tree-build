@@ -9,7 +9,7 @@ be used to populate a running OneZoom instance.
 The first step to using this repo is to create a Python virtual environment and activate it:
 
     # From the root of the repo, create a Python environment and activate it
-    python -m venv .venv
+    python3 -m venv .venv
     source .venv/bin/activate
 
     # Install it

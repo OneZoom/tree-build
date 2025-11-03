@@ -72,6 +72,13 @@ If you already have your own newick tree with open tree ids on it already, and d
 
 ## Create the tree
 
+0. The following steps assume the venv has been activated:
+
+	```
+	. .venv/bin/activate
+	```
+
+	If not created, see installation steps in the [main README](../README.markdown).
 
 1. (20 secs) Use the [OpenTree API](https://github.com/OpenTreeOfLife/germinator/wiki/Synthetic-tree-API-v3) to add OTT ids to any non-opentree taxa in our own bespoke phylogenies (those in `*.phy` or `*.PHY` files). The new `.phy` and `.PHY` files will be created in a new directory within `data/OZTreeBuild/${OZ_TREE}/BespokeTree`, and a symlink to that directory will be created called `include_files` 
 		

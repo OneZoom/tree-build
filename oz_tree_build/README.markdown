@@ -137,6 +137,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	From the data folder, run the `generate_filtered_files` script:
 
 	```
+	tar -C data/OpenTree -zxvf data/OpenTree/ott${OT_TAXONOMY_VERSION}.tgz
 	(cd data && generate_filtered_files OZTreeBuild/AllLife/AllLife_full_tree.phy OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv EOL/provider_ids.csv.gz Wiki/wd_JSON/latest-all.json.bz2 Wiki/wp_SQL/enwiki-latest-page.sql.gz Wiki/wp_pagecounts/pageviews*.bz2)
 	```
 

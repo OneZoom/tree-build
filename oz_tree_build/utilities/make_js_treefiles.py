@@ -38,13 +38,11 @@ def tidy_newick(newick_filepath):
 
 
 # String -> String
-# Given tidied newick string, return rawData and metadata in completetree.js
+# Given tidied newick string, return rawData in completetree.js
 # Input: (())
-# Output:var rawData = '(())' + 'var metadata= {....}';
-def generate_rawdata_metadata(newick_str):
-    rawData = "var rawData = '" + newick_str + "';"
-    metadata = 'var metadata = {\n"leaf_meta":{\n"0":["OTTid","scientificName","common_en","popularity","picID","picID_credit","picID_rating","picID_src","IUCN","price","sponsor_kind","sponsor_name","sponsor_extra","sponsor_url","n_spp"],\n"temp":[null," "]},\n\n"node_meta":{\n"0":["OTTid","scientificName","common_en","popularity","picID","picID_credit","picID_rating","IUCN","price","sponsor_kind","sponsor_name","sponsor_extra","sponsor_url","lengthbr","sp1","sp2","sp3","sp4","sp5","sp6","sp7","sp8","iucnNE","iucnDD","iucnLC","iucnNT","iucnVU","iucnEN","iucnCR","iucnEW","iucnEX"],\n"temp":[]}};'  # noqa: E501
-    return rawData + "\n" + metadata
+# Output:var rawData = '(())';
+def generate_completetree_js(newick_str):
+    return "var rawData = '" + newick_str + "';"
 
 
 # String, Number -> String
@@ -252,7 +250,7 @@ def main():
     datefile_outpath = os.path.join(args.outdir, args.datefilename.format(version=version_number))
     if parameter_valid(args):
         newick_str = tidy_newick(args.npath)
-        treedata_str = generate_rawdata_metadata(newick_str)
+        treedata_str = generate_completetree_js(newick_str)
         cutmap_str = generate_cut_position_map(newick_str, args.threshold)
         with open(treefile_path, "w") as tree:
             tree.write(treedata_str)

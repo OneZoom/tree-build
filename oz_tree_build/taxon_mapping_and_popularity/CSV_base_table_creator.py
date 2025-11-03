@@ -50,7 +50,7 @@ Download:
 To test, try e.g.
 
 Usage:
-OT_VERSION=9_1
+OT_VERSION=9.1
 ServerScripts/TaxonMappingAndPopularity/CSV_base_table_creator.py \
     ../static/FinalOutputs/Life_full_tree.phy data/OpenTree/ott/taxonomy.tsv \
     data/EOL/identifiers.csv data/Wiki/wd_JSON/* data/Wiki/wp_SQL/* \

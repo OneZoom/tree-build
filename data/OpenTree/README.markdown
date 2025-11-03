@@ -10,7 +10,7 @@ Files herein are .gitignored. To get the site working, this folder should contai
 	Removing the `mrca***` labels can be done by using a simple regular expression substitution, as in the following perl command:
 
 	```
-	# assumes you have defined OT_VERSION as an environment variable, e.g. > OT_VERSION=14_7
+	# assumes you have defined OT_VERSION as an environment variable, e.g. > OT_VERSION=14.7
 	perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' labelled_supertree_simplified_ottnames.tre > draftversion${OT_VERSION}.tre
 	```
 

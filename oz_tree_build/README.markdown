@@ -47,7 +47,7 @@ wget -cP data/Wiki/wp_SQL/ https://dumps.wikimedia.org/enwiki/latest/enwiki-late
 wget -cP data/Wiki/wd_JSON/ https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2
 
 ## Pre-processed PageViews - see https://github.com/OneZoom/tree-build/releases
-wget -cP data/Wiki/wp_pagecounts/ https://github.com/OneZoom/tree-build/releases/download/pageviews-202306-202403/OneZoom_pageviews-202306-202403.tar.gz
+curl -L https://github.com/OneZoom/tree-build/releases/download/pageviews-202306-202403/OneZoom_pageviews-202306-202403.tar.gz | tar -zxC data/Wiki/wp_pagecounts/
 
 ## EoL
 # TODO: In theory fetchable from https://opendata.eol.org/dataset/identifier-map, but currently broken

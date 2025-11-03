@@ -1,7 +1,5 @@
 import logging
 import os
-import shutil
-import urllib.request
 from types import SimpleNamespace
 from unittest import mock
 
@@ -19,6 +17,40 @@ from oz_tree_build.utilities.db_helper import (
 # These need to be real images to make the --real-apis mode work
 first_lion_image_name = "Okonjima_Lioness.jpg"
 second_lion_image_name = "Lioness_12.jpg"
+
+# Bytes for tiny JPEG
+TINY_JPEG_HEAD = bytes.fromhex(
+    "".join(
+        """
+ffd8 ffe0 0010 4a46 4946 0001 0101 012c
+012c 0000 ffdb 0043 00ff ffff ffff ffff
+ffff ffff ffff ffff ffff ffff ffff ffff
+ffff ffff ffff ffff ffff ffff ffff ffff
+ffff ffff ffff ffff ffff ffff ffff ffff
+ffff ffff ffff ffff ffff db00 4301 ffff
+ffff ffff ffff ffff ffff ffff ffff ffff
+ffff ffff ffff ffff ffff ffff ffff ffff
+ffff ffff ffff ffff ffff ffff ffff ffff
+ffff ffff ffff ffff ffff ffff ffff ffc0
+0011 0801 f401 f403 0111 0002 1101 0311
+01ff c400 1500 0101 0000 0000 0000 0000
+0000 0000 0000 0003 ffc4 0014 1001 0000
+0000 0000 0000 0000 0000 0000 0000 ffc4
+0014 0101 0000 0000 0000 0000 0000 0000
+0000 0000 ffc4 0014 1101 0000 0000 0000
+0000 0000 0000 0000 0000 ffda 000c 0301
+0002 1103 1100 3f00 a000 0000 0000 0000
+""".split()
+    )
+)
+TINY_JPEG_FOOT = bytes.fromhex(
+    "".join(
+        """
+003f ffd9
+""".split()
+    )
+)
+TINY_JPEG = TINY_JPEG_HEAD + b"\x00" * (3260 - len(TINY_JPEG_HEAD) - len(TINY_JPEG_FOOT)) + TINY_JPEG_FOOT
 
 
 class MockResponse:
@@ -52,14 +84,6 @@ class RemoteAPIs:
             "lal": "http://artlibre.org/licence/lal/en",
             "cc-by-3.0": "https://creativecommons.org/licenses/by/3.0",
         }
-
-        # Download an arbitrary test image in the tmp folder to use in the tests
-        self.temp_image_path = "/tmp/mocked_urlretrieve_image.jpg"
-        if not os.path.exists(self.temp_image_path):
-            image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Lion_waiting_in_Namibia.jpg/500px-Lion_waiting_in_Namibia.jpg"
-            urllib.request.urlretrieve(image_url, self.temp_image_path)
-        with open(self.temp_image_path, "rb") as f:
-            self.temp_image_content = f.read()
 
         self.add_mocked_request(
             **self.wikidata_response(
@@ -104,7 +128,7 @@ class RemoteAPIs:
     # Mock the requests.get function
     def mocked_requests_get(self, *args, **kwargs):
         if args[0] in self.mocked_requests:
-            content = self.temp_image_content if args[0].endswith(".jpg") else None
+            content = TINY_JPEG if args[0].endswith(".jpg") else None
             return MockResponse(200, self.mocked_requests[args[0]], content)
         return MockResponse(404)
 
@@ -112,7 +136,8 @@ class RemoteAPIs:
         # Instead of actually downloading, just copy the test image to the destination
         if not args[0].startswith("http"):
             raise ValueError("Only HTTP URLs are supported in these tests")
-        shutil.copyfile(self.temp_image_path, args[1])
+        with open(args[1], "wb") as f:
+            f.write(TINY_JPEG)
 
     # Mock the Azure Vision API smart crop response
     def mocked_analyze_from_url(self, *args, **kwargs):
@@ -279,7 +304,7 @@ class TestAPI:
             uncropped = os.path.join(img_dir, f"{qid}_uncropped.jpg")
             assert os.path.exists(uncropped)
             w, h = Image.open(uncropped).size
-            assert (w, h) == Image.open(self.apis.temp_image_path).size
+            assert (w, h) == (500, 500)  # Dimensions of TINY_JPEG
             cropped = os.path.join(img_dir, f"{qid}.jpg")
             assert os.path.exists(cropped)
             assert Image.open(cropped).size == (300, 300)

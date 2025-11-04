@@ -105,6 +105,10 @@ For more information, please refer to <http://unlicense.org/>"""  # noqa E501
 
 sql_subs_string = ""  #  ? for sqlite, %s for mysql
 
+# DendroPy performs lots of recursion when reading large trees, this is expected
+# https://github.com/jeetsukumaran/DendroPy/issues/52
+sys.setrecursionlimit(3000)
+
 
 def is_unnamed_OTT(OTTid):
     """

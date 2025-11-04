@@ -654,56 +654,58 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     logging.info(" ✔ ladderized")
 
     logging.info(" > writing tree, dates, and csv to files")
-    with open(os.path.join(outdir, f"ordered_tree_{version}.nwk"), "w+") as condensed_newick, open(
-        os.path.join(outdir, f"ordered_tree_{version}.poly"), "w+"
-    ) as condensed_poly, open(os.path.join(outdir, f"ordered_dates_{version}.js"), "w+") as json_dates, open(
-        os.path.join(outdir, f"ordered_leaves_{version}.csv"), "w+", encoding="utf-8"
-    ) as leaves, open(os.path.join(outdir, f"ordered_nodes_{version}.csv"), "w+", encoding="utf-8") as nodes:
+    with open(os.path.join(outdir, f"ordered_tree_{version}.nwk"), "w+") as condensed_newick:
         tree.seed_node.write_brief_newick(condensed_newick)
+    with open(os.path.join(outdir, f"ordered_tree_{version}.poly"), "w+") as condensed_poly:
         tree.seed_node.write_brief_newick(condensed_poly, "{}")
+    with open(os.path.join(outdir, f"ordered_dates_{version}.js"), "w+") as json_dates:
         tree.write_preorder_ages(json_dates, format="json")
-        # these are the extra columns output to the leaf csv file
-        leaf_extras = OrderedDict()
-        leaf_extras["ott"] = ["ott"]
-        leaf_extras["wikidata"] = ["wd", "Q"]
-        leaf_extras["wikipedia_lang_flag"] = ["wd", "wikipedia_lang_flag"]
-        leaf_extras["iucn"] = ["iucn"]
-        leaf_extras["eol"] = ["eol"]
-        leaf_extras["raw_popularity"] = ["wd", "raw_popularity"]
-        leaf_extras["popularity"] = ["popularity"]
-        leaf_extras["popularity_rank"] = ["popularity_rank"]
-        leaf_extras["price"] = None
-        leaf_extras["ncbi"] = ["sources", "ncbi", "id"]
-        leaf_extras["ifung"] = ["sources", "ifung", "id"]
-        leaf_extras["worms"] = ["sources", "worms", "id"]
-        leaf_extras["irmng"] = ["sources", "irmng", "id"]
-        leaf_extras["gbif"] = ["sources", "gbif", "id"]
-        leaf_extras["ipni"] = ["ipni"]
 
-        # these are the extra columns output to the node csv file
-        node_extras = OrderedDict()
-        node_extras["ott"] = ["ott"]
-        node_extras["wikidata"] = ["wd", "Q"]
-        node_extras["wikipedia_lang_flag"] = ["wd", "wikipedia_lang_flag"]
-        node_extras["eol"] = ["eol"]
-        # We avoid using 'rank' as it is a reserved word in mysql
-        node_extras["rnk"] = ["rank"]
-        node_extras["raw_popularity"] = ["wd", "raw_popularity"]
-        node_extras["popularity"] = ["popularity"]
-        node_extras["ncbi"] = ["sources", "ncbi", "id"]
-        node_extras["ifung"] = ["sources", "ifung", "id"]
-        node_extras["worms"] = ["sources", "worms", "id"]
-        node_extras["irmng"] = ["sources", "irmng", "id"]
-        node_extras["gbif"] = ["sources", "gbif", "id"]
-        node_extras["ipni"] = ["ipni"]
-        node_extras["vern_synth"] = None
-        for representative_image_type in ["rep", "rtr", "rpd"]:
-            for i in [str(x + 1) for x in range(8)]:
-                node_extras[representative_image_type + i] = None
+    # these are the extra columns output to the leaf csv file
+    leaf_extras = OrderedDict()
+    leaf_extras["ott"] = ["ott"]
+    leaf_extras["wikidata"] = ["wd", "Q"]
+    leaf_extras["wikipedia_lang_flag"] = ["wd", "wikipedia_lang_flag"]
+    leaf_extras["iucn"] = ["iucn"]
+    leaf_extras["eol"] = ["eol"]
+    leaf_extras["raw_popularity"] = ["wd", "raw_popularity"]
+    leaf_extras["popularity"] = ["popularity"]
+    leaf_extras["popularity_rank"] = ["popularity_rank"]
+    leaf_extras["price"] = None
+    leaf_extras["ncbi"] = ["sources", "ncbi", "id"]
+    leaf_extras["ifung"] = ["sources", "ifung", "id"]
+    leaf_extras["worms"] = ["sources", "worms", "id"]
+    leaf_extras["irmng"] = ["sources", "irmng", "id"]
+    leaf_extras["gbif"] = ["sources", "gbif", "id"]
+    leaf_extras["ipni"] = ["ipni"]
 
-        for iucn_type in ["NE", "DD", "LC", "NT", "VU", "EN", "CR", "EW", "EX"]:
-            node_extras["iucn" + iucn_type] = None
+    # these are the extra columns output to the node csv file
+    node_extras = OrderedDict()
+    node_extras["ott"] = ["ott"]
+    node_extras["wikidata"] = ["wd", "Q"]
+    node_extras["wikipedia_lang_flag"] = ["wd", "wikipedia_lang_flag"]
+    node_extras["eol"] = ["eol"]
+    # We avoid using 'rank' as it is a reserved word in mysql
+    node_extras["rnk"] = ["rank"]
+    node_extras["raw_popularity"] = ["wd", "raw_popularity"]
+    node_extras["popularity"] = ["popularity"]
+    node_extras["ncbi"] = ["sources", "ncbi", "id"]
+    node_extras["ifung"] = ["sources", "ifung", "id"]
+    node_extras["worms"] = ["sources", "worms", "id"]
+    node_extras["irmng"] = ["sources", "irmng", "id"]
+    node_extras["gbif"] = ["sources", "gbif", "id"]
+    node_extras["ipni"] = ["ipni"]
+    node_extras["vern_synth"] = None
+    for representative_image_type in ["rep", "rtr", "rpd"]:
+        for i in [str(x + 1) for x in range(8)]:
+            node_extras[representative_image_type + i] = None
+    for iucn_type in ["NE", "DD", "LC", "NT", "VU", "EN", "CR", "EW", "EX"]:
+        node_extras["iucn" + iucn_type] = None
 
+    with (
+        open(os.path.join(outdir, f"ordered_leaves_{version}.csv"), "w+", encoding="utf-8") as leaves,
+        open(os.path.join(outdir, f"ordered_nodes_{version}.csv"), "w+", encoding="utf-8") as nodes,
+    ):
         tree.write_preorder_to_csv(leaves, leaf_extras, nodes, node_extras, -version)
     logging.info(f" ✔ written into {outdir}/ordered_..._{version}...")
 

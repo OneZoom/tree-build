@@ -12,6 +12,18 @@ full_ott_token = re.compile(r"'?([\w\-~]+)@'?(?::([\d\.]+))?")
 ott_details = re.compile(r"(\w+)_ott(\d*)~?([-\d]*)$")
 
 
+def parse_one_zoom_token(node_label, ot_parts_folder=None, oz_parts_folder=None):
+    """
+    Parse a single OneZoom token from label name
+    """
+    if not node_label:
+        return None
+    try:
+        return next(enumerate_one_zoom_tokens(node_label, ot_parts_folder, oz_parts_folder))
+    except StopIteration:
+        return None
+
+
 def enumerate_one_zoom_tokens(tree, ot_parts_folder=None, oz_parts_folder=None):
     """
     Enumerates all the OneZoom tokens in a tree string (e.g. foobar_ott123~-789-111)
@@ -24,7 +36,7 @@ def enumerate_one_zoom_tokens(tree, ot_parts_folder=None, oz_parts_folder=None):
     - edge_length_in_parent: Edge length from inclusion node
     - file: File path pointing to tree to substitute
     - base_ott: OTT of root, if subtree is a OT tree
-    - excluded_otts: OTTs to exclude from subtree
+    - excluded_otts: OTTs to exclude from subtree (as strings not ints)
     - expand_nodes: Should we recurse and apply OZ inclusion rules to subtree?
     - override_edge_length: Replace edge length from root node with this value
     - override_taxon: Replace root node name with this value

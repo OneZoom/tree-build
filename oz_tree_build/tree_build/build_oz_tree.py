@@ -12,7 +12,6 @@ import sys
 
 from ..utilities.debug_util import parse_args_and_add_logging_switch
 from .oz_tokens import enumerate_one_zoom_tokens
-from .token_to_oz_tree_file_mapping import token_to_file_map
 
 __author__ = "David Ebbo"
 
@@ -44,7 +43,8 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
         file,
         node_name_in_parent=None,
         edge_length_in_parent=None,
-        mapping_entry=None,
+        override_edge_length=None,
+        override_taxon=None,
         expand_nodes=False,
     ):
         """
@@ -56,10 +56,7 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
 
         # If we're printing the file tree, print the current file
         if print_file_tree and expand_nodes:
-            print(
-                f"{'  ' * depth}{node_name_in_parent}: {edge_length_in_parent} "
-                f"{mapping_entry['edge_length'] if mapping_entry else 0}"
-            )
+            print(f"{'  ' * depth}{node_name_in_parent}: {edge_length_in_parent} {override_edge_length or 0}")
 
         if not os.path.exists(file):
             logging.warning(f"Subtree file {file} does not exist")
@@ -73,34 +70,18 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
 
         # We only need to look for children if it's a OneZoom file (i.e. .PHY extension)
         if expand_nodes:
-            for result in enumerate_one_zoom_tokens(tree):
+            for result in enumerate_one_zoom_tokens(tree, ot_parts_folder, oz_parts_folder):
                 # Write the part of the tree before the child
                 output_stream.write(tree[index : result["start"]])
 
-                child_full_name = result["full_name"]
-
-                # Check if OZ token has a base ott (e.g. 123 in foobar_ott123~456-789)
-                if "base_ott" in result:
-                    # It's an extracted Open Tree file, e.g. 123.phy
-                    sub_file = os.path.join(ot_parts_folder, f'{result["base_ott"]}.phy')
-                    if not os.path.exists(sub_file):
-                        # Fall back to .nwk, which happens for additional copied files
-                        sub_file = os.path.join(ot_parts_folder, f'{result["base_ott"]}.nwk')
-                    expand_child_nodes = False
-                    child_mapping_entry = None
-                else:
-                    # Otherwise, it's a OneZoom file, e.g. AMORPHEA@ --> Amorphea.PHY
-                    child_mapping_entry = token_to_file_map[child_full_name]
-                    sub_file = os.path.join(oz_parts_folder, child_mapping_entry["file"])
-                    expand_child_nodes = True
-
                 depth += 1
                 if process_newick(
-                    sub_file,
-                    child_full_name,
-                    result["edge_length"],
-                    child_mapping_entry,
-                    expand_child_nodes,
+                    file=result["file"],
+                    node_name_in_parent=result["node_name_in_parent"],
+                    edge_length_in_parent=result["edge_length_in_parent"],
+                    override_edge_length=result["override_edge_length"],
+                    override_taxon=result["override_taxon"],
+                    expand_nodes=result["expand_nodes"],
                 ):
                     index = result["end"]
                 else:
@@ -125,12 +106,11 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
         # Always favor the length from our mapping, falling back to the last token in the file
         # Note that we never fall back to edge_length_in_parent here, following old code logic
         # DISCUSS: should we?
-        edge_length = mapping_entry["edge_length"] if mapping_entry else None
-        edge_length = edge_length or last_token_edge_length
+        edge_length = override_edge_length or last_token_edge_length
 
-        if mapping_entry:
+        if expand_nodes:
             # Three levels of fallback for .PHY files: mapping, last token, parent
-            node_name = mapping_entry["taxon"] or last_token_name or node_name_in_parent
+            node_name = override_taxon or last_token_name or node_name_in_parent
         else:
             # NB: following old code logic, the above parent vs last logic is reversed here
             # DISCUSS: is there a logical reason for this?

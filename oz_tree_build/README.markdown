@@ -55,15 +55,6 @@ cp provider_ids.csv.gz data/EOL/
 
 ```
 
-Note that as documented in that readme,
-you will also need to create a `draftversionXXX.tre` file containing no `mrca` strings:
-
-```
-perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' \
-    data/OpenTree/labelled_supertree_simplified_ottnames.tre \
-    > data/OpenTree/draftversion${OT_VERSION}.tre
-```
-
 # Building a tree
 
 The times given at the start of each of the following steps refer to the time taken to run the commands on the entire tree of life. 
@@ -99,11 +90,13 @@ If you already have your own newick tree with open tree ids on it already, and d
 	```
 	If you do not have any supplementary `.nwk` subtrees in the  `OT_required` directory, this step will output a warning, which can be ignored.
 
-1. (a few secs) Construct OpenTree subtrees for inclusion from the `draftversion${OT_VERSION}.tre` file. The subtrees to be extracted are specified by inclusion strings in the `.PHY` files created in step 1. The command for this is `getOpenTreesFromOneZoom.py`, and it needs to be run from within the `data/OZTreeBuild/${OZ_TREE}` directory, as follows:
+1. (a few secs) Construct OpenTree subtrees for inclusion from the `labelled_supertree_simplified_ottnames.tre` file. The subtrees to be extracted are specified by inclusion strings in the `.PHY` files created in step 1. The command for this is `getOpenTreesFromOneZoom.py`, and it needs to be run from within the `data/OZTreeBuild/${OZ_TREE}` directory, as follows:
 
 	```
+	# NB: Transpose sequences of space/underscore to underscore, the newick parser relies on it
 	(cd data/OZTreeBuild/${OZ_TREE} && get_open_trees_from_one_zoom \
-	 ../../OpenTree/draftversion${OT_VERSION}.tre OpenTreeParts/OpenTree_all/ \
+	<(sed -r 's/[ _]+/_/g' ../../OpenTree/labelled_supertree_simplified_ottnames.tre) \
+	 OpenTreeParts/OpenTree_all/ \
 	 BespokeTree/include_files/*.PHY)
 	```
 	If you are not including any OpenTree subtrees in your final tree, you should have no `.PHY` files, and this step will output a warning, which can be ignored.
@@ -113,6 +106,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	```
 	(cd data/OZTreeBuild/${OZ_TREE} && \
 	build_oz_tree BespokeTree/include_files/Base.PHY OpenTreeParts/OpenTree_all/ AllLife_full_tree.phy)
+	sed -i -r 's/\)mrcaott[0-9]+ott[0-9]+/\)/g' AllLife_full_tree.phy
 	```
 
 	Now that we are not having to run this every sponsorship time, we should probably re-write this to actually know what tree structure looks like, maybe using Python/DendroPy (see https://github.com/jrosindell/OneZoomComplete/issues/340) and also to automatically create the list of DOIs at `${OZ_DIR}/static/FinalOutputs/refs.txt`. Note that any '@' signs in the `${OZ_TREE}_full_tree.phy` output file are indicative of OpenTree substitutions that have not been possible: it would be good to check to see if there are other sources (or old OpenTree versions) that have trees for these nodes, and place them as .phy files in `data/OZTreeBuild/${OZ_TREE}/OpenTreeParts/OT_required/`. You can check with

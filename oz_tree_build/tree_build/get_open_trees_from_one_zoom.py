@@ -53,7 +53,7 @@ def get_inclusions_and_exclusions_from_one_zoom_file(file, all_included_otts, al
 
     for result in enumerate_one_zoom_tokens(tree):
         # Check if the result has a base ott (won't have it if it's inserting another OZ file)
-        if "base_ott" in result:
+        if result.get("base_ott") is not None:
             all_included_otts.add(result["base_ott"])
             all_excluded_otts.update(result["excluded_otts"])
 

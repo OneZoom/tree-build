@@ -9,7 +9,7 @@ be used to populate a running OneZoom instance.
 The first step to using this repo is to create a Python virtual environment and activate it:
 
     # From the root of the repo, create a Python environment and activate it
-    python -m venv .venv
+    python3 -m venv .venv
     source .venv/bin/activate
 
     # Install it
@@ -48,7 +48,7 @@ You can check the most recent version of both the synthetic tree (`synth_id`) an
 [API](https://github.com/OpenTreeOfLife/germinator/wiki/Open-Tree-of-Life-Web-APIs) e.g. by running `curl -X POST https://api.opentreeoflife.org/v3/tree_of_life/about`. Later in the build, we use specific environment variables set to these version numbers. Assuming you are in a bash shell or similar, you can set them as follows:
 
 ```
-OT_VERSION=14_9 #or whatever your OpenTree version is
+OT_VERSION=14.9 #or whatever your OpenTree version is
 OT_TAXONOMY_VERSION=3.6
 OT_TAXONOMY_EXTRA=draft1 #optional - the draft for this version, e.g. `draft1` if the taxonomy_version is 3.6draft1
 ```

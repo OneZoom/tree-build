@@ -6,28 +6,62 @@ The instructions below are primarily intended for creating a full tree of all li
 The output files created by the tree building process (database files and files to feed to the js,
 and which can be loaded into the database and for the tree viewer) are saved in `output_files`.
 
+## Environment
 
-## Settings
-
-Assuming that the environment variables OT_VERSION and OT_TAXONOMY_VERSION have already
-been set as described in the [main README file](../README.markdown), and the
-appropriate data files downloaded as described [here](../data/README.markdown).
-the instructions below only require the following environmental variable to be
-set up:
+The following environment variables should be set:
 
 ```
 OZ_TREE=AllLife  # a tree directory in data/OZTreeBuild
 OZ_DIR=../OZtree  # the path to the OneZoom/OZtree github directory (here we assume the `tree-build` repo is a sibling to the `OZtree` repo)
 ```
 
-# Preliminaries
+You also need to select the OpenTree version to build against.
+You can discover the most recent version of both the synthetic tree (`synth_id`) and the taxonomy (`taxonomy_version`) via the
+[API](https://github.com/OpenTreeOfLife/germinator/wiki/Open-Tree-of-Life-Web-APIs):
 
-Follow [these instructions](../data/README.markdown) to download all required files. Note that as documented in that readme,
-you will also need to create a `draftversionXXX.tre` file containing no `mrca` strings, e.g.
-via the following in the OpenTree directory
+```bash
+$ curl -s -X POST https://api.opentreeoflife.org/v3/tree_of_life/about | grep -E '"synth_id"|"taxonomy_version"'
+ "synth_id": "opentree15.1",
+ "taxonomy_version": "3.7draft2"
+```
+
+You should then set these as environment variables:
 
 ```
-perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' labelled_supertree_simplified_ottnames.tre > draftversion${OT_VERSION}.tre
+OT_VERSION=15.1 #or whatever your OpenTree version is
+OT_TAXONOMY_VERSION=3.7
+OT_TAXONOMY_EXTRA=draft2 #optional - the draft for this version, e.g. `draft1` if the taxonomy_version is 3.6draft1
+```
+
+## Downloads
+
+Follow the [the download instructions](../data/README.markdown) to fetch required files. In summary, this should entail:
+
+```
+## Open Tree of Life
+wget -cP data/OpenTree/ "https://files.opentreeoflife.org/synthesis/opentree${OT_VERSION}/output/labelled_supertree/labelled_supertree_simplified_ottnames.tre"
+wget -cP data/OpenTree/ "https://files.opentreeoflife.org/ott/ott${OT_TAXONOMY_VERSION}/ott${OT_TAXONOMY_VERSION}.tgz"
+
+## Wikimedia
+wget -cP data/Wiki/wp_SQL/ https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-page.sql.gz
+wget -cP data/Wiki/wd_JSON/ https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2
+
+## Pre-processed PageViews - see https://github.com/OneZoom/tree-build/releases
+curl -L https://github.com/OneZoom/tree-build/releases/download/pageviews-202306-202403/OneZoom_pageviews-202306-202403.tar.gz | tar -zxC data/Wiki/wp_pagecounts/
+
+## EoL
+# TODO: In theory fetchable from https://opendata.eol.org/dataset/identifier-map, but currently broken
+cp provider_ids.csv.gz data/EOL/
+
+```
+
+Note that as documented in that readme,
+you will also need to create a `draftversionXXX.tre` file containing no `mrca` strings:
+
+```
+perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;' \
+    data/OpenTree/labelled_supertree_simplified_ottnames.tre \
+    > data/OpenTree/draftversion${OT_VERSION}.tre
 ```
 
 # Building a tree
@@ -38,10 +72,19 @@ If you already have your own newick tree with open tree ids on it already, and d
 
 ## Create the tree
 
+0. The following steps assume the venv has been activated:
+
+	```
+	. .venv/bin/activate
+	```
+
+	If not created, see installation steps in the [main README](../README.markdown).
 
 1. (20 secs) Use the [OpenTree API](https://github.com/OpenTreeOfLife/germinator/wiki/Synthetic-tree-API-v3) to add OTT ids to any non-opentree taxa in our own bespoke phylogenies (those in `*.phy` or `*.PHY` files). The new `.phy` and `.PHY` files will be created in a new directory within `data/OZTreeBuild/${OZ_TREE}/BespokeTree`, and a symlink to that directory will be created called `include_files` 
 		
 	```
+	mkdir -p "data/OZTreeBuild/${OZ_TREE}/BespokeTree/include_OTT${OT_TAXONOMY_VERSION}${OT_TAXONOMY_EXTRA}"
+	touch "data/OZTreeBuild/${OZ_TREE}/BespokeTree/include_OTT${OT_TAXONOMY_VERSION}${OT_TAXONOMY_EXTRA}/dir"
 	rm data/OZTreeBuild/${OZ_TREE}/BespokeTree/include_OTT${OT_TAXONOMY_VERSION}${OT_TAXONOMY_EXTRA}/* && \
 	add_ott_numbers_to_trees \
 	--savein data/OZTreeBuild/${OZ_TREE}/BespokeTree/include_OTT${OT_TAXONOMY_VERSION}${OT_TAXONOMY_EXTRA} \
@@ -94,6 +137,7 @@ If you already have your own newick tree with open tree ids on it already, and d
 	From the data folder, run the `generate_filtered_files` script:
 
 	```
+	tar -C data/OpenTree -zxvf data/OpenTree/ott${OT_TAXONOMY_VERSION}.tgz
 	(cd data && generate_filtered_files OZTreeBuild/AllLife/AllLife_full_tree.phy OpenTree/ott${OT_TAXONOMY_VERSION}/taxonomy.tsv EOL/provider_ids.csv.gz Wiki/wd_JSON/latest-all.json.bz2 Wiki/wp_SQL/enwiki-latest-page.sql.gz Wiki/wp_pagecounts/pageviews*.bz2)
 	```
 

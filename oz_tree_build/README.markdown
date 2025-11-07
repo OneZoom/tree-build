@@ -55,6 +55,11 @@ cp provider_ids.csv.gz data/EOL/
 
 ```
 
+### OT_required
+
+Any clades referenced in the OneZoom phylogeny that are missing from the OpenTree can be supplied by hand in the `OT_required` directory, and added to the repository.
+They should be named ``data/OZTreeBuild/${OZ_TREE}/OpenTreeParts/OT_required/(OTT).nwk``
+
 # Building a tree
 
 The times given at the start of each of the following steps refer to the time taken to run the commands on the entire tree of life. 
@@ -81,14 +86,6 @@ If you already have your own newick tree with open tree ids on it already, and d
 	--savein data/OZTreeBuild/${OZ_TREE}/BespokeTree/include_OTT${OT_TAXONOMY_VERSION}${OT_TAXONOMY_EXTRA} \
 	data/OZTreeBuild/${OZ_TREE}/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
 	```
-
-1. Copy supplementary OpenTree-like newick files (if any) to the `OpenTree_all` directory. These are clades referenced in the OneZoom phylogeny that are missing from the OpenTree, and whose subtrees thus need to be supplied by hand. If any are required, they should be placed in the `OT_required` directory within `data/OZTreeBuild/${OZ_TREE}`. For tree building, they should be copied into the directory containing OpenTree subtrees using
-
-	```
-	(cd data/OZTreeBuild/${OZ_TREE}/OpenTreeParts && \
-	 cp -n OT_required/*.nwk OpenTree_all/)
-	```
-	If you do not have any supplementary `.nwk` subtrees in the  `OT_required` directory, this step will output a warning, which can be ignored.
 
 1. (a few secs) Construct OpenTree subtrees for inclusion from the `labelled_supertree_simplified_ottnames.tre` file. The subtrees to be extracted are specified by inclusion strings in the `.PHY` files created in step 1. The command for this is `getOpenTreesFromOneZoom.py`, and it needs to be run from within the `data/OZTreeBuild/${OZ_TREE}` directory, as follows:
 

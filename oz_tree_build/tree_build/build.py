@@ -100,6 +100,11 @@ def main():
             "OpenTreeParts",
             "OpenTree_all",
         ),
+        ot_required=os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(args.treefile))),
+            "OpenTreeParts",
+            "OT_required",
+        ),
     )
 
     if args.outfile == "-":

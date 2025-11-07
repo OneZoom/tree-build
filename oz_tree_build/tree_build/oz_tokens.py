@@ -74,10 +74,15 @@ def enumerate_one_zoom_tokens(tree, parts_folders={}):
             # It's an extracted Open Tree file, e.g. 123.phy
             # NB: We can't make a valid path without parts_folder["ot"], but we probably don't care in this case
             result["base_ott"] = base_ott
-            result["file"] = os.path.join(parts_folders.get("ot") or ".", f"{base_ott}.phy")
-            if parts_folders.get("ot") and not os.path.exists(result["file"]):
-                # Fall back to .nwk, which happens for additional copied files
-                result["file"] = os.path.join(parts_folders.get("ot") or ".", f"{base_ott}.nwk")
+            if os.path.exists(
+                os.path.join(parts_folders.get("ot_required", "/unconfiguredpath/ot_requried/"), f"{base_ott}.nwk")
+            ):
+                # An ot_required orphan OT file exists, use that
+                result["file"] = os.path.join(
+                    parts_folders.get("ot_required", "/unconfiguredpath/ot_requried/"), f"{base_ott}.nwk"
+                )
+            else:
+                result["file"] = os.path.join(parts_folders.get("ot") or ".", f"{base_ott}.phy")
             result["override_edge_length"] = None
             result["override_taxon"] = None
             result["expand_nodes"] = False

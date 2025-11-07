@@ -70,7 +70,14 @@ def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
 
         # We only need to look for children if it's a OneZoom file (i.e. .PHY extension)
         if expand_nodes:
-            for result in enumerate_one_zoom_tokens(tree, dict(ot=ot_parts_folder, oz=oz_parts_folder)):
+            for result in enumerate_one_zoom_tokens(
+                tree,
+                dict(
+                    ot=ot_parts_folder,
+                    oz=oz_parts_folder,
+                    ot_required=os.path.join(os.path.dirname(os.path.dirname(ot_parts_folder)), "OT_required"),
+                ),
+            ):
                 # Write the part of the tree before the child
                 output_stream.write(tree[index : result["start"]])
 

@@ -43,13 +43,13 @@ def filter_tree(t, excluded_otts):
     return t
 
 
-def expand_nodes(t, ot_parts_folder, oz_parts_folder):
+def expand_nodes(t, parts_folders):
     """
     Recursively resolve OZ inclusion syntax in (t), returning a complete tree.
     """
 
     def is_leaf_fn(n):
-        result = parse_one_zoom_token(n.name, ot_parts_folder, oz_parts_folder)
+        result = parse_one_zoom_token(n.name, parts_folders)
         if result is None:
             # No inclusion syntax, recurse
             return n.is_leaf
@@ -57,7 +57,7 @@ def expand_nodes(t, ot_parts_folder, oz_parts_folder):
         sub_t = ete4.Tree(result["file"], parser=NWK_PARSER)
         sub_t = filter_tree(sub_t, result.get("excluded_otts"))
         if result["expand_nodes"]:
-            sub_t = expand_nodes(sub_t, ot_parts_folder, oz_parts_folder)
+            sub_t = expand_nodes(sub_t, parts_folders)
 
         # Replace n with sub_t
         if result["expand_nodes"]:
@@ -92,12 +92,14 @@ def main():
     )
     args = parse_args_and_add_logging_switch(parser)
 
-    # Work out oz_parts_folder / ot_parts_folder based on treefile
-    oz_parts_folder = os.path.dirname(args.treefile)
-    ot_parts_folder = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(args.treefile))),
-        "OpenTreeParts",
-        "OpenTree_all",
+    # Work out parts_folders based on treefile location
+    parts_folders = dict(
+        oz=os.path.dirname(args.treefile),
+        ot=os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(args.treefile))),
+            "OpenTreeParts",
+            "OpenTree_all",
+        ),
     )
 
     if args.outfile == "-":
@@ -105,7 +107,7 @@ def main():
         args.outfile = None
 
     t = ete4.Tree(args.treefile, parser=NWK_PARSER)
-    t = expand_nodes(t, ot_parts_folder, oz_parts_folder)
+    t = expand_nodes(t, parts_folders)
     # NB: We need to explicitly list properties we want printing out in [&&NHX:date=x] blocks
     out = t.write(outfile=args.outfile, parser=NWK_PARSER, props=["date"], format_root_node=True)
     if out:

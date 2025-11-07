@@ -12,19 +12,19 @@ full_ott_token = re.compile(r"'?([\w\-~]+)@'?(?::([\d\.]+))?")
 ott_details = re.compile(r"(\w+)_ott(\d*)~?([-\d]*)$")
 
 
-def parse_one_zoom_token(node_label, ot_parts_folder=None, oz_parts_folder=None):
+def parse_one_zoom_token(node_label, parts_folders={}):
     """
     Parse a single OneZoom token from label name
     """
     if not node_label:
         return None
     try:
-        return next(enumerate_one_zoom_tokens(node_label, ot_parts_folder, oz_parts_folder))
+        return next(enumerate_one_zoom_tokens(node_label, parts_folders))
     except StopIteration:
         return None
 
 
-def enumerate_one_zoom_tokens(tree, ot_parts_folder=None, oz_parts_folder=None):
+def enumerate_one_zoom_tokens(tree, parts_folders={}):
     """
     Enumerates all the OneZoom tokens in a tree string (e.g. foobar_ott123~-789-111)
 
@@ -72,12 +72,12 @@ def enumerate_one_zoom_tokens(tree, ot_parts_folder=None, oz_parts_folder=None):
         # Check if OZ token has a base ott (e.g. 123 in foobar_ott123~456-789)
         if base_ott is not None:
             # It's an extracted Open Tree file, e.g. 123.phy
-            # NB: We can't make a valid path without ot_parts_folder, but we probably don't care in this case
+            # NB: We can't make a valid path without parts_folder["ot"], but we probably don't care in this case
             result["base_ott"] = base_ott
-            result["file"] = os.path.join(ot_parts_folder or ".", f"{base_ott}.phy")
-            if ot_parts_folder and not os.path.exists(result["file"]):
+            result["file"] = os.path.join(parts_folders.get("ot") or ".", f"{base_ott}.phy")
+            if parts_folders.get("ot") and not os.path.exists(result["file"]):
                 # Fall back to .nwk, which happens for additional copied files
-                result["file"] = os.path.join(ot_parts_folder or ".", f"{base_ott}.nwk")
+                result["file"] = os.path.join(parts_folders.get("ot") or ".", f"{base_ott}.nwk")
             result["override_edge_length"] = None
             result["override_taxon"] = None
             result["expand_nodes"] = False
@@ -85,7 +85,7 @@ def enumerate_one_zoom_tokens(tree, ot_parts_folder=None, oz_parts_folder=None):
             # Otherwise, it's a OneZoom file, e.g. AMORPHEA@ --> Amorphea.PHY
             child_mapping_entry = token_to_file_map[result["node_name_in_parent"]]
             result["base_ott"] = None
-            result["file"] = os.path.join(oz_parts_folder or ".", child_mapping_entry["file"])
+            result["file"] = os.path.join(parts_folders.get("oz") or ".", child_mapping_entry["file"])
             result["override_edge_length"] = child_mapping_entry.get("edge_length", None)
             result["override_taxon"] = child_mapping_entry.get("taxon", None)
             result["expand_nodes"] = True

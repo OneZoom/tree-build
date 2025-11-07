@@ -138,6 +138,7 @@ def expand_nodes(t, parts_folders, node_ages):
         else:
             n.name = result.get("node_name_in_parent") or sub_t.root.name
         n.dist = result.get("override_edge_length", sub_t.root.dist)
+        n.props['date'] = sub_t.root.props.get('date')
         n.children = sub_t.root.children
 
         # Replaced children, no point recursing through the old ones

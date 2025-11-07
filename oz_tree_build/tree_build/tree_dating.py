@@ -21,8 +21,8 @@ def date_labelling(parent):
                      [oldest date found so far below this node, shortest path length to it]
     """
     if not parent.is_leaf:
-        oldest_path_long = [parent.props["date"], -1e8]
-        oldest_path_short = [parent.props["date"], 1e8]
+        oldest_path_long = [0, -1e8]
+        oldest_path_short = [0, 1e8]
         for child in parent.children:
             new_path_long, new_path_short = date_labelling(child)
             oldest_path_long = max(oldest_path_long, new_path_long)

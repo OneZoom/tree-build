@@ -29,16 +29,16 @@ def date_labelling(parent):
             oldest_path_short = max(oldest_path_short, new_path_short, key=use_shortest_path)
 
     if parent.props["date"] is None:
-        parent.oldest_path_long = copy.copy(oldest_path_long)
-        parent.oldest_path_short = copy.copy(oldest_path_short)
+        parent.props["oldest_path_long"] = copy.copy(oldest_path_long)
+        parent.props["oldest_path_short"] = copy.copy(oldest_path_short)
         oldest_path_long[1] += 1
         oldest_path_short[1] += 1
     else:
         # if there is a date, doesn't matter what was received; just return this date
         oldest_path_long = [parent.props["date"], 0]
         oldest_path_short = [parent.props["date"], 0]
-        parent.oldest_path_long = copy.copy(oldest_path_long)
-        parent.oldest_path_short = copy.copy(oldest_path_short)
+        parent.props["oldest_path_long"] = copy.copy(oldest_path_long)
+        parent.props["oldest_path_short"] = copy.copy(oldest_path_short)
         oldest_path_long[1] += 1
         oldest_path_short[1] += 1
 
@@ -62,27 +62,27 @@ def impute_missing_dates(tre, l=0.25, m=0):
 
     for node in tre.traverse(strategy="preorder"):
         if node.props["date"] is None:
-            node.date_above_long = node.up.props["date"]
-            node.date_above_short = node.up.props["date"]
+            node.props["date_above_long"] = node.up.props["date"]
+            node.props["date_above_short"] = node.up.props["date"]
 
-            mu_spacing_long = np.exp(m * np.linspace(0, 1, node.oldest_path_long[1] + 1))
-            mu_spacing_short = np.exp(m * np.linspace(0, 1, node.oldest_path_short[1] + 1))
+            mu_spacing_long = np.exp(m * np.linspace(0, 1, node.props["oldest_path_long"][1] + 1))
+            mu_spacing_short = np.exp(m * np.linspace(0, 1, node.props["oldest_path_short"][1] + 1))
 
-            node.mu_spacing_long = np.cumsum(mu_spacing_long / np.sum(mu_spacing_long))
-            node.mu_spacing_short = np.cumsum(mu_spacing_short / np.sum(mu_spacing_short))
+            node.props["mu_spacing_long"] = np.cumsum(mu_spacing_long / np.sum(mu_spacing_long))
+            node.props["mu_spacing_short"] = np.cumsum(mu_spacing_short / np.sum(mu_spacing_short))
 
-            node.date_long = (
-                node.date_above_long
-                - (node.date_above_long - node.oldest_path_long[0])
-                * node.mu_spacing_long[-(node.oldest_path_long[1] + 1)]
+            node.props["date_long"] = (
+                node.props["date_above_long"]
+                - (node.props["date_above_long"] - node.props["oldest_path_long"][0])
+                * node.props["mu_spacing_long"][-(node.props["oldest_path_long"][1] + 1)]
             )
-            node.date_short = (
-                node.date_above_short
-                - (node.date_above_short - node.oldest_path_short[0])
-                * node.mu_spacing_short[-(node.oldest_path_short[1] + 1)]
+            node.props["date_short"] = (
+                node.props["date_above_short"]
+                - (node.props["date_above_short"] - node.props["oldest_path_short"][0])
+                * node.props["mu_spacing_short"][-(node.props["oldest_path_short"][1] + 1)]
             )
 
-            node.props["date"] = l * node.date_long + (1 - l) * node.date_short
+            node.props["date"] = l * node.props["date_long"] + (1 - l) * node.props["date_short"]
 
 
 def date_tree(tre):

@@ -1,0 +1,5 @@
+[core]
+    remote = onezoom-r2
+['remote "onezoom-r2"']
+    url = s3://tree-build
+    endpointurl = https://78a9d10d15c6f99848d67e246e9f3e56.r2.cloudflarestorage.com

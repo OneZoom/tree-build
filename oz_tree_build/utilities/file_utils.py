@@ -3,9 +3,11 @@ Miscellaneous file utilities
 """
 
 import bz2
+import codecs
 import gzip
 import os
-import time
+import shutil
+import subprocess
 
 __author__ = "David Ebbo"
 
@@ -20,37 +22,67 @@ def open_file_based_on_extension(filename, mode):
         return open(filename, mode, encoding="utf-8")
 
 
-def enumerate_lines_from_file(filename, print_every=None, print_line_num_func=None):
+def stream_bz2_lines_from_url(url, read_timeout=120):
     """
-    Enumerate the lines in a file, whether it's uncompressed, bz2 or gz. If print_every
-    is given as an integer, print a message out every print_every lines. If
-    print_line_num_func is given, it should be a function that takes in the line number
-    and returns the string to print out.
+    Stream a .bz2 file over HTTP via wget and yield decompressed lines.
+    wget handles timeouts, connection management, and progress display;
+    Python handles decompression and line splitting.
     """
-    underlying_file_size = os.path.getsize(filename)
-    start_time = time.time()
-    with open_file_based_on_extension(filename, "rt") as f:
-        if print_every is not None:
+    if not shutil.which("wget"):
+        raise RuntimeError("wget is required but not found on PATH")
+
+    wget = subprocess.Popen(
+        [
+            "wget",
+            "-q",
+            "--show-progress",
+            "-O",
+            "-",
+            "--connect-timeout=30",
+            f"--read-timeout={read_timeout}",
+            "--header=User-Agent: OneZoom-tree-build/1.0",
+            url,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=None,
+    )
+
+    decompressor = bz2.BZ2Decompressor()
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    line_buf = ""
+
+    try:
+        while True:
+            chunk = wget.stdout.read(1024 * 1024)
+            if not chunk:
+                break
             try:
-                underlying_file = f.buffer.fileobj  # gzip
-            except AttributeError:
-                try:
-                    underlying_file = f.buffer._buffer.raw._fp  # b2zip
-                except AttributeError:
-                    underlying_file = f  # plain
-        for line_num, line in enumerate(iter(f.readline, "")):
-            if print_every is not None and line_num != 0 and line_num % print_every == 0:
-                underlying_file_pos = underlying_file.tell()
-                percent_done = 100 * underlying_file_pos / underlying_file_size
-                elapsed_time = time.time() - start_time
-                time_left = elapsed_time * (100 - percent_done) / percent_done
-                expected_ETA = time.strftime("%H:%M:%S", time.localtime(time.time() + time_left))
-                if print_line_num_func is not None:
-                    line_num_str = print_line_num_func(line_num)
-                else:
-                    line_num_str = f"Processing line {line_num}"
-                print(f"{percent_done:.2f}% read. " + line_num_str + f" ETA: {expected_ETA}")
-            yield line_num, line
+                raw = decompressor.decompress(chunk)
+            except EOFError:
+                break
+            text = decoder.decode(raw)
+            line_buf += text
+            parts = line_buf.split("\n")
+            line_buf = parts[-1]
+            yield from parts[:-1]
+
+        trailing = decoder.decode(b"", final=True)
+        line_buf += trailing
+        if line_buf:
+            yield line_buf
+    finally:
+        wget.stdout.close()
+        if wget.poll() is None:
+            wget.terminate()
+        rc = wget.wait()
+        if rc != 0:
+            raise RuntimeError(f"wget failed (exit {rc})")
+
+
+def enumerate_lines_from_file(filename):
+    """Enumerate the lines in a file, whether it's uncompressed, bz2 or gz."""
+    with open_file_based_on_extension(filename, "rt") as f:
+        yield from enumerate(iter(f.readline, ""))
 
 
 def check_identical_files(output_location, expected_output_path):

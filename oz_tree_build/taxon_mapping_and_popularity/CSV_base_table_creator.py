@@ -1,6 +1,6 @@
 """
 Creates the base files for the dynamically-loaded tree, on the basis of a
-single newick tree withOTT numbers on the leaves and nodes.
+single newick tree with OTT numbers on the leaves and nodes.
 
 Final output is 2 csv files, two long newick string with braces and commas
 (one with curly braces for polytomies) and a dates file.
@@ -1048,7 +1048,7 @@ def main():
         nargs="?",
         help=(
             "The gzipped >1GB wikipedia -latest-page.sql.gz dump, "
-            "from https://dumps.wikimedia.org/enwiki/latest/ (enwiki-latest-page.sql.gz) "
+            "from https://dumps.wikimedia.org/enwiki/latest/ (enwiki-page.sql.gz) "
         ),
     )
     parser.add_argument(

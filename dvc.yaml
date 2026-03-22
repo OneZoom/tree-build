@@ -1,0 +1,167 @@
+vars:
+  - params.yaml
+
+stages:
+  preprocess_opentree:
+    cmd: >-
+      perl -pe 's/\)mrcaott\d+ott\d+/\)/g; s/[ _]+/_/g;'
+      data/OpenTree/labelled_supertree_simplified_ottnames.tre
+      > data/OpenTree/draftversion${ot_version}.tre
+    deps:
+      - data/OpenTree/labelled_supertree_simplified_ottnames.tre
+    params:
+      - ot_version
+    outs:
+      - data/OpenTree/draftversion${ot_version}.tre
+
+  unpack_taxonomy:
+    cmd: tar -C data/OpenTree -zxf data/OpenTree/ott${ot_taxonomy_version}.tgz
+    deps:
+      - data/OpenTree/ott${ot_taxonomy_version}.tgz
+    params:
+      - ot_taxonomy_version
+    outs:
+      - data/OpenTree/ott${ot_taxonomy_version}/
+
+  add_ott_numbers:
+    cmd: >-
+      rm -rf data/OZTreeBuild/${oz_tree}/BespokeTree/include_OTT${ot_taxonomy_version}${ot_taxonomy_extra} &&
+      mkdir -p data/OZTreeBuild/${oz_tree}/BespokeTree/include_OTT${ot_taxonomy_version}${ot_taxonomy_extra} &&
+      add_ott_numbers_to_trees
+      --savein data/OZTreeBuild/${oz_tree}/BespokeTree/include_OTT${ot_taxonomy_version}${ot_taxonomy_extra}
+      data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
+    deps:
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/
+    params:
+      - oz_tree
+      - ot_taxonomy_version
+      - ot_taxonomy_extra
+    outs:
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OTT${ot_taxonomy_version}${ot_taxonomy_extra}/
+
+  prepare_open_trees:
+    cmd: >-
+      cp -n data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/*.nwk
+      data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/ 2>/dev/null || true &&
+      cd data/OZTreeBuild/${oz_tree} &&
+      get_open_trees_from_one_zoom
+      ../../OpenTree/draftversion${ot_version}.tre
+      OpenTreeParts/OpenTree_all/
+      BespokeTree/include_OTT${ot_taxonomy_version}${ot_taxonomy_extra}/*.PHY
+    deps:
+      - data/OpenTree/draftversion${ot_version}.tre
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OTT${ot_taxonomy_version}${ot_taxonomy_extra}/
+      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
+    params:
+      - oz_tree
+      - ot_version
+      - ot_taxonomy_version
+      - ot_taxonomy_extra
+    outs:
+      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
+
+  build_tree:
+    cmd: >-
+      cd data/OZTreeBuild/${oz_tree} &&
+      build_oz_tree
+      BespokeTree/include_OTT${ot_taxonomy_version}${ot_taxonomy_extra}/Base.PHY
+      OpenTreeParts/OpenTree_all/
+      ${oz_tree}_full_tree.phy
+    deps:
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OTT${ot_taxonomy_version}${ot_taxonomy_extra}/
+      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
+    params:
+      - oz_tree
+      - ot_taxonomy_version
+      - ot_taxonomy_extra
+    outs:
+      - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
+
+  filter_eol:
+    cmd: >-
+      filter_eol
+      data/EOL/provider_ids.csv.gz
+      data/OpenTree/ott${ot_taxonomy_version}/taxonomy.tsv
+      -o data/filtered/OneZoom_provider_ids.csv
+    deps:
+      - data/EOL/provider_ids.csv.gz
+      - data/OpenTree/ott${ot_taxonomy_version}/taxonomy.tsv
+    params:
+      - ot_taxonomy_version
+    outs:
+      - data/filtered/OneZoom_provider_ids.csv
+
+  filter_wikidata:
+    cmd: >-
+      filter_wikidata
+      data/Wiki/wd_JSON/latest-all.json.bz2
+      -o data/filtered/OneZoom_latest-all.json
+      --titles-output data/filtered/wikidata_titles.txt
+    deps:
+      - data/Wiki/wd_JSON/latest-all.json.bz2
+    outs:
+      - data/filtered/OneZoom_latest-all.json
+      - data/filtered/wikidata_titles.txt
+
+  filter_sql:
+    cmd: >-
+      filter_wikipedia_sql
+      data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      data/filtered/wikidata_titles.txt
+      -o data/filtered/OneZoom_enwiki-latest-page.sql
+    deps:
+      - data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      - data/filtered/wikidata_titles.txt
+    outs:
+      - data/filtered/OneZoom_enwiki-latest-page.sql
+
+  filter_pageviews:
+    cmd: >-
+      filter_pageviews
+      data/Wiki/wp_pagecounts/pageviews*.bz2
+      --titles-file data/filtered/wikidata_titles.txt
+      -o data/filtered/pageviews
+    deps:
+      - data/Wiki/wp_pagecounts/
+      - data/filtered/wikidata_titles.txt
+    outs:
+      - data/filtered/pageviews/
+
+  create_tables:
+    cmd: >-
+      CSV_base_table_creator
+      data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
+      data/OpenTree/ott${ot_taxonomy_version}/taxonomy.tsv
+      data/filtered/OneZoom_provider_ids.csv
+      data/filtered/OneZoom_latest-all.json
+      data/filtered/OneZoom_enwiki-latest-page.sql
+      data/filtered/pageviews/OneZoom_pageviews*
+      -o data/output_files -v
+      --version ${build_version}
+      --exclude ${exclude_from_popularity}
+      --extra_source_file data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
+      2> data/output_files/ordered_output.log
+    deps:
+      - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
+      - data/OpenTree/ott${ot_taxonomy_version}/taxonomy.tsv
+      - data/filtered/OneZoom_provider_ids.csv
+      - data/filtered/OneZoom_latest-all.json
+      - data/filtered/OneZoom_enwiki-latest-page.sql
+      - data/filtered/pageviews/
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
+    params:
+      - oz_tree
+      - ot_taxonomy_version
+      - build_version
+      - exclude_from_popularity
+    outs:
+      - data/output_files/
+
+  make_js:
+    cmd: >-
+      make_js_treefiles
+      --outdir data/js_output
+    deps:
+      - data/output_files/
+    outs:
+      - data/js_output/

@@ -41,22 +41,55 @@ you will need a valid Azure Image cropping key in your appconfig.ini.
 
 ## Building the latest tree from OpenTree
 
-### Setup
+This project uses [DVC](https://dvc.org/) for a cached, repeatable data pipeline. The build parameters (OpenTree version, taxonomy version, etc.) are defined in `params.yaml` and the pipeline stages are declared in `dvc.yaml`.
 
-We assume that you want to build a OneZoom tree based on the most recent online OpenTree version.
-You can check the most recent version of both the synthetic tree (`synth_id`) and the taxonomy (`taxonomy_version`) via the
-[API](https://github.com/OpenTreeOfLife/germinator/wiki/Open-Tree-of-Life-Web-APIs) e.g. by running `curl -X POST https://api.opentreeoflife.org/v3/tree_of_life/about`. Later in the build, we use specific environment variables set to these version numbers. Assuming you are in a bash shell or similar, you can set them as follows:
+### Quick start (using cached outputs)
 
+If someone has already run the pipeline and pushed the results to the DVC remote, you can reproduce the build without downloading any of the massive source files:
+
+```bash
+source .venv/bin/activate
+dvc repro --pull --allow-missing
 ```
-OT_VERSION=14.9 #or whatever your OpenTree version is
-OT_TAXONOMY_VERSION=3.6
-OT_TAXONOMY_EXTRA=draft1 #optional - the draft for this version, e.g. `draft1` if the taxonomy_version is 3.6draft1
-```
 
-### Download
+DVC will pull only the cached outputs needed for stages that haven't changed. If all stages are cached, nothing needs to be re-run.
 
-Constructing the full tree of life requires various files downloaded from the internet. They should be placed within the appropriate directories in the `data` directory, as [documented here](data/README.markdown).
+### Full build (first time / updating source data)
 
-### Building the tree
+1. Update `params.yaml` with the desired OpenTree version numbers. You can check the latest version via the [API](https://github.com/OpenTreeOfLife/germinator/wiki/Open-Tree-of-Life-Web-APIs):
 
-Once data files are downloaded, you should be set up to actually build the tree and other backend files, by following [these instructions](oz_tree_build/README.markdown).
+    ```bash
+    curl -s -X POST https://api.opentreeoflife.org/v3/tree_of_life/about | grep -E '"synth_id"|"taxonomy_version"'
+    ```
+
+2. Download the required source files into `data/` as [documented here](data/README.markdown), then register them with DVC:
+
+    ```bash
+    dvc add data/OpenTree/labelled_supertree_simplified_ottnames.tre
+    dvc add data/OpenTree/ott3.7.tgz
+    dvc add data/Wiki/wd_JSON/latest-all.json.bz2
+    dvc add data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+    dvc add data/Wiki/wp_pagecounts/
+    dvc add data/EOL/provider_ids.csv.gz
+    ```
+
+3. Run the pipeline and push results to the shared cache:
+
+    ```bash
+    dvc repro
+    dvc push
+    ```
+
+4. Commit the `.dvc` files and `dvc.lock` to git.
+
+### Pipeline stages
+
+The pipeline is defined in `dvc.yaml`. Use `dvc dag` to visualize the DAG. Key stages include:
+
+- **preprocess_opentree**, **unpack_taxonomy** -- prepare OpenTree data
+- **add_ott_numbers**, **prepare_open_trees**, **build_tree** -- assemble the full newick tree
+- **filter_eol**, **filter_wikidata**, **filter_sql**, **filter_pageviews** -- filter massive source files (parallelizable)
+- **create_tables** -- map taxa, calculate popularity, produce DB-ready CSVs
+- **make_js** -- generate JS viewer files
+
+For detailed step-by-step documentation, see [oz_tree_build/README.markdown](oz_tree_build/README.markdown).

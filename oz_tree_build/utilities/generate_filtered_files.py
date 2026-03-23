@@ -21,7 +21,7 @@ from .file_utils import enumerate_lines_from_file, open_file_based_on_extension
 from .filter_common import read_taxonomy_source_ids
 from .filter_eol import filter_eol_ids
 from .filter_pageviews import filter_pageviews
-from .filter_wikidata import filter_wikidata
+from .filter_wikidata import extract_wikidata_titles, filter_wikidata
 from .filter_wikipedia_sql import filter_wikipedia_sql
 
 __author__ = "David Ebbo"
@@ -106,7 +106,7 @@ def generate_all_filtered_files(
 
     if wikidata_dump_file:
         wikidata_output = _compute_output_path(wikidata_dump_file, prefix, context.compress)
-        wikidata_titles = filter_wikidata(
+        filter_wikidata(
             wikidata_dump_file,
             wikidata_output,
             source_ids=source_ids if context.clade else None,
@@ -114,6 +114,7 @@ def generate_all_filtered_files(
             wikilang=context.wikilang,
             dont_trim_sitelinks=context.dont_trim_sitelinks,
         )
+        wikidata_titles = extract_wikidata_titles(wikidata_output)
     else:
         wikidata_titles = set()
 

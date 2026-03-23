@@ -96,11 +96,19 @@ stages:
       filter_wikidata
       data/Wiki/wd_JSON/latest-all.json.bz2
       -o data/filtered/OneZoom_latest-all.json
-      --titles-output data/filtered/wikidata_titles.txt
     deps:
       - data/Wiki/wd_JSON/latest-all.json.bz2
     outs:
       - data/filtered/OneZoom_latest-all.json
+
+  extract_wikidata_titles:
+    cmd: >-
+      extract_wikidata_titles
+      data/filtered/OneZoom_latest-all.json
+      -o data/filtered/wikidata_titles.txt
+    deps:
+      - data/filtered/OneZoom_latest-all.json
+    outs:
       - data/filtered/wikidata_titles.txt
 
   filter_sql:

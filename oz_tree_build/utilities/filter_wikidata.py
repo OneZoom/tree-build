@@ -72,9 +72,6 @@ def filter_wikidata(
     """
     Filter the wikidata JSON dump, keeping only taxon and vernacular items,
     and trimming each item to only the fields we consume.
-
-    Returns the set of Wikipedia page titles found in the filtered output
-    (the ``wikidata_ids`` set used by downstream SQL and pageview filters).
     """
     sitelinks_key = f"{wikilang}wiki"
 
@@ -157,10 +154,6 @@ def filter_wikidata(
 
         filtered_wiki_f.write("]\n")
 
-    # Re-read the filtered output to extract the set of Wikipedia page titles
-    wikidata_titles = extract_wikidata_titles(output_file)
-    return wikidata_titles
-
 
 def extract_wikidata_titles(filtered_wikidata_file):
     """
@@ -195,11 +188,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("wikidata_file", help="The wikidata JSON dump file (bz2 or plain)")
     parser.add_argument("-o", "--output", required=True, help="Output path for filtered wikidata JSON")
-    parser.add_argument(
-        "--titles-output",
-        required=True,
-        help="Output path for wikidata_titles.txt sidecar (one Wikipedia title per line)",
-    )
     parser.add_argument("--wikilang", default="en", help="Wikipedia language code")
     parser.add_argument(
         "--dont-trim-sitelinks",
@@ -209,14 +197,26 @@ def main():
     )
     args = parser.parse_args()
 
-    titles = filter_wikidata(
+    filter_wikidata(
         args.wikidata_file,
         args.output,
         wikilang=args.wikilang,
         dont_trim_sitelinks=args.dont_trim_sitelinks,
     )
-    write_titles_file(titles, args.titles_output)
-    logging.info(f"Wrote {len(titles)} titles to {args.titles_output}")
+
+
+def extract_titles_main():
+    """Extract Wikipedia page titles from a filtered wikidata JSON file."""
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+
+    parser = argparse.ArgumentParser(description=extract_titles_main.__doc__)
+    parser.add_argument("filtered_wikidata_file", help="The filtered wikidata JSON file")
+    parser.add_argument("-o", "--output", required=True, help="Output path for wikidata_titles.txt")
+    args = parser.parse_args()
+
+    titles = extract_wikidata_titles(args.filtered_wikidata_file)
+    write_titles_file(titles, args.output)
+    logging.info(f"Wrote {len(titles)} titles to {args.output}")
 
 
 if __name__ == "__main__":

@@ -164,7 +164,3 @@ cython_debug/
 
 # sqlite
 storage.sqlite
-
-# DVC pipeline outputs (tracked by DVC, not git)
-/data/filtered/
-/data/js_output/

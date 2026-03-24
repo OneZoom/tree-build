@@ -1,0 +1,28 @@
+schema: '2.0'
+stages:
+  filter_wikidata:
+    cmd: filter_wikidata data/Wiki/wd_JSON/latest-all.json.bz2 -o 
+      data/filtered/OneZoom_latest-all.json
+    deps:
+    - path: data/Wiki/wd_JSON/latest-all.json.bz2
+      hash: md5
+      md5: 9d2253e0b9e629c8f77eadd8f09c1d88
+      size: 100346119273
+    outs:
+    - path: data/filtered/OneZoom_latest-all.json
+      hash: md5
+      md5: 65b22a5c761c78d79b30faf871d1e404
+      size: 1542990225
+  extract_wikidata_titles:
+    cmd: extract_wikidata_titles data/filtered/OneZoom_latest-all.json -o 
+      data/filtered/wikidata_titles.txt
+    deps:
+    - path: data/filtered/OneZoom_latest-all.json
+      hash: md5
+      md5: 65b22a5c761c78d79b30faf871d1e404
+      size: 1542990225
+    outs:
+    - path: data/filtered/wikidata_titles.txt
+      hash: md5
+      md5: e498b85311c8a84a0d5157a0bbbcb23f
+      size: 9382189

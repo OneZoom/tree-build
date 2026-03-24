@@ -165,7 +165,9 @@ def extract_wikidata_titles(filtered_wikidata_file):
         if not line.startswith('{"type":'):
             continue
         json_item = json.loads(line.rstrip().rstrip(","))
-        titles.add(get_wikipedia_name(json_item))
+        title = get_wikipedia_name(json_item)
+        if title is not None:
+            titles.add(title)
     return titles
 
 

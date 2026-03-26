@@ -41,7 +41,7 @@ you will need a valid Azure Image cropping key in your appconfig.ini.
 
 ## Building the latest tree from OpenTree
 
-This project uses [DVC](https://dvc.org/) for a cached, repeatable data pipeline. The build parameters (OpenTree version, taxonomy version, etc.) are defined in `params.yaml` and the pipeline stages are declared in `dvc.yaml`.
+This project uses [DVC](https://dvc.org/) for a cached, repeatable data pipeline. The build parameters are defined in `params.yaml` and the pipeline stages are declared in `dvc.yaml`.
 
 ### Quick start (using cached outputs)
 
@@ -56,17 +56,11 @@ DVC will pull only the cached outputs needed for stages that haven't changed. If
 
 ### Full build (first time / updating source data)
 
-1. Update `params.yaml` with the desired OpenTree version numbers. You can check the latest version via the [API](https://github.com/OpenTreeOfLife/germinator/wiki/Open-Tree-of-Life-Web-APIs):
+1. Set `ot_version` in `params.yaml` to the desired OpenTree synthesis version (e.g. `"v16.1"`). Available versions can be found in the [synthesis manifest](https://raw.githubusercontent.com/OpenTreeOfLife/opentree/master/webapp/static/statistics/synthesis.json). The OpenTree tree and taxonomy will be downloaded automatically by the `download_opentree` pipeline stage.
+
+2. Download the other required source files into `data/` as [documented here](data/README.markdown), then register them with DVC:
 
     ```bash
-    curl -s -X POST https://api.opentreeoflife.org/v3/tree_of_life/about | grep -E '"synth_id"|"taxonomy_version"'
-    ```
-
-2. Download the required source files into `data/` as [documented here](data/README.markdown), then register them with DVC:
-
-    ```bash
-    dvc add data/OpenTree/labelled_supertree_simplified_ottnames.tre
-    dvc add data/OpenTree/ott3.7.tgz
     dvc add data/Wiki/wd_JSON/latest-all.json.bz2
     dvc add data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
     dvc add data/Wiki/wp_pagecounts/
@@ -86,7 +80,7 @@ DVC will pull only the cached outputs needed for stages that haven't changed. If
 
 The pipeline is defined in `dvc.yaml`. Use `dvc dag` to visualize the DAG. Key stages include:
 
-- **preprocess_opentree**, **unpack_taxonomy** -- prepare OpenTree data
+- **download_opentree** -- download OpenTree synthesis tree and taxonomy
 - **add_ott_numbers**, **prepare_open_trees**, **build_tree** -- assemble the full newick tree
 - **filter_eol**, **filter_wikidata**, **filter_sql**, **filter_pageviews** -- filter massive source files (parallelizable)
 - **create_tables** -- map taxa, calculate popularity, produce DB-ready CSVs

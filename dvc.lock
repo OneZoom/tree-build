@@ -58,3 +58,68 @@ stages:
       hash: md5
       md5: ac10389b87372eff1d276802dbb345a5
       size: 21411110
+  download_opentree:
+    cmd: download_opentree --version v16.1 --output-dir data/OpenTree
+    params:
+      params.yaml:
+        ot_version: v16.1
+    outs:
+    - path: data/OpenTree/v16.1/
+      hash: md5
+      md5: 87ff995e9d5028efc185857f34448746.dir
+      size: 587064765
+      nfiles: 3
+  add_ott_numbers:
+    cmd: rm -rf data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 && mkdir 
+      -p data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 && 
+      add_ott_numbers_to_trees --savein 
+      data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 
+      data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
+    deps:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/
+      hash: md5
+      md5: 8cb57266b725e9893505618bf366af54.dir
+      size: 1231351
+      nfiles: 56
+    params:
+      params.yaml:
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
+      hash: md5
+      md5: 694f92ea523d0628824b4cf4ed7ef19e.dir
+      size: 1806192
+      nfiles: 56
+  prepare_open_trees:
+    cmd: mkdir -p data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all && cp -n 
+      data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/*.nwk 
+      data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/ 2>/dev/null || true 
+      && cd data/OZTreeBuild/AllLife && get_open_trees_from_one_zoom 
+      ../../OpenTree/v16.1/draftversion.tre OpenTreeParts/OpenTree_all/ 
+      BespokeTree/include_OT_v16.1/*.PHY
+    deps:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
+      hash: md5
+      md5: 694f92ea523d0628824b4cf4ed7ef19e.dir
+      size: 1806192
+      nfiles: 56
+    - path: data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/
+      hash: md5
+      md5: 81be05fde561126fb58b7bb7e8a0fbcd.dir
+      size: 808
+      nfiles: 3
+    - path: data/OpenTree/v16.1/draftversion.tre
+      hash: md5
+      md5: f59f21497ceb1b33273a192a63308386
+      size: 83619970
+    params:
+      params.yaml:
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
+      hash: md5
+      md5: 3f8df65320201c2db0ee35b17916c7cb.dir
+      size: 81928129
+      nfiles: 229

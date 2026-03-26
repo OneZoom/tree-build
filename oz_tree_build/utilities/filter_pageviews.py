@@ -17,17 +17,17 @@ def unquote_if_quoted(s):
     return s
 
 
-def filter_pageviews(pageviews_file, output_file, wikidata_titles, wikilang="en"):
+def filter_pageview_lines(lines, wikidata_titles, wikilang="en"):
     """
-    Filter a single pageview file, keeping only entries whose title appears
-    in the wikidata_titles set. Aggregates views per title and writes output
-    in the simplified format (``Title viewcount``).
+    Filter an iterable of pageview lines, keeping only entries whose title
+    appears in the wikidata_titles set. Returns a dict mapping title to
+    aggregated view count.
     """
     match_project = wikilang + ".wikipedia "
     pageviews = defaultdict(int)
     simplified_line_format = False
 
-    for i, line in enumerate_lines_from_file(pageviews_file):
+    for i, line in enumerate(lines):
         if i == 0:
             simplified_line_format = line.count(" ") == 1
 
@@ -48,9 +48,25 @@ def filter_pageviews(pageviews_file, output_file, wikidata_titles, wikilang="en"
         if title in wikidata_titles:
             pageviews[title] += int(views)
 
+    return pageviews
+
+
+def write_filtered_pageviews(pageviews, output_file):
+    """Write aggregated pageview counts to file in ``Title viewcount`` format."""
     with open_file_based_on_extension(output_file, "wt") as filtered_f:
         for title, views in pageviews.items():
             filtered_f.write(title + " " + str(views) + "\n")
+
+
+def filter_pageviews(pageviews_file, output_file, wikidata_titles, wikilang="en"):
+    """
+    Filter a single pageview file, keeping only entries whose title appears
+    in the wikidata_titles set. Aggregates views per title and writes output
+    in the simplified format (``Title viewcount``).
+    """
+    lines = (line for _, line in enumerate_lines_from_file(pageviews_file))
+    pageviews = filter_pageview_lines(lines, wikidata_titles, wikilang)
+    write_filtered_pageviews(pageviews, output_file)
 
 
 def main():

@@ -26,3 +26,35 @@ stages:
       hash: md5
       md5: e498b85311c8a84a0d5157a0bbbcb23f
       size: 9382189
+  download_and_filter_pageviews:
+    cmd: download_and_filter_pageviews --titles-file 
+      data/filtered/wikidata_titles.txt --months 12 -o data/filtered/pageviews
+    deps:
+    - path: data/filtered/wikidata_titles.txt
+      hash: md5
+      md5: e498b85311c8a84a0d5157a0bbbcb23f
+      size: 9382189
+    outs:
+    - path: data/filtered/pageviews/
+      hash: md5
+      md5: f021afa12f9d7c893412a0b2980ab187.dir
+      size: 104535557
+      nfiles: 13
+  filter_sql:
+    cmd: filter_wikipedia_sql data/Wiki/wp_SQL/enwiki-latest-page.sql.gz 
+      data/filtered/wikidata_titles.txt -o 
+      data/filtered/OneZoom_enwiki-latest-page.sql
+    deps:
+    - path: data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      hash: md5
+      md5: 85108d569d644c3d34d8b930597e42dc
+      size: 2384405614
+    - path: data/filtered/wikidata_titles.txt
+      hash: md5
+      md5: e498b85311c8a84a0d5157a0bbbcb23f
+      size: 9382189
+    outs:
+    - path: data/filtered/OneZoom_enwiki-latest-page.sql
+      hash: md5
+      md5: ac10389b87372eff1d276802dbb345a5
+      size: 21411110

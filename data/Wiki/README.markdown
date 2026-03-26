@@ -1,4 +1,4 @@
-To allow mappings to wikipedia and popularity calculations, the following three files
+To allow mappings to wikipedia and popularity calculations, the following files
 should be uploaded to their respective directories (NB: these could be symlinks to
 versions on external storage)
 
@@ -6,9 +6,13 @@ versions on external storage)
 (download from <http://dumps.wikimedia.org/wikidatawiki/entities/>)
 * The `wp_SQL` directory should contain the en.wikipedia SQL dump file, as `enwiki-latest-page.sql.gz`
 (download from <http://dumps.wikimedia.org/enwiki/latest/>)
-* The `wp_pagecounts` directory should contain the wikipedia pagevisits dump files:
-multiple files such as `wp_pagecounts/pageviews-202403-user.bz2` etc...
-(download from <https://dumps.wikimedia.org/other/pageview_complete/monthly/>).
+
+Wikipedia pageview files are downloaded and filtered automatically by the
+`download_and_filter_pageviews` pipeline stage. It streams monthly `-user` dumps
+from <https://dumps.wikimedia.org/other/pageview_complete/monthly/>, filters them
+against the wikidata titles, and caches the small filtered outputs. Only the most
+recent N months (configured via `--months` in the DVC stage) are processed. To
+pick up newly published months, run `dvc repro --force download_and_filter_pageviews`.
 
 These files are used as inputs to the DVC pipeline's filtering stages. If someone
 has already run the pipeline and pushed results to the DVC remote, you do not need

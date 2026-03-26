@@ -123,17 +123,17 @@ stages:
     outs:
       - data/filtered/OneZoom_enwiki-latest-page.sql
 
-  filter_pageviews:
+  download_and_filter_pageviews:
     cmd: >-
-      filter_pageviews
-      data/Wiki/wp_pagecounts/pageviews*.bz2
+      download_and_filter_pageviews
       --titles-file data/filtered/wikidata_titles.txt
+      --months 12
       -o data/filtered/pageviews
     deps:
-      - data/Wiki/wp_pagecounts/
       - data/filtered/wikidata_titles.txt
     outs:
-      - data/filtered/pageviews/
+      - data/filtered/pageviews/:
+          persist: true
 
   create_tables:
     cmd: >-

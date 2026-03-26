@@ -123,3 +123,123 @@ stages:
       md5: 3f8df65320201c2db0ee35b17916c7cb.dir
       size: 81928129
       nfiles: 229
+  download_eol:
+    cmd: curl -L -o data/EOL/provider_ids.csv.gz 
+      https://eol.org/data/provider_ids.csv.gz
+    outs:
+    - path: data/EOL/provider_ids.csv.gz
+      hash: md5
+      md5: 03c0e857a35695b6b6a5467014bd38d8
+      size: 314398683
+  filter_eol:
+    cmd: filter_eol data/EOL/provider_ids.csv.gz 
+      data/OpenTree/v16.1/taxonomy.tsv -o data/filtered/OneZoom_provider_ids.csv
+    deps:
+    - path: data/EOL/provider_ids.csv.gz
+      hash: md5
+      md5: 03c0e857a35695b6b6a5467014bd38d8
+      size: 314398683
+    - path: data/OpenTree/v16.1/taxonomy.tsv
+      hash: md5
+      md5: d7a58eaaf132522b89a506e96ca5098f
+      size: 417054016
+    params:
+      params.yaml:
+        ot_version: v16.1
+    outs:
+    - path: data/filtered/OneZoom_provider_ids.csv
+      hash: md5
+      md5: f7c9bb8374957c07168bec36d6591347
+      size: 221682224
+  build_tree:
+    cmd: cd data/OZTreeBuild/AllLife && build_oz_tree 
+      BespokeTree/include_OT_v16.1/Base.PHY OpenTreeParts/OpenTree_all/ 
+      AllLife_full_tree.phy
+    deps:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
+      hash: md5
+      md5: 694f92ea523d0628824b4cf4ed7ef19e.dir
+      size: 1806192
+      nfiles: 56
+    - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
+      hash: md5
+      md5: 3f8df65320201c2db0ee35b17916c7cb.dir
+      size: 81928129
+      nfiles: 229
+    params:
+      params.yaml:
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/OZTreeBuild/AllLife/AllLife_full_tree.phy
+      hash: md5
+      md5: 0b17680b0a0a633f8ae50e4a8f68f17a
+      size: 83061022
+  create_tables:
+    cmd: mkdir -p data/output_files && CSV_base_table_creator 
+      data/OZTreeBuild/AllLife/AllLife_full_tree.phy 
+      data/OpenTree/v16.1/taxonomy.tsv data/filtered/OneZoom_provider_ids.csv 
+      data/filtered/OneZoom_latest-all.json 
+      data/filtered/OneZoom_enwiki-latest-page.sql 
+      data/filtered/pageviews/OneZoom_pageviews* -o data/output_files -v 
+      --version 28017344 --exclude Archosauria_ott335588 Dinosauria_ott90215 
+      --extra_source_file 
+      data/OZTreeBuild/AllLife/BespokeTree/SupplementaryTaxonomy.tsv 2> 
+      data/output_files/ordered_output.log
+    deps:
+    - path: data/OZTreeBuild/AllLife/AllLife_full_tree.phy
+      hash: md5
+      md5: 0b17680b0a0a633f8ae50e4a8f68f17a
+      size: 83061022
+    - path: data/OZTreeBuild/AllLife/BespokeTree/SupplementaryTaxonomy.tsv
+      hash: md5
+      md5: 8e861649388bf88595b93c0199f2cc3a
+      size: 312
+      isexec: true
+    - path: data/OpenTree/v16.1/taxonomy.tsv
+      hash: md5
+      md5: d7a58eaaf132522b89a506e96ca5098f
+      size: 417054016
+    - path: data/filtered/OneZoom_enwiki-latest-page.sql
+      hash: md5
+      md5: ac10389b87372eff1d276802dbb345a5
+      size: 21411110
+    - path: data/filtered/OneZoom_latest-all.json
+      hash: md5
+      md5: 65b22a5c761c78d79b30faf871d1e404
+      size: 1542990225
+    - path: data/filtered/OneZoom_provider_ids.csv
+      hash: md5
+      md5: f7c9bb8374957c07168bec36d6591347
+      size: 221682224
+    - path: data/filtered/pageviews/
+      hash: md5
+      md5: f021afa12f9d7c893412a0b2980ab187.dir
+      size: 104535557
+      nfiles: 13
+    params:
+      params.yaml:
+        build_version: 28017344
+        exclude_from_popularity: Archosauria_ott335588 Dinosauria_ott90215
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/output_files/
+      hash: md5
+      md5: babe7302afec6bc868d2889963796b74.dir
+      size: 1182737679
+      nfiles: 8
+  make_js:
+    cmd: mkdir -p data/js_output && make_js_treefiles --outdir data/js_output
+    deps:
+    - path: data/output_files/
+      hash: md5
+      md5: babe7302afec6bc868d2889963796b74.dir
+      size: 1182737679
+      nfiles: 8
+    outs:
+    - path: data/js_output/
+      hash: md5
+      md5: 77ff7fae56095a0cdcec84e70b895b28.dir
+      size: 8293094
+      nfiles: 6

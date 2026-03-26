@@ -60,6 +60,13 @@ stages:
     outs:
       - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
 
+  download_eol:
+    cmd: >-
+      curl -L -o data/EOL/provider_ids.csv.gz
+      https://eol.org/data/provider_ids.csv.gz
+    outs:
+      - data/EOL/provider_ids.csv.gz
+
   filter_eol:
     cmd: >-
       filter_eol
@@ -120,6 +127,7 @@ stages:
 
   create_tables:
     cmd: >-
+      mkdir -p data/output_files &&
       CSV_base_table_creator
       data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
       data/OpenTree/${ot_version}/taxonomy.tsv
@@ -150,6 +158,7 @@ stages:
 
   make_js:
     cmd: >-
+      mkdir -p data/js_output &&
       make_js_treefiles
       --outdir data/js_output
     deps:

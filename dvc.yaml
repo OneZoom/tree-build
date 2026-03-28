@@ -9,6 +9,7 @@ stages:
     outs:
       - data/OpenTree/${ot_version}/
 
+  # ~20 secs
   add_ott_numbers:
     cmd: >-
       rm -rf data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version} &&
@@ -24,6 +25,7 @@ stages:
     outs:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
 
+  # ~a few secs
   prepare_open_trees:
     cmd: >-
       mkdir -p data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all &&
@@ -81,6 +83,7 @@ stages:
     outs:
       - data/filtered/OneZoom_provider_ids.csv
 
+  # >6 hours (streams ~90 GB dump from wikidata server)
   download_and_filter_wikidata:
     cmd: >-
       download_and_filter_wikidata
@@ -98,6 +101,13 @@ stages:
     outs:
       - data/filtered/wikidata_titles.txt
 
+  download_wikipedia_sql:
+    cmd: >-
+      wget --progress=bar:force -O data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-page.sql.gz
+    outs:
+      - data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+
   filter_sql:
     cmd: >-
       filter_wikipedia_sql
@@ -110,6 +120,7 @@ stages:
     outs:
       - data/filtered/OneZoom_enwiki-latest-page.sql
 
+  # ~several hours (streams 12 ~5GB monthly dumps)
   download_and_filter_pageviews:
     cmd: >-
       download_and_filter_pageviews
@@ -122,6 +133,7 @@ stages:
       - data/filtered/pageviews/:
           persist: true
 
+  # ~10 mins
   create_tables:
     cmd: >-
       mkdir -p data/output_files &&

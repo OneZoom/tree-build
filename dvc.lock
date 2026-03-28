@@ -1,13 +1,7 @@
 schema: '2.0'
 stages:
-  filter_wikidata:
-    cmd: filter_wikidata data/Wiki/wd_JSON/latest-all.json.bz2 -o 
-      data/filtered/OneZoom_latest-all.json
-    deps:
-    - path: data/Wiki/wd_JSON/latest-all.json.bz2
-      hash: md5
-      md5: 9d2253e0b9e629c8f77eadd8f09c1d88
-      size: 100346119273
+  download_and_filter_wikidata:
+    cmd: download_and_filter_wikidata -o data/filtered/OneZoom_latest-all.json
     outs:
     - path: data/filtered/OneZoom_latest-all.json
       hash: md5
@@ -26,6 +20,14 @@ stages:
       hash: md5
       md5: e498b85311c8a84a0d5157a0bbbcb23f
       size: 9382189
+  download_wikipedia_sql:
+    cmd: wget --progress=bar:force -O data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-page.sql.gz
+    outs:
+    - path: data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      hash: md5
+      md5: 85108d569d644c3d34d8b930597e42dc
+      size: 2384405614
   download_and_filter_pageviews:
     cmd: download_and_filter_pageviews --titles-file 
       data/filtered/wikidata_titles.txt --months 12 -o data/filtered/pageviews

@@ -1,12 +1,10 @@
-To allow mappings to wikipedia and popularity calculations, the following file
-must be downloaded manually into its directory (NB: this could be a symlink to
-a version on external storage):
+To allow mappings to wikipedia and popularity calculations, the following
+files are downloaded and filtered automatically by pipeline stages:
 
-* The `wp_SQL` directory should contain the en.wikipedia SQL dump file, as `enwiki-latest-page.sql.gz`
-(download from <http://dumps.wikimedia.org/enwiki/latest/>)
-
-The Wikidata dump and Wikipedia pageview files are downloaded and filtered
-automatically by pipeline stages:
+* **`download_wikipedia_sql`** downloads the en.wikipedia SQL dump
+  (`enwiki-latest-page.sql.gz`, ~2 GB) from
+  <https://dumps.wikimedia.org/enwiki/latest/>. To re-download the latest
+  version, run `dvc repro --force download_wikipedia_sql`.
 
 * **`download_and_filter_wikidata`** streams the full Wikidata JSON dump
   (`latest-all.json.bz2`, ~90 GB) from

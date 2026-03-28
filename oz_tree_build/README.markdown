@@ -27,7 +27,7 @@ To run only up to a specific stage (e.g. just the JS generation):
 dvc repro make_js
 ```
 
-To visualize the pipeline DAG:
+To visualize the pipeline graph:
 
 ```bash
 dvc dag

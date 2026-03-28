@@ -21,6 +21,8 @@ If you want to run the test suite, make sure the test requirements are also inst
 
     pip install -e '.[test]'
 
+To be able to run the pipeline, you'll also need to install `wget`.
+
 ## Testing
 
 Assuming you have installed the test requirements, you should be able to run
@@ -58,17 +60,13 @@ DVC will pull only the cached outputs needed for stages that haven't changed. If
 
 1. Set `ot_version` in `params.yaml` to the desired OpenTree synthesis version (e.g. `"v16.1"`). Available versions can be found in the [synthesis manifest](https://raw.githubusercontent.com/OpenTreeOfLife/opentree/master/webapp/static/statistics/synthesis.json). The OpenTree tree and taxonomy will be downloaded automatically by the `download_opentree` pipeline stage.
 
-2. Download the Wikipedia SQL dump into `data/` as [documented here](data/README.markdown), then register it with DVC:
+2. Some source files are unversioned so will use cached results unless forced. To force re-download them all with the latest upstream data:
 
     ```bash
-    dvc add data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+    dvc repro --force download_eol download_wikipedia_sql download_and_filter_wikidata download_and_filter_pageviews
     ```
 
-    The other source files (OpenTree, EOL, Wikidata dump, pageviews) are downloaded automatically by pipeline stages. To force re-download all of them:
-
-    ```bash
-    dvc repro --force download_opentree download_eol download_and_filter_wikidata download_and_filter_pageviews
-    ```
+Note that download_and_filter_wikidata and download_and_filter_pageviews take several hours to run.
 
 3. Run the pipeline and push results to the shared cache:
 
@@ -77,16 +75,7 @@ DVC will pull only the cached outputs needed for stages that haven't changed. If
     dvc push
     ```
 
-4. Commit the `.dvc` files and `dvc.lock` to git.
+4. Commit `dvc.lock` to git.
 
-### Pipeline stages
-
-The pipeline is defined in `dvc.yaml`. Use `dvc dag` to visualize the DAG. Key stages include:
-
-- **download_opentree**, **download_eol** -- download OpenTree and EOL source files
-- **add_ott_numbers**, **prepare_open_trees**, **build_tree** -- assemble the full newick tree
-- **filter_eol**, **download_and_filter_wikidata**, **filter_sql**, **download_and_filter_pageviews** -- download/filter massive source files (parallelizable)
-- **create_tables** -- map taxa, calculate popularity, produce DB-ready CSVs
-- **make_js** -- generate JS viewer files
 
 For detailed step-by-step documentation, see [oz_tree_build/README.markdown](oz_tree_build/README.markdown).

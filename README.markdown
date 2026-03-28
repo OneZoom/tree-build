@@ -47,7 +47,8 @@ This project uses [DVC](https://dvc.org/) to manage the pipeline. The build para
 
 ### Quick start (using cached outputs)
 
-If someone has already run the pipeline and pushed the results to the DVC remote, you can reproduce the build without downloading any of the massive source files:
+You'll need to ask for the DVC remote credentials on the OneZoom Slack channel in order to pull cached results.
+Then, if someone has already run the pipeline and pushed the results to the DVC remote, you can reproduce the build and any of the intermediate stages without downloading any of the massive source files:
 
 ```bash
 source .venv/bin/activate
@@ -62,20 +63,19 @@ DVC will pull only the cached outputs needed for stages that haven't changed. If
 
 2. Some source files are unversioned so will use cached results unless forced. To force re-download them all with the latest upstream data:
 
-    ```bash
-    dvc repro --force download_eol download_wikipedia_sql download_and_filter_wikidata download_and_filter_pageviews
-    ```
+   ```bash
+   dvc repro --force download_eol download_wikipedia_sql download_and_filter_wikidata download_and_filter_pageviews
+   ```
 
 Note that download_and_filter_wikidata and download_and_filter_pageviews take several hours to run.
 
 3. Run the pipeline and push results to the shared cache:
 
-    ```bash
-    dvc repro
-    dvc push
-    ```
+   ```bash
+   dvc repro
+   dvc push
+   ```
 
 4. Commit `dvc.lock` to git.
-
 
 For detailed step-by-step documentation, see [oz_tree_build/README.markdown](oz_tree_build/README.markdown).

@@ -21,7 +21,7 @@ dependencies = [
     "cryptography>=42.0",
     "mwparserfromhell>=0.6.6",
     "requests-cache>=1.2.1",
-    "dvc>=3.0",
+    "dvc[s3]>=3.0",
 ]
 
 [project.optional-dependencies]

@@ -180,8 +180,11 @@ def main():
         f"Selected {len(selected)} most recent months"
     )
 
+    expected_filenames = set()
     for i, (url, filename) in enumerate(selected, 1):
-        output_file = os.path.join(args.output_dir, _output_filename(filename))
+        output_name = _output_filename(filename)
+        expected_filenames.add(output_name)
+        output_file = os.path.join(args.output_dir, output_name)
 
         if os.path.exists(output_file):
             logging.info(f"[{i}/{len(selected)}] Skipping {filename} (already filtered)")
@@ -190,6 +193,13 @@ def main():
         logging.info(f"[{i}/{len(selected)}] Streaming and filtering {filename}...")
         stream_and_filter(url, output_file, wikidata_titles, wikilang=args.wikilang)
         logging.info(f"[{i}/{len(selected)}] Done: {output_file}")
+
+    expected_filenames.add(TITLES_HASH_FILE)
+    for name in os.listdir(args.output_dir):
+        if name not in expected_filenames:
+            stale_path = os.path.join(args.output_dir, name)
+            logging.info(f"Removing old pageview file outside window: {name}")
+            os.remove(stale_path)
 
     logging.info("All pageview months up to date")
 

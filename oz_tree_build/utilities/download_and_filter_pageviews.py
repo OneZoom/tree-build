@@ -7,19 +7,16 @@ Already-filtered months are skipped unless the titles file has changed.
 """
 
 import argparse
-import bz2
-import codecs
 import hashlib
 import itertools
 import logging
 import os
 import re
-import shutil
-import subprocess
 import sys
 import tempfile
 import urllib.request
 
+from .file_utils import stream_bz2_lines_from_url
 from .filter_pageviews import filter_pageview_lines, write_filtered_pageviews
 from .filter_wikidata import load_titles_file
 
@@ -72,65 +69,6 @@ def discover_pageview_months(base_url=BASE_URL):
                 yield file_url, filename
 
 
-def _stream_bz2_lines(url):
-    """
-    Stream a .bz2 file over HTTP via wget and yield decompressed lines.
-    wget handles timeouts and connection management; Python handles decompression.
-    """
-    if not shutil.which("wget"):
-        raise RuntimeError("wget is required but not found on PATH")
-
-    wget = subprocess.Popen(
-        [
-            "wget", "-q", "-O", "-",
-            "--connect-timeout=30",
-            f"--read-timeout={WGET_READ_TIMEOUT}",
-            "--header=User-Agent: OneZoom-tree-build/1.0",
-            url,
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    decompressor = bz2.BZ2Decompressor()
-    decoder = codecs.getincrementaldecoder("utf-8")("replace")
-    line_buf = ""
-    bytes_read = 0
-
-    try:
-        while True:
-            chunk = wget.stdout.read(1024 * 1024)
-            if not chunk:
-                break
-            bytes_read += len(chunk)
-            if bytes_read % (500 * 1024 * 1024) < 1024 * 1024:
-                logging.info(f"  Downloaded {bytes_read / (1024**3):.1f} GB so far...")
-            try:
-                raw = decompressor.decompress(chunk)
-            except EOFError:
-                break
-            text = decoder.decode(raw)
-            line_buf += text
-            parts = line_buf.split("\n")
-            line_buf = parts[-1]
-            for line in parts[:-1]:
-                yield line
-
-        trailing = decoder.decode(b"", final=True)
-        line_buf += trailing
-        if line_buf:
-            yield line_buf
-    finally:
-        wget.stdout.close()
-        if wget.poll() is None:
-            wget.terminate()
-        rc = wget.wait()
-        stderr_out = wget.stderr.read().decode("utf-8", errors="replace").strip()
-        wget.stderr.close()
-        if rc != 0:
-            raise RuntimeError(f"wget failed (exit {rc}): {stderr_out}")
-
-
 def _compute_file_hash(path):
     """Return the SHA-256 hex digest of a file's contents."""
     h = hashlib.sha256()
@@ -178,7 +116,7 @@ def stream_and_filter(url, output_path, wikidata_titles, wikilang="en"):
     Stream a remote .bz2 pageview file, filter it, and write the result.
     Uses a temp file + rename for atomicity.
     """
-    lines = _stream_bz2_lines(url)
+    lines = stream_bz2_lines_from_url(url, read_timeout=WGET_READ_TIMEOUT)
     pageviews = filter_pageview_lines(lines, wikidata_titles, wikilang)
 
     dir_name = os.path.dirname(output_path)

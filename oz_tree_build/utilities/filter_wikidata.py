@@ -62,7 +62,7 @@ WIKIDATA_MASK = {
 
 
 def filter_wikidata(
-    wikidata_file,
+    lines,
     output_file,
     source_ids=None,
     clade=None,
@@ -72,6 +72,9 @@ def filter_wikidata(
     """
     Filter the wikidata JSON dump, keeping only taxon and vernacular items,
     and trimming each item to only the fields we consume.
+
+    *lines* should be an iterable of raw dump lines (e.g. from
+    ``stream_bz2_lines_from_url`` or ``enumerate_lines_from_file``).
     """
     sitelinks_key = f"{wikilang}wiki"
 
@@ -99,10 +102,12 @@ def filter_wikidata(
         filtered_wiki_f.write("[\n")
         preserved_lines = 0
 
-        def get_line_message(line_num):
-            return f"Kept {preserved_lines}/{line_num} lines ({preserved_lines / line_num * 100:.2f}%)"
+        for line_num, line in enumerate(lines):
+            if line_num > 0 and line_num % 100_000 == 0:
+                logging.info(
+                    f"Processed {line_num} lines, kept {preserved_lines}"
+                )
 
-        for _, line in enumerate_lines_from_file(wikidata_file, 100000, get_line_message):
             if not (line.startswith('{"type":') and quick_byte_match.search(line)):
                 continue
 
@@ -199,8 +204,9 @@ def main():
     )
     args = parser.parse_args()
 
+    lines = (line for _, line in enumerate_lines_from_file(args.wikidata_file))
     filter_wikidata(
-        args.wikidata_file,
+        lines,
         args.output,
         wikilang=args.wikilang,
         dont_trim_sitelinks=args.dont_trim_sitelinks,

@@ -106,8 +106,9 @@ def generate_all_filtered_files(
 
     if wikidata_dump_file:
         wikidata_output = _compute_output_path(wikidata_dump_file, prefix, context.compress)
+        lines = (line for _, line in enumerate_lines_from_file(wikidata_dump_file))
         filter_wikidata(
-            wikidata_dump_file,
+            lines,
             wikidata_output,
             source_ids=source_ids if context.clade else None,
             clade=context.clade,

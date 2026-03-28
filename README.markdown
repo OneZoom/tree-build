@@ -41,7 +41,7 @@ you will need a valid Azure Image cropping key in your appconfig.ini.
 
 ## Building the latest tree from OpenTree
 
-This project uses [DVC](https://dvc.org/) for a cached, repeatable data pipeline. The build parameters are defined in `params.yaml` and the pipeline stages are declared in `dvc.yaml`.
+This project uses [DVC](https://dvc.org/) to manage the pipeline. The build parameters are defined in `params.yaml` and the pipeline stages are declared in `dvc.yaml`.
 
 ### Quick start (using cached outputs)
 
@@ -58,13 +58,16 @@ DVC will pull only the cached outputs needed for stages that haven't changed. If
 
 1. Set `ot_version` in `params.yaml` to the desired OpenTree synthesis version (e.g. `"v16.1"`). Available versions can be found in the [synthesis manifest](https://raw.githubusercontent.com/OpenTreeOfLife/opentree/master/webapp/static/statistics/synthesis.json). The OpenTree tree and taxonomy will be downloaded automatically by the `download_opentree` pipeline stage.
 
-2. Download the other required source files into `data/` as [documented here](data/README.markdown), then register them with DVC:
+2. Download the Wikipedia SQL dump into `data/` as [documented here](data/README.markdown), then register it with DVC:
 
     ```bash
-    dvc add data/Wiki/wd_JSON/latest-all.json.bz2
     dvc add data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
-    dvc add data/Wiki/wp_pagecounts/
-    dvc add data/EOL/provider_ids.csv.gz
+    ```
+
+    The other source files (OpenTree, EOL, Wikidata dump, pageviews) are downloaded automatically by pipeline stages. To force re-download all of them:
+
+    ```bash
+    dvc repro --force download_opentree download_eol download_and_filter_wikidata download_and_filter_pageviews
     ```
 
 3. Run the pipeline and push results to the shared cache:
@@ -80,9 +83,9 @@ DVC will pull only the cached outputs needed for stages that haven't changed. If
 
 The pipeline is defined in `dvc.yaml`. Use `dvc dag` to visualize the DAG. Key stages include:
 
-- **download_opentree** -- download OpenTree synthesis tree and taxonomy
+- **download_opentree**, **download_eol** -- download OpenTree and EOL source files
 - **add_ott_numbers**, **prepare_open_trees**, **build_tree** -- assemble the full newick tree
-- **filter_eol**, **filter_wikidata**, **filter_sql**, **filter_pageviews** -- filter massive source files (parallelizable)
+- **filter_eol**, **download_and_filter_wikidata**, **filter_sql**, **download_and_filter_pageviews** -- download/filter massive source files (parallelizable)
 - **create_tables** -- map taxa, calculate popularity, produce DB-ready CSVs
 - **make_js** -- generate JS viewer files
 

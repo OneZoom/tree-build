@@ -13,19 +13,18 @@ The first step to using this repo is to create a Python virtual environment and 
     source .venv/bin/activate
 
     # Install it
-    pip install -e .
+    pip install -e '.[dev]'
+
+    # Set up git hooks including linting and DVC
+    pre-commit install --hook-type pre-push --hook-type post-checkout --hook-type pre-commit
 
 After the first time, you just need to run the `source .venv/bin/activate` each time you want to activate it in a new shell.
-
-If you want to run the test suite, make sure the test requirements are also installed, with:
-
-    pip install -e '.[test]'
 
 To be able to run the pipeline, you'll also need to install `wget`.
 
 ## Testing
 
-Assuming you have installed the test requirements, you should be able to run
+Assuming you have installed the 'dev' dependencies, you should be able to run
 
     python -m pytest --conf-file tests/appconfig.ini
 

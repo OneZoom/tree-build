@@ -25,9 +25,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
+dev = [
     "pytest>=8.1",
     "ruff>=0.5.1",
+    "pre-commit>=4.5.1",
 ]
 
 [tool.pytest.ini_options]

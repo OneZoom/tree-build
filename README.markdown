@@ -13,17 +13,18 @@ The first step to using this repo is to create a Python virtual environment and 
     source .venv/bin/activate
 
     # Install it
-    pip install -e .
+    pip install -e '.[dev]'
+
+    # Set up git hooks including linting and DVC
+    pre-commit install --hook-type pre-push --hook-type post-checkout --hook-type pre-commit
 
 After the first time, you just need to run the `source .venv/bin/activate` each time you want to activate it in a new shell.
 
-If you want to run the test suite, make sure the test requirements are also installed, with:
-
-    pip install -e '.[test]'
+To be able to run the pipeline, you'll also need to install `wget`.
 
 ## Testing
 
-Assuming you have installed the test requirements, you should be able to run
+Assuming you have installed the 'dev' dependencies, you should be able to run
 
     python -m pytest --conf-file tests/appconfig.ini
 
@@ -41,22 +42,39 @@ you will need a valid Azure Image cropping key in your appconfig.ini.
 
 ## Building the latest tree from OpenTree
 
-### Setup
+This project uses [DVC](https://dvc.org/) to manage the pipeline. The build parameters are defined in `params.yaml` and the pipeline stages are declared in `dvc.yaml`.
 
-We assume that you want to build a OneZoom tree based on the most recent online OpenTree version.
-You can check the most recent version of both the synthetic tree (`synth_id`) and the taxonomy (`taxonomy_version`) via the
-[API](https://github.com/OpenTreeOfLife/germinator/wiki/Open-Tree-of-Life-Web-APIs) e.g. by running `curl -X POST https://api.opentreeoflife.org/v3/tree_of_life/about`. Later in the build, we use specific environment variables set to these version numbers. Assuming you are in a bash shell or similar, you can set them as follows:
+### Quick start (using cached outputs)
 
+You'll need to ask for the DVC remote credentials on the OneZoom Slack channel in order to pull cached results.
+Then, if someone has already run the pipeline and pushed the results to the DVC remote, you can reproduce the build and any of the intermediate stages without downloading any of the massive source files:
+
+```bash
+source .venv/bin/activate
+dvc repro --pull --allow-missing
 ```
-OT_VERSION=14.9 #or whatever your OpenTree version is
-OT_TAXONOMY_VERSION=3.6
-OT_TAXONOMY_EXTRA=draft1 #optional - the draft for this version, e.g. `draft1` if the taxonomy_version is 3.6draft1
-```
 
-### Download
+DVC will pull only the cached outputs needed for stages that haven't changed. If all stages are cached, nothing needs to be re-run.
 
-Constructing the full tree of life requires various files downloaded from the internet. They should be placed within the appropriate directories in the `data` directory, as [documented here](data/README.markdown).
+### Full build (first time / updating source data)
 
-### Building the tree
+1. Set `ot_version` in `params.yaml` to the desired OpenTree synthesis version (e.g. `"v16.1"`). Available versions can be found in the [synthesis manifest](https://raw.githubusercontent.com/OpenTreeOfLife/opentree/master/webapp/static/statistics/synthesis.json). The OpenTree tree and taxonomy will be downloaded automatically by the `download_opentree` pipeline stage.
 
-Once data files are downloaded, you should be set up to actually build the tree and other backend files, by following [these instructions](oz_tree_build/README.markdown).
+2. Some source files are unversioned so will use cached results unless forced. To force re-download them all with the latest upstream data:
+
+   ```bash
+   dvc repro --force download_eol discover_enwiki_sql_url download_wikipedia_sql discover_wikidata_url download_and_filter_wikidata download_and_filter_pageviews
+   ```
+
+Note that download_and_filter_wikidata and download_and_filter_pageviews take several hours to run.
+
+3. Run the pipeline and push results to the shared cache:
+
+   ```bash
+   dvc repro
+   dvc push
+   ```
+
+4. Commit `dvc.lock` to git.
+
+For detailed step-by-step documentation, see [oz_tree_build/README.markdown](oz_tree_build/README.markdown).

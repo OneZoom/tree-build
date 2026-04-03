@@ -1,0 +1,281 @@
+schema: '2.0'
+stages:
+  download_and_filter_wikidata:
+    cmd: download_and_filter_wikidata --url "$(cat 
+      data/Wiki/wd_JSON/latest-all-json-bz2-url.txt)" -o 
+      data/filtered/OneZoom_latest-all.json
+    deps:
+    - path: data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+      hash: md5
+      md5: e094b0f57c0c14e1016842c2dac5482e
+      size: 90
+    outs:
+    - path: data/filtered/OneZoom_latest-all.json
+      hash: md5
+      md5: 65b22a5c761c78d79b30faf871d1e404
+      size: 1542990225
+  extract_wikidata_titles:
+    cmd: extract_wikidata_titles data/filtered/OneZoom_latest-all.json -o 
+      data/filtered/wikidata_titles.txt
+    deps:
+    - path: data/filtered/OneZoom_latest-all.json
+      hash: md5
+      md5: 65b22a5c761c78d79b30faf871d1e404
+      size: 1542990225
+    outs:
+    - path: data/filtered/wikidata_titles.txt
+      hash: md5
+      md5: e498b85311c8a84a0d5157a0bbbcb23f
+      size: 9382189
+  download_wikipedia_sql:
+    cmd: wget --progress=bar:force -O data/Wiki/wp_SQL/enwiki-page.sql.gz "$(cat
+      data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt)"
+    deps:
+    - path: data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+      hash: md5
+      md5: 1018a5c664d01747fdd7e218190cb4ac
+      size: 72
+    outs:
+    - path: data/Wiki/wp_SQL/enwiki-page.sql.gz
+      hash: md5
+      md5: 541324eaa9f3f1a14bb6ddcf7ea95de6
+      size: 2397370114
+  download_and_filter_pageviews:
+    cmd: download_and_filter_pageviews --titles-file 
+      data/filtered/wikidata_titles.txt --months 12 -o data/filtered/pageviews
+    deps:
+    - path: data/filtered/wikidata_titles.txt
+      hash: md5
+      md5: e498b85311c8a84a0d5157a0bbbcb23f
+      size: 9382189
+    outs:
+    - path: data/filtered/pageviews/
+      hash: md5
+      md5: f021afa12f9d7c893412a0b2980ab187.dir
+      size: 104535557
+      nfiles: 13
+  filter_sql:
+    cmd: filter_wikipedia_sql data/Wiki/wp_SQL/enwiki-page.sql.gz 
+      data/filtered/wikidata_titles.txt -o 
+      data/filtered/OneZoom_enwiki-latest-page.sql
+    deps:
+    - path: data/Wiki/wp_SQL/enwiki-page.sql.gz
+      hash: md5
+      md5: 541324eaa9f3f1a14bb6ddcf7ea95de6
+      size: 2397370114
+    - path: data/filtered/wikidata_titles.txt
+      hash: md5
+      md5: e498b85311c8a84a0d5157a0bbbcb23f
+      size: 9382189
+    outs:
+    - path: data/filtered/OneZoom_enwiki-latest-page.sql
+      hash: md5
+      md5: af577077774060f78a752f22e2f1c6d3
+      size: 21445833
+  download_opentree:
+    cmd: download_opentree --version v16.1 --output-dir data/OpenTree
+    params:
+      params.yaml:
+        ot_version: v16.1
+    outs:
+    - path: data/OpenTree/v16.1/
+      hash: md5
+      md5: 87ff995e9d5028efc185857f34448746.dir
+      size: 587064765
+      nfiles: 3
+  add_ott_numbers:
+    cmd: rm -rf data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 && mkdir 
+      -p data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 && 
+      add_ott_numbers_to_trees --savein 
+      data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 
+      data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
+    deps:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/
+      hash: md5
+      md5: 8cb57266b725e9893505618bf366af54.dir
+      size: 1231351
+      nfiles: 56
+    params:
+      params.yaml:
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
+      hash: md5
+      md5: 694f92ea523d0628824b4cf4ed7ef19e.dir
+      size: 1806192
+      nfiles: 56
+  prepare_open_trees:
+    cmd: mkdir -p data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all && cp -n 
+      data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/*.nwk 
+      data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/ 2>/dev/null || true 
+      && cd data/OZTreeBuild/AllLife && get_open_trees_from_one_zoom 
+      ../../OpenTree/v16.1/draftversion.tre OpenTreeParts/OpenTree_all/ 
+      BespokeTree/include_OT_v16.1/*.PHY
+    deps:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
+      hash: md5
+      md5: 694f92ea523d0628824b4cf4ed7ef19e.dir
+      size: 1806192
+      nfiles: 56
+    - path: data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/
+      hash: md5
+      md5: 81be05fde561126fb58b7bb7e8a0fbcd.dir
+      size: 808
+      nfiles: 3
+    - path: data/OpenTree/v16.1/draftversion.tre
+      hash: md5
+      md5: f59f21497ceb1b33273a192a63308386
+      size: 83619970
+    params:
+      params.yaml:
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
+      hash: md5
+      md5: 3f8df65320201c2db0ee35b17916c7cb.dir
+      size: 81928129
+      nfiles: 229
+  download_eol:
+    cmd: "HEADER_FILE=$(mktemp) && curl -L -D \"$HEADER_FILE\" -o data/EOL/provider_ids.csv.gz
+      https://eol.org/data/provider_ids.csv.gz && grep -i last-modified \"$HEADER_FILE\"\
+      \ | tail -1 | sed 's/^[^:]*: //' > data/EOL/provider_ids_last_modified.txt &&
+      rm -f \"$HEADER_FILE\""
+    outs:
+    - path: data/EOL/provider_ids.csv.gz
+      hash: md5
+      md5: 03c0e857a35695b6b6a5467014bd38d8
+      size: 314398683
+    - path: data/EOL/provider_ids_last_modified.txt
+      hash: md5
+      md5: cb59f793fb021063b7c35e821ee8086a
+      size: 31
+  filter_eol:
+    cmd: filter_eol data/EOL/provider_ids.csv.gz 
+      data/OpenTree/v16.1/taxonomy.tsv -o data/filtered/OneZoom_provider_ids.csv
+    deps:
+    - path: data/EOL/provider_ids.csv.gz
+      hash: md5
+      md5: 03c0e857a35695b6b6a5467014bd38d8
+      size: 314398683
+    - path: data/OpenTree/v16.1/taxonomy.tsv
+      hash: md5
+      md5: d7a58eaaf132522b89a506e96ca5098f
+      size: 417054016
+    params:
+      params.yaml:
+        ot_version: v16.1
+    outs:
+    - path: data/filtered/OneZoom_provider_ids.csv
+      hash: md5
+      md5: f7c9bb8374957c07168bec36d6591347
+      size: 221682224
+  build_tree:
+    cmd: cd data/OZTreeBuild/AllLife && build_oz_tree 
+      BespokeTree/include_OT_v16.1/Base.PHY OpenTreeParts/OpenTree_all/ 
+      AllLife_full_tree.phy
+    deps:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
+      hash: md5
+      md5: 694f92ea523d0628824b4cf4ed7ef19e.dir
+      size: 1806192
+      nfiles: 56
+    - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
+      hash: md5
+      md5: 3f8df65320201c2db0ee35b17916c7cb.dir
+      size: 81928129
+      nfiles: 229
+    params:
+      params.yaml:
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/OZTreeBuild/AllLife/AllLife_full_tree.phy
+      hash: md5
+      md5: 0b17680b0a0a633f8ae50e4a8f68f17a
+      size: 83061022
+  create_tables:
+    cmd: mkdir -p data/output_files && CSV_base_table_creator 
+      data/OZTreeBuild/AllLife/AllLife_full_tree.phy 
+      data/OpenTree/v16.1/taxonomy.tsv data/filtered/OneZoom_provider_ids.csv 
+      data/filtered/OneZoom_latest-all.json 
+      data/filtered/OneZoom_enwiki-latest-page.sql 
+      data/filtered/pageviews/OneZoom_pageviews* -o data/output_files -v 
+      --version 28017344 --exclude Archosauria_ott335588 Dinosauria_ott90215 
+      --extra_source_file 
+      data/OZTreeBuild/AllLife/BespokeTree/SupplementaryTaxonomy.tsv 2> 
+      data/output_files/ordered_output.log
+    deps:
+    - path: data/OZTreeBuild/AllLife/AllLife_full_tree.phy
+      hash: md5
+      md5: 0b17680b0a0a633f8ae50e4a8f68f17a
+      size: 83061022
+    - path: data/OZTreeBuild/AllLife/BespokeTree/SupplementaryTaxonomy.tsv
+      hash: md5
+      md5: 8e861649388bf88595b93c0199f2cc3a
+      size: 312
+      isexec: true
+    - path: data/OpenTree/v16.1/taxonomy.tsv
+      hash: md5
+      md5: d7a58eaaf132522b89a506e96ca5098f
+      size: 417054016
+    - path: data/filtered/OneZoom_enwiki-latest-page.sql
+      hash: md5
+      md5: af577077774060f78a752f22e2f1c6d3
+      size: 21445833
+    - path: data/filtered/OneZoom_latest-all.json
+      hash: md5
+      md5: 65b22a5c761c78d79b30faf871d1e404
+      size: 1542990225
+    - path: data/filtered/OneZoom_provider_ids.csv
+      hash: md5
+      md5: f7c9bb8374957c07168bec36d6591347
+      size: 221682224
+    - path: data/filtered/pageviews/
+      hash: md5
+      md5: f021afa12f9d7c893412a0b2980ab187.dir
+      size: 104535557
+      nfiles: 13
+    params:
+      params.yaml:
+        build_version: 28017344
+        exclude_from_popularity: Archosauria_ott335588 Dinosauria_ott90215
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/output_files/
+      hash: md5
+      md5: a9e258bc6560d47e8d4af723eee707b6.dir
+      size: 1182677609
+      nfiles: 8
+  make_js:
+    cmd: mkdir -p data/js_output && make_js_treefiles --outdir data/js_output
+    deps:
+    - path: data/output_files/
+      hash: md5
+      md5: a9e258bc6560d47e8d4af723eee707b6.dir
+      size: 1182677609
+      nfiles: 8
+    outs:
+    - path: data/js_output/
+      hash: md5
+      md5: 35cc8189813c4523903d33c9acce3b69.dir
+      size: 8293094
+      nfiles: 6
+  discover_wikidata_url:
+    cmd: discover_latest_wikidata_dump_url > 
+      data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+    outs:
+    - path: data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+      hash: md5
+      md5: e094b0f57c0c14e1016842c2dac5482e
+      size: 90
+  discover_enwiki_sql_url:
+    cmd: discover_latest_enwiki_sql_url > 
+      data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+    outs:
+    - path: data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+      hash: md5
+      md5: 1018a5c664d01747fdd7e218190cb4ac
+      size: 72

@@ -21,12 +21,14 @@ dependencies = [
     "cryptography>=42.0",
     "mwparserfromhell>=0.6.6",
     "requests-cache>=1.2.1",
+    "dvc[s3]>=3.0",
 ]
 
 [project.optional-dependencies]
-test = [
+dev = [
     "pytest>=8.1",
     "ruff>=0.5.1",
+    "pre-commit>=4.5.1",
 ]
 
 [tool.pytest.ini_options]
@@ -39,6 +41,16 @@ add_ott_numbers_to_trees = "oz_tree_build.tree_build.ott_mapping.add_ott_numbers
 build_oz_tree = "oz_tree_build.tree_build.build_oz_tree:main"
 get_open_trees_from_one_zoom = "oz_tree_build.tree_build.get_open_trees_from_one_zoom:main"
 generate_filtered_files = "oz_tree_build.utilities.generate_filtered_files:main"
+filter_eol = "oz_tree_build.utilities.filter_eol:main"
+filter_wikidata = "oz_tree_build.utilities.filter_wikidata:main"
+extract_wikidata_titles = "oz_tree_build.utilities.filter_wikidata:extract_titles_main"
+filter_wikipedia_sql = "oz_tree_build.utilities.filter_wikipedia_sql:main"
+filter_pageviews = "oz_tree_build.utilities.filter_pageviews:main"
+download_and_filter_pageviews = "oz_tree_build.utilities.download_and_filter_pageviews:main"
+download_and_filter_wikidata = "oz_tree_build.utilities.download_and_filter_wikidata:main"
+discover_latest_wikidata_dump_url = "oz_tree_build.utilities.download_and_filter_wikidata:discover_main"
+discover_latest_enwiki_sql_url = "oz_tree_build.utilities.filter_wikipedia_sql:discover_main"
+download_opentree = "oz_tree_build.utilities.download_opentree:main"
 CSV_base_table_creator = "oz_tree_build.taxon_mapping_and_popularity.CSV_base_table_creator:main"
 get_wiki_images = "oz_tree_build.images_and_vernaculars.get_wiki_images:main"
 process_image_bits = "oz_tree_build.images_and_vernaculars.process_image_bits:main"

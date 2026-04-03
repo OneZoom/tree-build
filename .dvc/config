@@ -1,0 +1,5 @@
+[core]
+    remote = jared-r2
+['remote "jared-r2"']
+    url = s3://onezoom
+    endpointurl = https://9d168184d3ac384b6a159313dd90a75a.r2.cloudflarestorage.com

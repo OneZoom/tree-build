@@ -1,0 +1,198 @@
+vars:
+  - params.yaml
+
+stages:
+  download_opentree:
+    cmd: download_opentree --version ${ot_version} --output-dir data/OpenTree
+    params:
+      - ot_version
+    outs:
+      - data/OpenTree/${ot_version}/
+
+  # ~20 secs
+  add_ott_numbers:
+    cmd: >-
+      rm -rf data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version} &&
+      mkdir -p data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version} &&
+      add_ott_numbers_to_trees
+      --savein data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}
+      data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
+    deps:
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/
+    params:
+      - oz_tree
+      - ot_version
+    outs:
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
+
+  # ~a few secs
+  prepare_open_trees:
+    cmd: >-
+      mkdir -p data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all &&
+      cp -n data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/*.nwk
+      data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/ 2>/dev/null || true &&
+      cd data/OZTreeBuild/${oz_tree} &&
+      get_open_trees_from_one_zoom
+      ../../OpenTree/${ot_version}/draftversion.tre
+      OpenTreeParts/OpenTree_all/
+      BespokeTree/include_OT_${ot_version}/*.PHY
+    deps:
+      - data/OpenTree/${ot_version}/draftversion.tre
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
+      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
+    params:
+      - oz_tree
+      - ot_version
+    outs:
+      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
+
+  build_tree:
+    cmd: >-
+      cd data/OZTreeBuild/${oz_tree} &&
+      build_oz_tree
+      BespokeTree/include_OT_${ot_version}/Base.PHY
+      OpenTreeParts/OpenTree_all/
+      ${oz_tree}_full_tree.phy
+    deps:
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
+      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
+    params:
+      - oz_tree
+      - ot_version
+    outs:
+      - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
+
+  download_eol:
+    # EOL doesn't version the provider ids file, so capture the last-modified header instead
+    cmd: >-
+      HEADER_FILE=$(mktemp)
+      && curl -L -D "$HEADER_FILE" -o data/EOL/provider_ids.csv.gz
+      https://eol.org/data/provider_ids.csv.gz
+      && grep -i last-modified "$HEADER_FILE" | tail -1 | sed 's/^[^:]*: //' > data/EOL/provider_ids_last_modified.txt
+      && rm -f "$HEADER_FILE"
+    outs:
+      - data/EOL/provider_ids.csv.gz
+      - data/EOL/provider_ids_last_modified.txt
+
+  filter_eol:
+    cmd: >-
+      filter_eol
+      data/EOL/provider_ids.csv.gz
+      data/OpenTree/${ot_version}/taxonomy.tsv
+      -o data/filtered/OneZoom_provider_ids.csv
+    deps:
+      - data/EOL/provider_ids.csv.gz
+      - data/OpenTree/${ot_version}/taxonomy.tsv
+    params:
+      - ot_version
+    outs:
+      - data/filtered/OneZoom_provider_ids.csv
+
+  discover_wikidata_url:
+    cmd: >-
+      discover_latest_wikidata_dump_url > data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+    outs:
+      - data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+
+  # >6 hours (streams ~90 GB dump from wikidata server)
+  download_and_filter_wikidata:
+    cmd: >-
+      download_and_filter_wikidata
+      --url "$(cat data/Wiki/wd_JSON/latest-all-json-bz2-url.txt)"
+      -o data/filtered/OneZoom_latest-all.json
+    deps:
+      - data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+    outs:
+      - data/filtered/OneZoom_latest-all.json
+
+  extract_wikidata_titles:
+    cmd: >-
+      extract_wikidata_titles
+      data/filtered/OneZoom_latest-all.json
+      -o data/filtered/wikidata_titles.txt
+    deps:
+      - data/filtered/OneZoom_latest-all.json
+    outs:
+      - data/filtered/wikidata_titles.txt
+
+  discover_enwiki_sql_url:
+    cmd: >-
+      discover_latest_enwiki_sql_url > data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+    outs:
+      - data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+
+  download_wikipedia_sql:
+    cmd: >-
+      wget --progress=bar:force -O data/Wiki/wp_SQL/enwiki-page.sql.gz
+      "$(cat data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt)"
+    deps:
+      - data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+    outs:
+      - data/Wiki/wp_SQL/enwiki-page.sql.gz
+
+  filter_sql:
+    cmd: >-
+      filter_wikipedia_sql
+      data/Wiki/wp_SQL/enwiki-page.sql.gz
+      data/filtered/wikidata_titles.txt
+      -o data/filtered/OneZoom_enwiki-latest-page.sql
+    deps:
+      - data/Wiki/wp_SQL/enwiki-page.sql.gz
+      - data/filtered/wikidata_titles.txt
+    outs:
+      - data/filtered/OneZoom_enwiki-latest-page.sql
+
+  # ~several hours (streams 12 ~5GB monthly dumps)
+  download_and_filter_pageviews:
+    cmd: >-
+      download_and_filter_pageviews
+      --titles-file data/filtered/wikidata_titles.txt
+      --months 12
+      -o data/filtered/pageviews
+    deps:
+      - data/filtered/wikidata_titles.txt
+    outs:
+      - data/filtered/pageviews/:
+          persist: true
+
+  # ~10 mins
+  create_tables:
+    cmd: >-
+      mkdir -p data/output_files &&
+      CSV_base_table_creator
+      data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
+      data/OpenTree/${ot_version}/taxonomy.tsv
+      data/filtered/OneZoom_provider_ids.csv
+      data/filtered/OneZoom_latest-all.json
+      data/filtered/OneZoom_enwiki-latest-page.sql
+      data/filtered/pageviews/OneZoom_pageviews*
+      -o data/output_files -v
+      --version ${build_version}
+      --exclude ${exclude_from_popularity}
+      --extra_source_file data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
+      2> data/output_files/ordered_output.log
+    deps:
+      - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
+      - data/OpenTree/${ot_version}/taxonomy.tsv
+      - data/filtered/OneZoom_provider_ids.csv
+      - data/filtered/OneZoom_latest-all.json
+      - data/filtered/OneZoom_enwiki-latest-page.sql
+      - data/filtered/pageviews/
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
+    params:
+      - oz_tree
+      - ot_version
+      - build_version
+      - exclude_from_popularity
+    outs:
+      - data/output_files/
+
+  make_js:
+    cmd: >-
+      mkdir -p data/js_output &&
+      make_js_treefiles
+      --outdir data/js_output
+    deps:
+      - data/output_files/
+    outs:
+      - data/js_output/

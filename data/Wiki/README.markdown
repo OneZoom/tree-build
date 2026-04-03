@@ -1,20 +1,24 @@
-To allow mappings to wikipedia and popularity calculations, the following three files
-should be uploaded to their respective directories (NB: these could be symlinks to
-versions on external storage)
+To allow mappings to wikipedia and popularity calculations, the following
+files are downloaded and filtered automatically by pipeline stages:
 
-* The `wd_JSON` directory should contain the wikidata JSON dump, as `latest-all.json.bz2`
-(download from <http://dumps.wikimedia.org/wikidatawiki/entities/>)
-* The `wp_SQL` directory should contain the en.wikipedia SQL dump file, as `enwiki-latest-page.sql.gz`
-(download from <http://dumps.wikimedia.org/enwiki/latest/>)
-* The `wp_pagecounts` directory should contain the wikipedia pagevisits dump files:
-multiple files such as `wp_pagecounts/pageviews-202403-user.bz2` etc... 
-(download from <https://dumps.wikimedia.org/other/pageview_complete/monthly/>).
+- **`download_wikipedia_sql`** downloads the en.wikipedia SQL dump
+  (`enwiki-page.sql.gz`, ~2 GB) from
+  <https://dumps.wikimedia.org/enwiki/>. To re-download the latest
+  version, run `dvc repro --force discover_enwiki_sql_url download_wikipedia_sql`.
 
-For `wp_pagecounts`, as a much faster alternative, you can download preprocessed pageviews files from a [release](https://github.com/OneZoom/tree-build/releases).
+- **`download_and_filter_wikidata`** streams the full Wikidata JSON dump
+  (`latest-all.json.bz2`, ~90 GB) from
+  <https://dumps.wikimedia.org/wikidatawiki/entities/>, filters it on the fly,
+  and writes only the small filtered output. To re-download with a fresh dump,
+  run `dvc repro --force discover_wikidata_url download_and_filter_wikidata`.
 
-You can download the gz file and unpack it in one command. e.g. from `data/Wiki/wp_pagecounts`, run:
-```bash
-wget https://github.com/OneZoom/tree-build/releases/download/pageviews-202306-202403/OneZoom_pageviews-202306-202403.tar.gz -O - | tar -xz
-```
+- **`download_and_filter_pageviews`** streams monthly `-user` dumps from
+  <https://dumps.wikimedia.org/other/pageview_complete/monthly/>, filters them
+  against the wikidata titles, and caches the small filtered outputs. Only the
+  most recent N months (configured via `--months` in the DVC stage) are
+  processed. To pick up newly published months, run
+  `dvc repro --force download_and_filter_pageviews`.
 
-You will then omit passing pageviews files when you later run `generate_filtered_files` (see [build steps](../../oz_tree_build/README.markdown)).
+If someone has already run the pipeline and pushed results to the DVC remote,
+you do not need to download these files yourself --
+`dvc repro --pull --allow-missing` will pull the cached filtered outputs instead.

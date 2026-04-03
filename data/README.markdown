@@ -1,13 +1,11 @@
 # Downloading required data files
- 
-To build a tree, you will first need to download various files from the internet. These are not provided by OneZoom directly as they are (a) very large and (b) regularly updated. The files you will need are:
 
-* Open Tree of Life files, to be downloaded into the `OpenTree` directory (see [OpenTree/README.markdown](OpenTree/README.markdown)
-	* `labelled_supertree_simplified_ottnames.tre` (subsequently converted to `draftversionXXX.tre`, as detailed in the instructions)
-	* `ottX.Y/taxonomy.tsv` (where X.Y is the OT_TAXONOMY_VERSION)
-* Wikimedia files, to be downloaded into directories within the `Wiki` directory (see [Wiki/README.markdown](Wiki/README.markdown))
-	* `wd_JSON/latest-all.json.bz2`
-	* `wp_SQL/enwiki-latest-page.sql.gz`
-	* `wp_pagecounts/pageviews-YYYYMM-user.bz2` (several files for different months). Or download preprocessed files from a [release](https://github.com/OneZoom/tree-build/releases)
-* EoL files, to be downloaded into the `EOL` directory (see [EOL/README.markdown](EOL/README.markdown))
-	* `identifiers.csv`
+To build a tree, you will first need various data files from the internet. These are not provided by OneZoom directly as they are (a) very large and (b) regularly updated.
+
+All source files are downloaded automatically by DVC pipeline stages:
+
+- **Open Tree of Life** files, downloaded by the `download_opentree` stage into `OpenTree/<version>/` (see [OpenTree/README.markdown](OpenTree/README.markdown))
+- **EOL provider IDs**, downloaded by the `download_eol` stage into `EOL/provider_ids.csv.gz`
+- **Wikipedia SQL dump**, downloaded by the `download_wikipedia_sql` stage into `Wiki/wp_SQL/enwiki-page.sql.gz` (see [Wiki/README.markdown](Wiki/README.markdown))
+- **Wikidata JSON dump**, streamed and filtered by the `download_and_filter_wikidata` stage (see [Wiki/README.markdown](Wiki/README.markdown))
+- **Wikipedia pageviews**, streamed and filtered by the `download_and_filter_pageviews` stage (see [Wiki/README.markdown](Wiki/README.markdown))

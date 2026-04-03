@@ -1,7 +1,14 @@
 schema: '2.0'
 stages:
   download_and_filter_wikidata:
-    cmd: download_and_filter_wikidata -o data/filtered/OneZoom_latest-all.json
+    cmd: download_and_filter_wikidata --url "$(cat 
+      data/Wiki/wd_JSON/latest-all-json-bz2-url.txt)" -o 
+      data/filtered/OneZoom_latest-all.json
+    deps:
+    - path: data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+      hash: md5
+      md5: e094b0f57c0c14e1016842c2dac5482e
+      size: 90
     outs:
     - path: data/filtered/OneZoom_latest-all.json
       hash: md5
@@ -245,3 +252,11 @@ stages:
       md5: 77ff7fae56095a0cdcec84e70b895b28.dir
       size: 8293094
       nfiles: 6
+  discover_wikidata_url:
+    cmd: discover_latest_wikidata_dump_url > 
+      data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+    outs:
+    - path: data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+      hash: md5
+      md5: e094b0f57c0c14e1016842c2dac5482e
+      size: 90

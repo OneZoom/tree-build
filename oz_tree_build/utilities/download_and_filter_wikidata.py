@@ -7,17 +7,59 @@ dump locally.
 
 import argparse
 import logging
+import re
 import os
 import sys
 import tempfile
+import urllib.request
 
 from .file_utils import stream_bz2_lines_from_url
 from .filter_wikidata import filter_wikidata
 
-WIKIDATA_DUMP_URL = (
-    "https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2"
-)
+WIKIDATA_ENTITIES_URL = "https://dumps.wikimedia.org/wikidatawiki/entities/"
 WGET_READ_TIMEOUT = 600
+
+logger = logging.getLogger(__name__)
+
+
+def discover_latest_wikidata_dump_url(
+    base_url=WIKIDATA_ENTITIES_URL, timeout=30
+):
+    """Find the URL of the most recent dated wikidata-YYYYMMDD-all.json.bz2 dump.
+    We don't use the symlinked latest-all.json.bz2 file because we want to know the date."""
+    folder_re = re.compile(r'href="(\d{8})/"')
+    file_re_template = r'href="(wikidata-{date}-all\.json\.bz2)"'
+
+    index_html = urllib.request.urlopen(
+        base_url, timeout=timeout
+    ).read().decode()
+
+    dates = sorted(folder_re.findall(index_html), reverse=True)
+    if not dates:
+        raise RuntimeError(f"No dated folders found at {base_url}")
+
+    for date in dates:
+        folder_url = f"{base_url}{date}/"
+        logger.info("Checking %s", folder_url)
+        try:
+            folder_html = urllib.request.urlopen(
+                folder_url, timeout=timeout
+            ).read().decode()
+        except urllib.error.URLError as exc:
+            logger.warning("Could not fetch %s: %s", folder_url, exc)
+            continue
+
+        match = re.search(
+            file_re_template.format(date=date), folder_html
+        )
+        if match:
+            url = f"{folder_url}{match.group(1)}"
+            logger.info("Found latest dump: %s", url)
+            return url
+
+    raise RuntimeError(
+        f"No wikidata-YYYYMMDD-all.json.bz2 file found in any folder at {base_url}"
+    )
 
 
 def stream_and_filter(url, output_path, wikilang="en", dont_trim_sitelinks=False):
@@ -57,8 +99,7 @@ def main():
     parser.add_argument("--wikilang", default="en", help="Wikipedia language code")
     parser.add_argument(
         "--url",
-        default=WIKIDATA_DUMP_URL,
-        help="URL of the Wikidata JSON dump (.bz2)",
+        required=True,
     )
     parser.add_argument(
         "--dont-trim-sitelinks",
@@ -79,6 +120,12 @@ def main():
     )
     logging.info(f"Done: {args.output}")
 
+
+def discover_main():
+    """CLI entry point: discover the latest wikidata dump URL."""
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+    url = discover_latest_wikidata_dump_url()
+    print(url)
 
 if __name__ == "__main__":
     main()

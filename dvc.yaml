@@ -83,11 +83,20 @@ stages:
     outs:
       - data/filtered/OneZoom_provider_ids.csv
 
+  discover_wikidata_url:
+    cmd: >-
+      discover_latest_wikidata_dump_url > data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+    outs:
+      - data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+
   # >6 hours (streams ~90 GB dump from wikidata server)
   download_and_filter_wikidata:
     cmd: >-
       download_and_filter_wikidata
+      --url "$(cat data/Wiki/wd_JSON/latest-all-json-bz2-url.txt)"
       -o data/filtered/OneZoom_latest-all.json
+    deps:
+      - data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
     outs:
       - data/filtered/OneZoom_latest-all.json
 

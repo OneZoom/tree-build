@@ -22,8 +22,7 @@ import tempfile
 import requests
 
 SYNTHESIS_JSON_URL = (
-    "https://raw.githubusercontent.com/OpenTreeOfLife/opentree"
-    "/master/webapp/static/statistics/synthesis.json"
+    "https://raw.githubusercontent.com/OpenTreeOfLife/opentree" "/master/webapp/static/statistics/synthesis.json"
 )
 
 
@@ -39,10 +38,7 @@ def find_synthesis_entry(synthesis_json, version):
         if entry.get("version") == version:
             return entry
     available = [e["version"] for e in synthesis_json.values() if "version" in e]
-    raise SystemExit(
-        f"Version '{version}' not found in synthesis.json. "
-        f"Available versions: {', '.join(available)}"
-    )
+    raise SystemExit(f"Version '{version}' not found in synthesis.json. " f"Available versions: {', '.join(available)}")
 
 
 def strip_mrca_prefixes(content: str) -> str:
@@ -78,9 +74,7 @@ def download_tree(version, output_dir):
 def download_taxonomy(ott_version_raw, output_dir):
     """Download and extract taxonomy.tsv from the OTT taxonomy tarball."""
     ott_version = ott_version_raw.split("draft")[0]
-    taxonomy_url = (
-        f"https://files.opentreeoflife.org/ott/{ott_version}/{ott_version}.tgz"
-    )
+    taxonomy_url = f"https://files.opentreeoflife.org/ott/{ott_version}/{ott_version}.tgz"
     print(f"Downloading taxonomy from {taxonomy_url} ...")
     response = requests.get(taxonomy_url)
     response.raise_for_status()
@@ -98,9 +92,7 @@ def download_taxonomy(ott_version_raw, output_dir):
                     taxonomy_member = member
                     break
             if taxonomy_member is None:
-                raise SystemExit(
-                    "Could not find taxonomy.tsv in the taxonomy tarball"
-                )
+                raise SystemExit("Could not find taxonomy.tsv in the taxonomy tarball")
             extracted = tar.extractfile(taxonomy_member)
             dest_path = os.path.join(output_dir, "taxonomy.tsv")
             with open(dest_path, "wb") as f:
@@ -109,9 +101,7 @@ def download_taxonomy(ott_version_raw, output_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Download Open Tree of Life synthesis data into a versioned folder."
-    )
+    parser = argparse.ArgumentParser(description="Download Open Tree of Life synthesis data into a versioned folder.")
     parser.add_argument(
         "--version",
         required=True,

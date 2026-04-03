@@ -22,17 +22,13 @@ WGET_READ_TIMEOUT = 600
 logger = logging.getLogger(__name__)
 
 
-def discover_latest_wikidata_dump_url(
-    base_url=WIKIDATA_ENTITIES_URL, timeout=30
-):
+def discover_latest_wikidata_dump_url(base_url=WIKIDATA_ENTITIES_URL, timeout=30):
     """Find the URL of the most recent dated wikidata-YYYYMMDD-all.json.bz2 dump.
     We don't use the symlinked latest-all.json.bz2 file because we want to know the date."""
     folder_re = re.compile(r'href="(\d{8})/"')
     file_re_template = r'href="(wikidata-{date}-all\.json\.bz2)"'
 
-    index_html = urllib.request.urlopen(
-        base_url, timeout=timeout
-    ).read().decode()
+    index_html = urllib.request.urlopen(base_url, timeout=timeout).read().decode()
 
     dates = sorted(folder_re.findall(index_html), reverse=True)
     if not dates:
@@ -42,24 +38,18 @@ def discover_latest_wikidata_dump_url(
         folder_url = f"{base_url}{date}/"
         logger.info("Checking %s", folder_url)
         try:
-            folder_html = urllib.request.urlopen(
-                folder_url, timeout=timeout
-            ).read().decode()
+            folder_html = urllib.request.urlopen(folder_url, timeout=timeout).read().decode()
         except urllib.error.URLError as exc:
             logger.warning("Could not fetch %s: %s", folder_url, exc)
             continue
 
-        match = re.search(
-            file_re_template.format(date=date), folder_html
-        )
+        match = re.search(file_re_template.format(date=date), folder_html)
         if match:
             url = f"{folder_url}{match.group(1)}"
             logger.info("Found latest dump: %s", url)
             return url
 
-    raise RuntimeError(
-        f"No wikidata-YYYYMMDD-all.json.bz2 file found in any folder at {base_url}"
-    )
+    raise RuntimeError(f"No wikidata-YYYYMMDD-all.json.bz2 file found in any folder at {base_url}")
 
 
 def stream_and_filter(url, output_path, wikilang="en", dont_trim_sitelinks=False):
@@ -126,6 +116,7 @@ def discover_main():
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     url = discover_latest_wikidata_dump_url()
     print(url)
+
 
 if __name__ == "__main__":
     main()

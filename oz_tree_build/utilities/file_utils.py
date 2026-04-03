@@ -33,7 +33,11 @@ def stream_bz2_lines_from_url(url, read_timeout=120):
 
     wget = subprocess.Popen(
         [
-            "wget", "-q", "--show-progress", "-O", "-",
+            "wget",
+            "-q",
+            "--show-progress",
+            "-O",
+            "-",
             "--connect-timeout=30",
             f"--read-timeout={read_timeout}",
             "--header=User-Agent: OneZoom-tree-build/1.0",
@@ -60,8 +64,7 @@ def stream_bz2_lines_from_url(url, read_timeout=120):
             line_buf += text
             parts = line_buf.split("\n")
             line_buf = parts[-1]
-            for line in parts[:-1]:
-                yield line
+            yield from parts[:-1]
 
         trailing = decoder.decode(b"", final=True)
         line_buf += trailing
@@ -79,8 +82,7 @@ def stream_bz2_lines_from_url(url, read_timeout=120):
 def enumerate_lines_from_file(filename):
     """Enumerate the lines in a file, whether it's uncompressed, bz2 or gz."""
     with open_file_based_on_extension(filename, "rt") as f:
-        for line_num, line in enumerate(iter(f.readline, "")):
-            yield line_num, line
+        yield from enumerate(iter(f.readline, ""))
 
 
 def check_identical_files(output_location, expected_output_path):

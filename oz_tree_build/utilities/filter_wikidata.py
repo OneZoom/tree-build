@@ -28,9 +28,7 @@ WIKIDATA_MASK = {
         "P31": [
             {
                 "mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}},
-                "qualifiers": {
-                    "P642": [{"datavalue": {"value": {"numeric-id": KEEP}}}]
-                },
+                "qualifiers": {"P642": [{"datavalue": {"value": {"numeric-id": KEEP}}}]},
             }
         ],
         "P685": [{"mainsnak": {"datavalue": {"value": KEEP}}}],
@@ -82,9 +80,7 @@ def filter_wikidata(
         apply_mask_to_object_graph(json_item, WIKIDATA_MASK)
 
         if dont_trim_sitelinks:
-            json_item["sitelinks"] = {
-                k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")
-            }
+            json_item["sitelinks"] = {k: v for k, v in json_item["sitelinks"].items() if k.endswith("wiki")}
         else:
             json_item["sitelinks"] = {
                 k: v if k == sitelinks_key else {}
@@ -104,9 +100,7 @@ def filter_wikidata(
 
         for line_num, line in enumerate(lines):
             if line_num > 0 and line_num % 100_000 == 0:
-                logging.info(
-                    f"Processed {line_num} lines, kept {preserved_lines}"
-                )
+                logging.info(f"Processed {line_num} lines, kept {preserved_lines}")
 
             if not (line.startswith('{"type":') and quick_byte_match.search(line)):
                 continue
@@ -143,8 +137,7 @@ def filter_wikidata(
                 potential_extra_json_items.append(("vernacular", vernaculars_matches, json_item))
 
         logging.info(
-            "Writing extra lines at the end of the file "
-            f"(subset of {len(potential_extra_json_items)} lines)"
+            "Writing extra lines at the end of the file " f"(subset of {len(potential_extra_json_items)} lines)"
         )
 
         for desc, linked_qids, json_item in potential_extra_json_items:

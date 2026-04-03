@@ -46,9 +46,7 @@ def discover_pageview_months(base_url=BASE_URL):
     user_file_pattern = re.compile(r'href="(pageviews-\d{6}-user\.bz2)"')
 
     years_html = _fetch_index(base_url)
-    year_dirs = sorted(
-        (m.group(1) for m in year_pattern.finditer(years_html)), reverse=True
-    )
+    year_dirs = sorted((m.group(1) for m in year_pattern.finditer(years_html)), reverse=True)
 
     for year_dir in year_dirs:
         year_url = base_url + year_dir
@@ -172,13 +170,9 @@ def main():
     logging.info(f"Loaded {len(wikidata_titles)} wikidata titles")
 
     logging.info("Discovering available pageview months from Wikimedia...")
-    selected = list(itertools.islice(
-        discover_pageview_months(args.base_url), args.months
-    ))
+    selected = list(itertools.islice(discover_pageview_months(args.base_url), args.months))
     selected.reverse()
-    logging.info(
-        f"Selected {len(selected)} most recent months"
-    )
+    logging.info(f"Selected {len(selected)} most recent months")
 
     expected_filenames = set()
     for i, (url, filename) in enumerate(selected, 1):

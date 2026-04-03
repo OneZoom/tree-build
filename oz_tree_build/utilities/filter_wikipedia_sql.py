@@ -83,9 +83,7 @@ def main():
     filter_wikipedia_sql(args.sql_file, args.output, wikidata_titles)
 
 
-def discover_latest_enwiki_sql_url(
-    base_url=ENWIKI_DUMPS_URL, timeout=30
-):
+def discover_latest_enwiki_sql_url(base_url=ENWIKI_DUMPS_URL, timeout=30):
     """Find the URL of the most recent enwiki-YYYYMMDD-page.sql.gz dump.
 
     Fetches the directory listing at *base_url*, collects the dated
@@ -99,9 +97,7 @@ def discover_latest_enwiki_sql_url(
     folder_re = re.compile(r'href="(\d{8})/"')
     file_re_template = r'href="([^"]*enwiki-{date}-page\.sql\.gz)"'
 
-    index_html = urllib.request.urlopen(
-        base_url, timeout=timeout
-    ).read().decode()
+    index_html = urllib.request.urlopen(base_url, timeout=timeout).read().decode()
 
     dates = sorted(folder_re.findall(index_html), reverse=True)
     if not dates:
@@ -111,24 +107,18 @@ def discover_latest_enwiki_sql_url(
         folder_url = f"{base_url}{date}/"
         logger.info("Checking %s", folder_url)
         try:
-            folder_html = urllib.request.urlopen(
-                folder_url, timeout=timeout
-            ).read().decode()
+            folder_html = urllib.request.urlopen(folder_url, timeout=timeout).read().decode()
         except urllib.error.URLError as exc:
             logger.warning("Could not fetch %s: %s", folder_url, exc)
             continue
 
-        match = re.search(
-            file_re_template.format(date=date), folder_html
-        )
+        match = re.search(file_re_template.format(date=date), folder_html)
         if match:
             url = urllib.parse.urljoin(folder_url, match.group(1))
             logger.info("Found latest enwiki SQL dump: %s", url)
             return url
 
-    raise RuntimeError(
-        f"No enwiki-YYYYMMDD-page.sql.gz file found in any folder at {base_url}"
-    )
+    raise RuntimeError(f"No enwiki-YYYYMMDD-page.sql.gz file found in any folder at {base_url}")
 
 
 def discover_main():

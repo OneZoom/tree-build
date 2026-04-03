@@ -187,7 +187,7 @@ def main():
         nargs="?",
         help=(
             "The gzipped >1GB wikipedia -latest-page.sql.gz dump, "
-            "from https://dumps.wikimedia.org/enwiki/latest/ (enwiki-latest-page.sql.gz) "
+            "from https://dumps.wikimedia.org/enwiki/latest/ (enwiki-page.sql.gz) "
         ),
     )
     parser.add_argument(

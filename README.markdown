@@ -64,7 +64,7 @@ DVC will pull only the cached outputs needed for stages that haven't changed. If
 2. Some source files are unversioned so will use cached results unless forced. To force re-download them all with the latest upstream data:
 
    ```bash
-   dvc repro --force download_eol download_wikipedia_sql discover_wikidata_url download_and_filter_wikidata download_and_filter_pageviews
+   dvc repro --force download_eol discover_enwiki_sql_url download_wikipedia_sql discover_wikidata_url download_and_filter_wikidata download_and_filter_pageviews
    ```
 
 Note that download_and_filter_wikidata and download_and_filter_pageviews take several hours to run.

@@ -110,21 +110,29 @@ stages:
     outs:
       - data/filtered/wikidata_titles.txt
 
+  discover_enwiki_sql_url:
+    cmd: >-
+      discover_latest_enwiki_sql_url > data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+    outs:
+      - data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+
   download_wikipedia_sql:
     cmd: >-
-      wget --progress=bar:force -O data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
-      https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-page.sql.gz
+      wget --progress=bar:force -O data/Wiki/wp_SQL/enwiki-page.sql.gz
+      "$(cat data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt)"
+    deps:
+      - data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
     outs:
-      - data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      - data/Wiki/wp_SQL/enwiki-page.sql.gz
 
   filter_sql:
     cmd: >-
       filter_wikipedia_sql
-      data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      data/Wiki/wp_SQL/enwiki-page.sql.gz
       data/filtered/wikidata_titles.txt
       -o data/filtered/OneZoom_enwiki-latest-page.sql
     deps:
-      - data/Wiki/wp_SQL/enwiki-latest-page.sql.gz
+      - data/Wiki/wp_SQL/enwiki-page.sql.gz
       - data/filtered/wikidata_titles.txt
     outs:
       - data/filtered/OneZoom_enwiki-latest-page.sql

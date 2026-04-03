@@ -7,8 +7,8 @@ dump locally.
 
 import argparse
 import logging
-import re
 import os
+import re
 import sys
 import tempfile
 import urllib.request

@@ -20,6 +20,29 @@ jobs:
           python-version: "3.10"
       - uses: pre-commit/action@v3.0.0
 
+  dvc:
+    name: DVC
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install '.[dev]'
+      - name: Check DVC status
+        run: |
+          dvc remote modify --local jared-r2 access_key_id ${{ secrets.DVC_ACCESS_KEY_ID }}
+          dvc remote modify --local jared-r2 secret_access_key ${{ secrets.DVC_SECRET_ACCESS_KEY }}
+          dvc repro --allow-missing --dry | tee /dev/stderr | grep -q "Data and pipelines are up to date."
+          if dvc data status --not-in-remote | grep -q "Not in remote"; then exit 1; fi
   test:
     name: Python
     runs-on: ubuntu-latest

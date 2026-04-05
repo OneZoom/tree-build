@@ -38,7 +38,12 @@ class WikiCladeNode:
 
         # If the template is wrapped in a {{cladogram}} template, use the inner clade template
         if template.name.strip().casefold() == "cladogram".casefold():
-            param_name = "clades" if template.has_param("clades") else "cladogram"
+            if template.has_param("clades"):
+                param_name = "clades"
+            elif template.has_param("clade"):
+                param_name = "clade"
+            else:
+                param_name = "cladogram"
             template = template.get(param_name).value.filter_templates(recursive=False)[0]
 
         return WikiCladeNode(containing_page_title, None, None, template)

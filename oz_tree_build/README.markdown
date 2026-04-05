@@ -50,9 +50,7 @@ wget -cP data/Wiki/wd_JSON/ https://dumps.wikimedia.org/wikidatawiki/entities/la
 curl -L https://github.com/OneZoom/tree-build/releases/download/pageviews-202306-202403/OneZoom_pageviews-202306-202403.tar.gz | tar -zxC data/Wiki/wp_pagecounts/
 
 ## EoL
-# TODO: In theory fetchable from https://opendata.eol.org/dataset/identifier-map, but currently broken
-cp provider_ids.csv.gz data/EOL/
-
+wget -cP data/EOL/ https://eol.org/data/provider_ids.csv.gz
 ```
 
 Note that as documented in that readme,

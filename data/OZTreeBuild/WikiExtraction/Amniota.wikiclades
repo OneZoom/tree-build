@@ -6,9 +6,8 @@ Amniota FROM Amniota@2
     # Sauropsida
         Lanthanosuchoidea=>Acleistorhinidae FROM Lanthanosuchoidea@2 # They seem mostly the same?
         Millerettidae FROM Millerettidae@1
-        Mesosauridae->Mesosauria FROM Stereosternum@1
         Procolophonia FROM Procolophonia@1
-            Pareiasauria FROM Pareiasauria@1
+            Pareiasauria FROM Pareiasauria@3
             Procolophonidae FROM Procolophonidae@1
             Owenettidae FROM Owenettidae@1
         Younginiformes FROM Younginiformes@2
@@ -52,7 +51,7 @@ Amniota FROM Amniota@2
                         Crocodylomorpha FROM Crocodylomorpha@1
                             Crocodyliformes-Peirosauridae FROM Crocodyliformes@2 # We get Peirosauridae from Notosuchia, but they're completely diffrent. Need to resolve this!
                                 Notosuchia FROM Notosuchia@5
-                                Neosuchia FROM Neosuchia@2
+                                Neosuchia FROM Neosuchia(1312892883)@2
                     Avemetatarsalia FROM Avemetatarsalia@2
                         Aphanosauria FROM Aphanosauria@1
                         Lagerpetidae FROM Lagerpetidae@1

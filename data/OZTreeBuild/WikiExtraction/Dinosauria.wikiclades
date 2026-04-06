@@ -1,4 +1,4 @@
-Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkaraptorinae/Unenlagiinae from Dromaeosauridae, and Megaraptora from Tyrannosauroidea
+Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur(1293512790)@Taxonomy # We get Halszkaraptorinae/Unenlagiinae from Dromaeosauridae, and Megaraptora from Tyrannosauroidea
     Ornithischia-Heterodontosaurus_tucki-Rhabdodontidae FROM Ornithischia@4
         Heterodontosauridae->Ornithischia FROM Heterodontosauridae@1 # Basically replaces Heterodontosaurus_tucki that we removed
         Stegosauria FROM Stegosauria@1
@@ -19,17 +19,17 @@ Dinosauria-Unenlagiidae-Megaraptora FROM Dinosaur@Taxonomy # We get Halszkarapto
         #Sauropodomorpha
             Unaysauridae FROM Jaklapallisaurus@1
             Plateosauridae->Plateosauria FROM Jaklapallisaurus@1
-            Massopoda-Antetonitrus FROM Massopoda@1
+            Massopoda-Antetonitrus FROM Massopoda(1295932388)@1
                 Sauropoda FROM Sauropoda@1
                     Mamenchisauridae FROM Mamenchisauridae@1 # https://www.tandfonline.com/doi/full/10.1080/14772019.2023.2171818
-                    Rebbachisauridae FROM Rebbachisauridae@2
+                    Rebbachisauridae FROM Rebbachisauridae@1
                     Dicraeosauridae FROM Dicraeosauridae@1
                     Diplodocidae FROM Diplodocidae@1
                     Brachiosauridae=>Brachiosaurus FROM Brachiosauridae@2
                     Titanosauria FROM Titanosauria@8
                     Turiasauria->Sauropoda FROM Mierasaurus@1 # Unclear placement
                     Euhelopodidae-Phuwiangosaurus->Sauropoda FROM Euhelopodidae@2 # Unclear placement
-            Saturnaliinae->Sauropodomorpha FROM Sauropodomorpha@2
+            Saturnaliinae->Sauropodomorpha FROM Sauropodomorpha(1284819028)@2
         #Theropoda
             Coelophysoidea FROM Coelophysoidea@1
             Dilophosauridae->Neotheropoda FROM Dilophosaurus@1 # Exact placement unclear

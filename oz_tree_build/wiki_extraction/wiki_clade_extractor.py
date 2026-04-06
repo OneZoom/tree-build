@@ -62,8 +62,8 @@ def get_taxon_tree_from_wikicode(page_title, wikicode, taxon_tree_location) -> d
     return tree
 
 
-def get_taxon_tree_from_wiki_page(wiki_title, taxon_tree_location) -> dendropy.Tree:
-    wikicode = get_wikicode_for_page(wiki_title)
+def get_taxon_tree_from_wiki_page(wiki_title, taxon_tree_location, revision_id=None) -> dendropy.Tree:
+    wikicode = get_wikicode_for_page(wiki_title, revision_id)
     return get_taxon_tree_from_wikicode(wiki_title, wikicode, taxon_tree_location)
 
 

@@ -4,6 +4,7 @@ Helper functions for extracting data from Wikipedia using mwparserfromhell
 
 import logging
 import re
+import time
 
 import mwparserfromhell
 import requests_cache
@@ -13,31 +14,50 @@ session = requests_cache.CachedSession("http_cache")
 API_URL = "https://en.wikipedia.org/w/api.php"
 
 
-def get_id_and_text_from_wiki_page(page_title):
+def wiki_api_request(params):
+    headers = {"User-Agent": "My-Bot-Name/1.0"}
+    # Use this line to avoid caching when testing
+    # headers["Cache-Control"] = "no-cache"
+    max_retries = 30
+    for attempt in range(max_retries):
+        req = session.get(API_URL, headers=headers, params=params, allow_redirects=True)
+        if req.status_code != 429:
+            break
+        # Delete cached 429 response so the retry makes a fresh request
+        session.cache.delete(requests=[req.request])
+        delay = min(2 ** attempt, 60)
+        logging.warning(f"Wikipedia API returned 429, retrying in {delay}s...")
+        time.sleep(delay)
+    else:
+        raise Exception(f"Wikipedia API request still returning 429 after {max_retries} retries")
+
+    return req.json()
+
+
+def get_id_and_text_from_wiki_page(page_title, revision_id=None):
     # Doc: https://www.mediawiki.org/wiki/API:Revisions
     params = {
         "action": "query",
         "prop": "revisions",
         "rvprop": "content",
         "rvslots": "main",
-        "rvlimit": 1,
-        "titles": page_title,
         "format": "json",
         "formatversion": "2",
-        "redirects": "1",
     }
-    headers = {"User-Agent": "My-Bot-Name/1.0"}
-    # Use this line to avoid caching when testing
-    # headers["Cache-Control"] = "no-cache"
-    req = session.get(API_URL, headers=headers, params=params, allow_redirects=True)
-    res = req.json()
+    if revision_id:
+        params["revids"] = revision_id
+    else:
+        params["rvlimit"] = 1
+        params["titles"] = page_title
+        params["redirects"] = "1"
+    res = wiki_api_request(params)
     try:
         page = res["query"]["pages"][0]
         revision = page["revisions"][0]
         page_id = page["pageid"]
         return page_id, revision["slots"]["main"]["content"]
     except KeyError:
-        logging.warning(f"Could not find page '{page_title}'")
+        logging.warning(f"Could not find page '{page_title}' (revision={revision_id})")
         return None, None
 
 
@@ -52,9 +72,7 @@ def get_qid_from_wiki_page_props(page_title, redirect):
     }
     if redirect:
         params["redirects"] = "1"
-    headers = {"User-Agent": "My-Bot-Name/1.0"}
-    req = session.get(API_URL, headers=headers, params=params, allow_redirects=True)
-    res = req.json()
+    res = wiki_api_request(params)
     try:
         page = res["query"]["pages"][0]
         qid_string = page["pageprops"].get("wikibase_item")
@@ -68,8 +86,8 @@ def get_wikicode_for_string(wiki_string) -> mwparserfromhell.wikicode.Wikicode:
     return mwparserfromhell.parse(wiki_string, skip_style_tags=True)
 
 
-def get_wikicode_for_page(page_title) -> mwparserfromhell.wikicode.Wikicode:
-    page_id, wiki_string = get_id_and_text_from_wiki_page(page_title)
+def get_wikicode_for_page(page_title, revision_id=None) -> mwparserfromhell.wikicode.Wikicode:
+    page_id, wiki_string = get_id_and_text_from_wiki_page(page_title, revision_id)
     if not wiki_string:
         return None
 

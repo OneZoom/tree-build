@@ -7,6 +7,7 @@ The output tree is in Newick format.
 import argparse
 import logging
 import os
+import re
 
 import dendropy
 
@@ -80,6 +81,13 @@ def process_file(filename, extraction_cache_folder, node_to_source_map, main_tre
 
         page_name, location = source.split("@")
 
+        # Parse optional revision ID from page name, e.g. "Synapsid(12345)"
+        revision_id = None
+        revision_match = re.match(r"^(.+)\((\d+)\)$", page_name)
+        if revision_match:
+            page_name = revision_match.group(1)
+            revision_id = revision_match.group(2)
+
         logging.info(f"Processing wiki page '{source}'")
 
         child_tree = None
@@ -98,7 +106,7 @@ def process_file(filename, extraction_cache_folder, node_to_source_map, main_tre
 
         # If we didn't load the tree from the cache, extract it from the wiki page
         if not child_tree:
-            child_tree = get_taxon_tree_from_wiki_page(page_name, location)
+            child_tree = get_taxon_tree_from_wiki_page(page_name, location, revision_id)
 
             # Save the tree to the cache
             if extraction_cache_folder:
@@ -109,7 +117,7 @@ def process_file(filename, extraction_cache_folder, node_to_source_map, main_tre
         # Go through all the nodes and keep track of the wiki page and cladogram index/location
         for node in child_tree.nodes():
             if node.taxon:
-                node_to_source_map[node] = (page_name, location)
+                node_to_source_map[node] = (page_name, location, revision_id)
 
         replace_parent_node = True
         if "->" in taxon:
@@ -177,11 +185,16 @@ def main():
         nodes_in_tree = set(tree.nodes())
         for node, source in sorted(node_to_source_map.items(), key=lambda item: item[0].taxon.label):
             if node in nodes_in_tree:
-                args.source_mapping_file.write(f"- {node.taxon.label}: https://en.wikipedia.org/wiki/{source[0]}")
-                if source[1].isnumeric():
-                    args.source_mapping_file.write(f" @{source[1]}\n")
+                page_name, location, revision_id = source
+                if revision_id:
+                    url = f"https://en.wikipedia.org/w/index.php?title={page_name}&oldid={revision_id}"
                 else:
-                    args.source_mapping_file.write(f"#{source[1]}\n")
+                    url = f"https://en.wikipedia.org/wiki/{page_name}"
+                args.source_mapping_file.write(f"- {node.taxon.label}: {url}")
+                if location.isnumeric():
+                    args.source_mapping_file.write(f" @{location}\n")
+                else:
+                    args.source_mapping_file.write(f"#{location}\n")
 
     # Print the combined tree
     print(tree.as_string(schema="newick", suppress_item_comments=False))

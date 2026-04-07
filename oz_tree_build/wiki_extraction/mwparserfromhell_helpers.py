@@ -25,7 +25,7 @@ def wiki_api_request(params):
             break
         # Delete cached 429 response so the retry makes a fresh request
         session.cache.delete(requests=[req.request])
-        delay = min(2 ** attempt, 60)
+        delay = min(2**attempt, 60)
         logging.warning(f"Wikipedia API returned 429, retrying in {delay}s...")
         time.sleep(delay)
     else:

@@ -52,7 +52,6 @@ stages:
         cd data/OZTreeBuild/${oz_tree} &&
         build_oz_tree
         BespokeTree/include_OT_${ot_version}/Base.PHY
-        OpenTreeParts/OpenTree_all/
         ${oz_tree}_full_tree.phy
     deps:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/

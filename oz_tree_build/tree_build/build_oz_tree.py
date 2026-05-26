@@ -1,163 +1,137 @@
-"""
-Build the entire OneZoom tree from the saved parts.
-
-It does this in one pass, by starting with the base file (e.g. base.PHY) and
-recursively expanding any OneZoom tokens it finds.
-"""
-
+# https://etetoolkit.github.io/ete/tutorial/tutorial_trees.html
 import argparse
 import logging
 import os
-import sys
+import os.path
+import re
+
+import ete4
+import ete4.parser.newick
+
+from oz_tree_build.tree_build.oz_tokens import parse_one_zoom_token
 
 from ..utilities.debug_util import parse_args_and_add_logging_switch
-from .oz_tokens import enumerate_one_zoom_tokens
 
-__author__ = "David Ebbo"
+logger = logging.getLogger(__name__)
 
-
-def trim_tree(tree, strip_semicolon=True):
-    # Trim any whitespace
-    tree = tree.strip()
-
-    # Skip the comment block at the start of the file, if any
-    if tree[0] == "[":
-        tree = tree[tree.index("]") + 1 :]
-        tree = tree.lstrip()
-
-    # Strip the trailing semicolon
-    if strip_semicolon and tree[-1] == ";":
-        tree = tree[:-1]
-
-    return tree
+# Custom parser, force { to be quoted for DendroPy
+NAME = {
+    "pname": "name",
+    "read": ete4.parser.newick.unquote,
+    "write": lambda name: ete4.parser.newick.quote(name, escaped_chars=" \t\r\n()[]':;,{}="),
+}
+DIST = {"pname": "dist", "read": float, "write": lambda x: f"{float(x):g}"}
+NWK_WRITE_PARSER = {
+    "leaf": [NAME, DIST],
+    "internal": [NAME, DIST],
+}
+# NB: We can't use a custom parser when reading, due to a bug in ete4: https://github.com/etetoolkit/ete/issues/801
+NWK_READ_PARSER = 1
 
 
-def build_oz_tree(base_file, ot_parts_folder, output_stream, print_file_tree):
+def filter_tree(t, excluded_otts):
     """
-    Do all the token replacement, starting with the base file
+    Prune tree (t) of all the otts listed in (excluded_otts)
+    """
+    if not excluded_otts:
+        # Nothing to filter, nothing to do
+        return t
+
+    # NB: excluded_otts haven't been parsed to int (no reason to)
+    excluded_re = re.compile("|".join(f"_ott{ott}$" for ott in excluded_otts))
+
+    def is_leaf_fn(n):
+        if n.name and excluded_re.search(n.name):
+            n.detach()
+            # Don't recurse over nodes we've removed
+            return True
+
+        return n.is_leaf
+
+    for _ in t.traverse(strategy="levelorder", is_leaf_fn=is_leaf_fn):
+        # NB: We do all the work in the is_leaf_fn, so we can influence whether to recurse
+        pass
+
+    return t
+
+
+def expand_nodes(t, parts_folders):
+    """
+    Recursively resolve OZ inclusion syntax in (t), returning a complete tree.
     """
 
-    depth = 0
+    def is_leaf_fn(n):
+        result = parse_one_zoom_token(n.name, parts_folders)
+        if result is None:
+            # No inclusion syntax, recurse
+            return n.is_leaf
 
-    def process_newick(
-        file,
-        node_name_in_parent=None,
-        edge_length_in_parent=None,
-        override_edge_length=None,
-        override_taxon=None,
-        expand_nodes=False,
-    ):
-        """
-        Copy the input file to the output file, recursively expanding any OneZoom tokens
-        """
-        nonlocal depth
+        # If file not present, ditch inclusion syntax and carry on
+        if not os.path.exists(result["file"]):
+            logger.warning(f"Subtree file {result['file']} does not exist")
+            n.name = result["node_name_in_parent"]
+            return n.is_leaf
 
-        logging.debug(f"Processing {file}")
+        sub_t = ete4.Tree(result["file"], parser=NWK_READ_PARSER)
+        sub_t = filter_tree(sub_t, result.get("excluded_otts"))
+        if result["expand_nodes"]:
+            sub_t = expand_nodes(sub_t, parts_folders)
 
-        # If we're printing the file tree, print the current file
-        if print_file_tree and expand_nodes:
-            print(f"{'  ' * depth}{node_name_in_parent}: {edge_length_in_parent} {override_edge_length or 0}")
-
-        if not os.path.exists(file):
-            logging.warning(f"Subtree file {file} does not exist")
-            return False
-
-        with open(file, encoding="utf8") as stream:
-            tree = stream.read()
-
-        tree = trim_tree(tree)
-        index = 0
-
-        # We only need to look for children if it's a OneZoom file (i.e. .PHY extension)
-        if expand_nodes:
-            for result in enumerate_one_zoom_tokens(
-                tree,
-                dict(
-                    ot=ot_parts_folder,
-                    oz=oz_parts_folder,
-                    ot_required=os.path.join(os.path.dirname(os.path.dirname(ot_parts_folder)), "OT_required"),
-                ),
-            ):
-                # Write the part of the tree before the child
-                output_stream.write(tree[index : result["start"]])
-
-                depth += 1
-                if process_newick(
-                    file=result["file"],
-                    node_name_in_parent=result["node_name_in_parent"],
-                    edge_length_in_parent=result["edge_length_in_parent"],
-                    override_edge_length=result["override_edge_length"],
-                    override_taxon=result["override_taxon"],
-                    expand_nodes=result["expand_nodes"],
-                ):
-                    index = result["end"]
-                else:
-                    # If child file absent, we'll need to write the child token as-is
-                    index = result["start"]
-                depth -= 1
-
-        # We've processed all the children, and we need to write the rest of the tree
-        last_chunk = tree[index:]
-
-        # Write the last chunk, but exclude the last name:edge_length,
-        # which needs special handling
-        last_closed_bracket = last_chunk.rfind(")")
-        output_stream.write(last_chunk[: last_closed_bracket + 1])
-
-        # Parse the last token into the node name and edge length
-        last_token = last_chunk[last_closed_bracket + 1 :]
-        last_token_segments = last_token.split(":")
-        last_token_name = last_token_segments[0]
-        last_token_edge_length = last_token_segments[1] if len(last_token_segments) > 1 else None
-
-        # Always favor the length from our mapping, falling back to the last token in the file
-        # Note that we never fall back to edge_length_in_parent here, following old code logic
-        # DISCUSS: should we?
-        edge_length = override_edge_length or last_token_edge_length
-
-        if expand_nodes:
-            # Three levels of fallback for .PHY files: mapping, last token, parent
-            node_name = override_taxon or last_token_name or node_name_in_parent
+        # Replace n with sub_t
+        if result["expand_nodes"]:
+            n.name = result.get("override_taxon") or sub_t.root.name or result.get("node_name_in_parent")
         else:
-            # NB: following old code logic, the above parent vs last logic is reversed here
-            # DISCUSS: is there a logical reason for this?
-            node_name = node_name_in_parent or last_token_name
+            n.name = result.get("node_name_in_parent") or sub_t.root.name
+        n.dist = result.get("override_edge_length", sub_t.root.dist)
+        n.children = sub_t.root.children
 
-        output_stream.write(node_name)
-        if edge_length:
-            output_stream.write(f":{edge_length}")
-
+        # Replaced children, no point recursing through the old ones
         return True
 
-    # Assume that the base file is in the same folder as the OneZoom parts
-    oz_parts_folder = os.path.dirname(base_file)
+    for _ in t.traverse(strategy="levelorder", is_leaf_fn=is_leaf_fn):
+        # NB: We do all the work in the is_leaf_fn, so we can influence whether to recurse
+        pass
 
-    process_newick(base_file, expand_nodes=True)
+    return t
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--printfiletree",
-        action="store_true",
-        help="Print a tree of all the OneZoom included files",
-    )
     parser.add_argument("treefile", help="The base tree file in newick form")
-    parser.add_argument("ot_parts_folder", help="The folder containing the Open Tree parts")
     parser.add_argument(
         "outfile",
-        type=argparse.FileType("w"),
         nargs="?",
-        default=sys.stdout,
-        help="The output tree file",
+        default="-",
+        help="The output tree file path, defaults to stdout",
     )
     args = parse_args_and_add_logging_switch(parser)
 
-    build_oz_tree(args.treefile, args.ot_parts_folder, args.outfile, args.printfiletree)
+    # Work out parts_folders based on treefile location
+    parts_folders = dict(
+        oz=os.path.dirname(args.treefile),
+        ot=os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(args.treefile))),
+            "OpenTreeParts",
+            "OpenTree_all",
+        ),
+        ot_required=os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(args.treefile))),
+            "OpenTreeParts",
+            "OT_required",
+        ),
+    )
 
-    # Write out the ending semi-colon and flush the stream
-    args.outfile.write(";")
-    args.outfile.flush()
+    if args.outfile == "-":
+        # NB: None means return string in ete4, so set that and print the return value
+        args.outfile = None
+
+    t = ete4.Tree(args.treefile, parser=NWK_READ_PARSER)
+    t = expand_nodes(t, parts_folders)
+    # NB: We need to explicitly list properties we want printing out in [&&NHX:date=x] blocks
+    out = t.write(outfile=args.outfile, parser=NWK_WRITE_PARSER, props=["date"], format_root_node=True)
+    if out:
+        # ete4 provided some output (so args.outfile was stdout), print it
+        print(out)
 
 
 if __name__ == "__main__":

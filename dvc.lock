@@ -174,8 +174,8 @@ stages:
       size: 221682224
   build_oz_tree:
     cmd:
-    - cd data/OZTreeBuild/AllLife && build_oz_tree 
-      BespokeTree/include_OT_v16.1/Base.PHY OpenTreeParts/OpenTree_all/ 
+    - cd data/OZTreeBuild/AllLife && build_oz_tree --nodeages 
+      ../../node_ages.json BespokeTree/include_OT_v16.1/Base.PHY 
       AllLife_full_tree.phy
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
@@ -279,3 +279,10 @@ stages:
       hash: md5
       md5: 1018a5c664d01747fdd7e218190cb4ac
       size: 72
+  download_node_ages:
+    cmd: download_node_ages data/node_ages.json
+    outs:
+    - path: data/node_ages.json
+      hash: md5
+      md5: 2440f9bb2139301bf352797a9802c2d9
+      size: 14044769

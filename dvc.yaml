@@ -9,6 +9,11 @@ stages:
     outs:
       - data/OpenTree/${ot_version}/
 
+  download_node_ages:
+    cmd: .venv/bin/download_node_ages data/node_ages.json
+    outs:
+      - data/node_ages.json
+
   # ~20 secs
   add_ott_numbers_to_trees:
     cmd:
@@ -51,10 +56,12 @@ stages:
       - >-
         cd data/OZTreeBuild/${oz_tree} &&
         build_oz_tree
+        --nodeages ../../node_ages.json
         BespokeTree/include_OT_${ot_version}/Base.PHY
         OpenTreeParts/OpenTree_all/
         ${oz_tree}_full_tree.phy
     deps:
+      - data/node_ages.json
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
       - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
     params:

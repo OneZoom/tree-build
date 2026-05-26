@@ -1,5 +1,6 @@
 # https://etetoolkit.github.io/ete/tutorial/tutorial_trees.html
 import argparse
+import json
 import logging
 import os
 import os.path
@@ -8,7 +9,9 @@ import re
 import ete4
 import ete4.parser.newick
 
+from oz_tree_build.tree_build.infer_ages import infer_ages
 from oz_tree_build.tree_build.oz_tokens import parse_one_zoom_token
+from oz_tree_build.tree_build.tree_dating import date_tree
 
 from ..utilities.debug_util import parse_args_and_add_logging_switch
 
@@ -55,7 +58,7 @@ def filter_tree(t, excluded_otts):
     return t
 
 
-def expand_nodes(t, parts_folders):
+def expand_nodes(t, parts_folders, node_ages):
     """
     Recursively resolve OZ inclusion syntax in (t), returning a complete tree.
     """
@@ -75,7 +78,10 @@ def expand_nodes(t, parts_folders):
         sub_t = ete4.Tree(result["file"], parser=NWK_READ_PARSER)
         sub_t = filter_tree(sub_t, result.get("excluded_otts"))
         if result["expand_nodes"]:
-            sub_t = expand_nodes(sub_t, parts_folders)
+            sub_t = expand_nodes(sub_t, parts_folders, node_ages)
+
+        # Fill in props['date'], working from leaves backwards or node_ages
+        infer_ages(sub_t, node_ages)
 
         # Replace n with sub_t
         if result["expand_nodes"]:
@@ -83,6 +89,7 @@ def expand_nodes(t, parts_folders):
         else:
             n.name = result.get("node_name_in_parent") or sub_t.root.name
         n.dist = result.get("override_edge_length", sub_t.root.dist)
+        n.props["date"] = sub_t.root.props.get("date")
         n.children = sub_t.root.children
 
         # Replaced children, no point recursing through the old ones
@@ -98,6 +105,11 @@ def expand_nodes(t, parts_folders):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("treefile", help="The base tree file in newick form")
+    parser.add_argument(
+        "--nodeages",
+        type=str,
+        help="The 'node_ages.json' file to parse, if not provided no ages inserted",
+    )
     parser.add_argument(
         "outfile",
         nargs="?",
@@ -125,10 +137,26 @@ def main():
         # NB: None means return string in ete4, so set that and print the return value
         args.outfile = None
 
+    # Load node_ages.json if present
+    if args.nodeages:
+        with open(args.nodeages) as f:
+            node_ages = json.load(f)["node_ages"]
+    else:
+        node_ages = {}
+
+    write_props = []
+
     t = ete4.Tree(args.treefile, parser=NWK_READ_PARSER)
-    t = expand_nodes(t, parts_folders)
+    infer_ages(t, node_ages)
+    t = expand_nodes(t, parts_folders, node_ages)
+
+    # If we at least assigned a date to the root, then try to date the tree
+    if t.props.get("date") is not None:
+        date_tree(t)
+        write_props.append("date")
+
     # NB: We need to explicitly list properties we want printing out in [&&NHX:date=x] blocks
-    out = t.write(outfile=args.outfile, parser=NWK_WRITE_PARSER, props=["date"], format_root_node=True)
+    out = t.write(outfile=args.outfile, parser=NWK_WRITE_PARSER, props=write_props, format_root_node=True)
     if out:
         # ete4 provided some output (so args.outfile was stdout), print it
         print(out)

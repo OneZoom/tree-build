@@ -22,12 +22,26 @@ import argparse
 import re
 import sys
 
-from ..tree_build.build_oz_tree import trim_tree
-
 __author__ = "David Ebbo"
 
 # Token may be quoted or not
 whole_token_regex = re.compile("('[^']*'|[^(),;[]+)(:[0-9.]+)?")
+
+
+def trim_tree(tree, strip_semicolon=True):
+    # Trim any whitespace
+    tree = tree.strip()
+
+    # Skip the comment block at the start of the file, if any
+    if tree[0] == "[":
+        tree = tree[tree.index("]") + 1 :]
+        tree = tree.lstrip()
+
+    # Strip the trailing semicolon
+    if strip_semicolon and tree[-1] == ";":
+        tree = tree[:-1]
+
+    return tree
 
 
 def format_nwk(newick_tree, output_stream, indent_spaces=2):

@@ -27,6 +27,15 @@ SYNTHESIS_JSON_URL = (
 )
 
 
+def normalise_whitespace(content):
+    """
+    Several of our Newick parsers look for OTTs by splitting on _ott.
+    For this to work, ensure all whitespace is underscore
+    """
+    content = re.sub(r"[ _]+", "_", content)
+    return content
+
+
 def fetch_synthesis_json():
     response = requests.get(SYNTHESIS_JSON_URL, verify=OT_SSL_VERIFY)
     response.raise_for_status()
@@ -42,16 +51,8 @@ def find_synthesis_entry(synthesis_json, version):
     raise SystemExit(f"Version '{version}' not found in synthesis.json. " f"Available versions: {', '.join(available)}")
 
 
-def strip_mrca_prefixes(content: str) -> str:
-    # Clean up synthetically named mrca (most recent common ancestor) node labels, no use to us
-    content = re.sub(r"\)mrcaott\d+ott\d+", ")", content)
-    # Also clean up unwanted spaces
-    content = re.sub(r"[ _]+", "_", content)
-    return content
-
-
 def download_tree(version, output_dir):
-    """Download the labelled supertree and produce the processed draftversion."""
+    """Download the labelled supertree"""
     assert version.startswith("v")
     version_without_v = version[1:]
     tree_url = (
@@ -68,9 +69,9 @@ def download_tree(version, output_dir):
     print(f"  Saved raw tree to {raw_path}")
 
     draft_path = os.path.join(output_dir, "draftversion.tre")
-    print("  Stripping mrca prefixes ...")
+    print("  Normalising whitespace ...")
     with open(draft_path, "w") as f:
-        f.write(strip_mrca_prefixes(response.text))
+        f.write(normalise_whitespace(response.text))
     print(f"  Saved processed tree to {draft_path}")
 
 

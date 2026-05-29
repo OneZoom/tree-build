@@ -136,8 +136,14 @@ def parse_tree(tree_filename):
     Parses (tree_filename) and returns the DendroPy tree object
     """
     try:
-        tree = Tree.get_from_path(
-            tree_filename,
+        with open(tree_filename) as f:
+            tree_str = f.read()
+
+        # Clean up synthetically named mrca (most recent common ancestor) node labels, no use to us
+        tree_str = re.sub(r"\)mrcaott\d+ott\d+", ")", tree_str)
+
+        tree = Tree.get_from_string(
+            tree_str,
             schema="newick",
             preserve_underscores=True,
             suppress_leaf_node_taxa=True,

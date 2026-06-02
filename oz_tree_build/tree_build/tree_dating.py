@@ -29,6 +29,17 @@ def date_labelling(parent):
             oldest_path_long = max(oldest_path_long, new_path_long)
             oldest_path_short = max(oldest_path_short, new_path_short, key=use_shortest_path)
 
+        if (
+            parent.props.get("date") is not None
+            and parent.props["date"] - max(oldest_path_long[0], oldest_path_short[0]) < -1e-6
+        ):
+            print(f"Node {parent.name} date {parent.props['date']} is too new based on children, removing")
+            parent.props["date"] = None
+    else:
+        # Leaves should always have date 0, fill in if missing.
+        if parent.props.get("date") is None:
+            parent.props["date"] = 0
+
     if parent.props["date"] is None:
         parent.props["oldest_path_long"] = copy.copy(oldest_path_long)
         parent.props["oldest_path_short"] = copy.copy(oldest_path_short)
@@ -93,6 +104,7 @@ def date_tree(tre):
     """
     date_labelling(tre)
     impute_missing_dates(tre)
+    compute_branch_lengths(tre)
 
 
 def compute_branch_lengths(tre):
@@ -100,8 +112,10 @@ def compute_branch_lengths(tre):
     for node in tre.traverse():
         if node.up:
             branch_length = node.up.props["date"] - node.props["date"]
-            if branch_length < 0:
+            if branch_length < -1e-6:
                 raise Exception("Negative branch length found in compute_branch_lengths.")
+            if branch_length < 1e-6:
+                branch_length = 0
 
             node.dist = branch_length
 

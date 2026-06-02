@@ -720,19 +720,22 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
         from shutil import copyfile
         from subprocess import call
 
-        # make CSV files that can be imported into mySQL (subs \\N for null values)
-        logging.info(" > saving extra file copies in mySQL format: import them using:")
-        for tab in ["_leaves", "_nodes"]:
-            fn = os.path.join(outdir, "ordered" + tab + f"_{version}" + ".csv")
-            sqlfile = fn + ".mySQL"
-            copyfile(fn, sqlfile)
-            call(["perl", "-pi", "-e", r"s/,(?=(,|\n))/,\\N/g", sqlfile])
-            logging.info(
-                f"sql> TRUNCATE TABLE ordered{tab}; "
-                f"LOAD DATA LOCAL INFILE '{sqlfile}' REPLACE INTO TABLE `ordered{tab}` "
-                f"FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' "
-                f"IGNORE 1 LINES ({open(fn).readline().rstrip()}) SET id = NULL;"
-            )
+        with open(os.path.join(outdir, f"import_{version}.sql"), "w", encoding="utf-8") as sql_f:
+            # make CSV files that can be imported into mySQL (subs \\N for null values)
+            logging.info(" > saving extra file copies in mySQL format: import them using:")
+            for tab in ["_leaves", "_nodes"]:
+                fn = os.path.join(outdir, "ordered" + tab + f"_{version}" + ".csv")
+                sqlfile = fn + ".mySQL"
+                copyfile(fn, sqlfile)
+                call(["perl", "-pi", "-e", r"s/,(?=(,|\n))/,\\N/g", sqlfile])
+                sql_f.writelines(
+                    [
+                        f"TRUNCATE TABLE ordered{tab};\n"
+                        f"LOAD DATA LOCAL INFILE '{sqlfile}' REPLACE INTO TABLE `ordered{tab}` \n"
+                        f"    FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \n"
+                        f"    IGNORE 1 LINES ({open(fn).readline().rstrip()}) SET id = NULL;\n"
+                    ]
+                )
 
 
 def display_WD_ott_stats(OTT_ptrs):

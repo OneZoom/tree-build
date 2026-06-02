@@ -254,8 +254,9 @@ stages:
       nfiles: 7
   make_js_treefiles:
     cmd:
-    - mkdir -p data/js_output
-    - make_js_treefiles --outdir data/js_output
+    - rm -r data/js_output ; mkdir -p data/js_output
+    - make_js_treefiles --outdir data/js_output 
+      data/output_files/ordered_tree_*.poly
     deps:
     - path: data/output_files/
       hash: md5

@@ -193,8 +193,12 @@ stages:
 
   make_js_treefiles:
     cmd:
-      - mkdir -p data/js_output
-      - make_js_treefiles --outdir data/js_output
+      - rm -r data/js_output ; mkdir -p data/js_output
+      - >-
+        make_js_treefiles
+        --outdir data/js_output
+        data/output_files/ordered_tree_*.poly
+        data/output_files/ordered_dates_*.js
     deps:
       - data/output_files/
     always_changed: true

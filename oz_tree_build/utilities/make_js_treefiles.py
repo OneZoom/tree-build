@@ -2,28 +2,9 @@ import argparse
 import fileinput
 import json
 import os
+import re
 import shutil
 from subprocess import call
-
-
-# argparse  -> boolean
-# produces true if all parameters are valid.
-# print error message if:
-#   -- newick file can't be found
-#     -> can't find newick file: + file path
-#   -- completetree file dir not exist
-#     -> Output directory for completetree does not exist: + path
-#   -- cut_position_map file dir not exist
-#     -> Output directory for cut_position_map does not exist: + path
-def parameter_valid(args):
-    parameter_valid = True
-    if not os.path.isfile(args.npath):
-        print("Can't find newick file: '" + args.npath + "'")
-        parameter_valid = False
-    if not os.path.exists(args.outdir):
-        print("Output directory does not exist: '" + args.outdir + "'")
-        parameter_valid = False
-    return parameter_valid
 
 
 # string -> string
@@ -157,6 +138,52 @@ def get_polytomy_substring_pos(start, end, start_end_arr, threshold, newick_str,
     return res
 
 
+def write_js_file(outdir, input_path, version_number, args):
+    # Output to versioned path
+    input_name = os.path.basename(input_path)
+    output_path = os.path.join(
+        outdir,
+        re.sub(
+            # Extract any existing version number / extension from filename
+            r"(_\d+)?(\.[a-zA-Z]+)$",
+            # Replace with verison number / extension
+            "_" + str(version_number) + r"\2",
+            input_name,
+        ),
+    )
+
+    if input_name.startswith("ordered_tree_"):
+        output_path = re.sub(r"ordered_tree_", "completetree_", output_path)
+        output_path = re.sub(r"\.(nwk|poly)$", ".js", output_path)
+
+        print(f"{input_path} -> {output_path}")
+        newick_str = tidy_newick(input_path)
+        with open(output_path, "w") as out_f:
+            out_f.write(generate_completetree_js(newick_str))
+
+        # Generate derived cut-position-map
+        cut_path = re.sub(r"completetree_", r"cut_position_map_", output_path)
+        with open(cut_path, "w") as out_f:
+            out_f.write(generate_cut_position_map(newick_str, args.threshold))
+        # Trigger write_js_file for cut map so we gzip it
+        write_js_file(outdir, cut_path, version_number, args)
+
+    elif input_name.startswith("ordered_dates_"):
+        output_path = re.sub(r"ordered_dates_", "dates_", output_path)
+        print(f"{input_path} -> {output_path}")
+        shutil.copyfile(input_path, output_path)
+
+    elif input_path == output_path:
+        # Nothing to do, already in output_path
+        pass
+    else:
+        # By default we just copy file
+        print(f"{input_path} -> {output_path}")
+        shutil.copyfile(input_path, output_path)
+    print(f"{output_path} -> {output_path}.gz")
+    call(["gzip", "-9fk", output_path])
+
+
 def main():
     # rawData string + metadata -> output result into file.
 
@@ -167,26 +194,7 @@ def main():
     )
 
     # pick the most recent ordered_tree_XXX.nwk file
-    import glob
     import re
-
-    datafile_name = "ordered_{data}_{version}.{ext}"
-    input_file = glob.glob(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "data",
-            "output_files",
-            datafile_name.format(data="tree", version="*", ext="poly"),
-        )
-    )
-    parser.add_argument(
-        "--npath",
-        default=input_file,
-        nargs="+",
-        help="filepath of polytomy-marked newick string",
-    )
 
     parser.add_argument(
         "--outdir",
@@ -203,29 +211,12 @@ def main():
         ),
         help="output filepath of cut_position_map",
     )
-
     parser.add_argument(
-        "--treefilename",
-        default="completetree_{version}.js",
-        help="output filepath of rawData and metadata",
+        "in_files",
+        nargs="+",
+        metavar="FILE",
+        help="Files to move to outdir, with versions appended if not present",
     )
-
-    parser.add_argument(
-        "--cutfilename",
-        default="cut_position_map_{version}.js",
-        help="output filepath of cut_position_map",
-    )
-
-    parser.add_argument(
-        "--datefilename",
-        default="dates_{version}.js",
-        help=(
-            "output filepath of json dates file (copied from "
-            + datafile_name.format(data="dates", version="XXXXX", ext="js")
-            + "in the same dir as the treefile)"
-        ),
-    )
-
     parser.add_argument(
         "--threshold",
         default=10000,
@@ -234,39 +225,18 @@ def main():
     )
 
     args = parser.parse_args()
-    # tidy up the file names to include versioning numbers
-    args.npath = max(args.npath, key=os.path.getctime)
-    version_number = re.search(
-        datafile_name.format(data="tree", version="([^/]+)", ext="(nwk|poly)"),
-        args.npath,
-    ).group(1)
-    print(f"Using version number: {version_number}")
-    treefile_path = os.path.join(args.outdir, args.treefilename.format(version=version_number))
-    cutfile_path = os.path.join(args.outdir, args.cutfilename.format(version=version_number))
-    datefile_inpath = os.path.join(
-        os.path.dirname(args.npath),
-        datafile_name.format(data="dates", version=version_number, ext="js"),
-    )
-    datefile_outpath = os.path.join(args.outdir, args.datefilename.format(version=version_number))
-    if parameter_valid(args):
-        newick_str = tidy_newick(args.npath)
-        treedata_str = generate_completetree_js(newick_str)
-        cutmap_str = generate_cut_position_map(newick_str, args.threshold)
-        with open(treefile_path, "w") as tree:
-            tree.write(treedata_str)
-        print("Generated file: " + treefile_path)
-        call(["gzip", "-9fk", treefile_path])
-        print("Gzipped tree file")
-        with open(cutfile_path, "w") as cutfile:
-            cutfile.write(cutmap_str)
-        print("Generated file: " + cutfile_path)
-        call(["gzip", "-9fk", cutfile_path])
-        print("Gzipped cutmap file")
-        print(f"Copying date file {datefile_inpath} to {datefile_outpath}")
-        shutil.copyfile(datefile_inpath, datefile_outpath)
-        call(["gzip", "-9fk", datefile_outpath])
-        print("Gzipped date file")
-        print("Done")
+
+    # Find higest version number in files present, use that as version
+    version_number = 0
+    for f in args.in_files:
+        m = re.search(r"_(\d+)\.(\w+)$", f)
+        if m and int(m.group(1)) > version_number:
+            version_number = int(m.group(1))
+
+    for f in args.in_files:
+        write_js_file(args.outdir, f, version_number, args)
+
+    print("Done")
 
 
 if __name__ == "__main__":

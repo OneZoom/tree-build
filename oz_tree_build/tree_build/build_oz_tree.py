@@ -151,6 +151,7 @@ def main():
     t = expand_nodes(t, parts_folders, node_ages)
 
     # If we at least assigned a date to the root, then try to date the tree
+    t.root.props["date"] = 4566.9  # Hadean starts 4567 Mya ago, bodge it
     if t.props.get("date") is not None:
         date_tree(t)
         write_props.append("date")

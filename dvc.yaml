@@ -167,7 +167,7 @@ stages:
   # ~10 mins
   CSV_base_table_creator:
     cmd:
-      - mkdir -p data/output_files
+      - rm -r data/output_files ; mkdir -p data/output_files
       - >-
         CSV_base_table_creator
         data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
@@ -205,6 +205,7 @@ stages:
         --outdir data/js_output
         data/output_files/ordered_tree_*.poly
         data/output_files/ordered_dates_*.js
+        data/output_files/*.dat
     deps:
       - data/output_files/
     always_changed: true

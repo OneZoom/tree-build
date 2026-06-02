@@ -90,6 +90,7 @@ from . import OTT_popularity_mapping
 
 # local packages
 from .dendropy_extras import write_pop_newick
+from .prop_array import prop_array_all
 
 __author__ = "Yan Wong"
 __license__ = """This is free and unencumbered software released into the public domain by the author, Yan Wong, for OneZoom CIO.
@@ -624,6 +625,10 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     logging.info(" > ladderizing tree (groups with fewer leaves first)")
     tree.ladderize(ascending=True)  # warning: ladderize ascending is needed for the short OZ newick-like form
     logging.info(" ✔ ladderized")
+
+    logging.info(" > writing array outputs to files")
+    prop_array_all(outdir, tree)
+    logging.info(" ✔ array outputs written")
 
     logging.info(" > writing tree, dates, and csv to files")
     with open(os.path.join(outdir, f"ordered_tree_{version}.nwk"), "w+") as condensed_newick:

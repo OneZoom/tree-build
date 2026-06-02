@@ -1,5 +1,6 @@
 import csv
 import os.path
+import struct
 
 from ..utilities.ete import node_name_without_ott
 
@@ -231,3 +232,43 @@ def output_mysqlexport(tree, out_dir):
                     f"    IGNORE 1 LINES ({open(os.path.join(out_dir,csvfile)).readline().rstrip()}) SET id = NULL;\n"
                 ]
             )
+
+
+def output_proparray(tree, out_dir, prop_name):
+    """
+    Given an ete4 tree and prop_name, write out 2 packed arrays to out_dir:
+
+        (prop_name)_leaves_(pack format).dat
+        (prop_name)_nodes_(pack format).dat
+
+    The ordering will match ordered_leaves/ordered_nodes
+    """
+    PROP_FORMAT_TO_PACK = dict(
+        c8="c",  # 8-bit chars
+        i8="b",  # Signed 8-bit ints
+        u8="B",  # Unsigned 8-bit ints
+        f16="<e",  # LE 16-bit floats
+        f32="<f",  # LE 32-bit floats
+        f64="<d",  # LE 32-bit floats (doubles)
+    )
+
+    # Derive packing format from python type of property
+    prop_format = tree.root.props.get("prop_format", {}).get(prop_name)
+    if prop_format is None:
+        raise ValueError(f"Property {prop_name} has no entry in prop_format. Has it been applied to the tree?")
+    pack_format = PROP_FORMAT_TO_PACK.get(prop_format)
+    if pack_format is None:
+        raise ValueError(f"Unknown property format {prop_format}")
+
+    leaf_path = os.path.join(out_dir, f"{prop_name}_leaves_{prop_format}.dat")
+    node_path = os.path.join(out_dir, f"{prop_name}_nodes_{prop_format}.dat")
+    with open(leaf_path, "wb") as leaf_f:
+        with open(node_path, "wb") as node_f:
+            # NB: Traverse behaviour has to match output_mysqlexport
+            for node in tree.traverse("preorder"):
+                value = node.props[prop_name]
+                if node.is_leaf:
+                    leaf_f.write(struct.pack(pack_format, value))
+                else:
+                    node_f.write(struct.pack(pack_format, value))
+    return (leaf_path, node_path)

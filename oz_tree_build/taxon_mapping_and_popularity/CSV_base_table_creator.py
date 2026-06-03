@@ -76,7 +76,6 @@ import csv
 import json
 import logging
 import os.path
-import random
 import re
 import sys
 import time
@@ -482,47 +481,6 @@ def popularity_function(
         )
 
 
-def resolve_polytomies_add_popularity(tree, seed):
-    """
-    If there are polytomies in the tree, resolve them, but make sure that the newly
-    created nodes get popularity values too. These can be recalculated from the
-    descendants and ancestors of the children
-
-    """
-    prev_num_nodes = sum(1 for i in tree.postorder_node_iter())
-    random.seed(seed)  # so we get the same bifurcations each time
-
-    # We implement a slightly non-random resolution to group nodes with the same genus together
-    # See https://github.com/OneZoom/OZtree/issues/958
-    tree.group_genera_in_polytomies()
-    tree.resolve_polytomies(rng=random)
-    num_new_nodes = sum(1 for i in tree.postorder_node_iter()) - prev_num_nodes
-    for node in tree.postorder_node_iter():
-        if not hasattr(node, "data"):
-            # this is a new node - it should always have 2 children
-            try:
-                n = ancestor_pop_sum = descendant_pop_sum = n_ancestors_sum = n_descendants_sum = 0
-                for c in node.child_node_iter():
-                    n += 1
-                    ancestor_pop_sum += c.ancestors_popsum
-                    descendant_pop_sum += c.descendants_popsum
-                    n_ancestors_sum += c.n_ancestors
-                    n_descendants_sum += c.n_descendants
-
-                node.data = {
-                    "popularity": popularity_function(
-                        ancestor_pop_sum / n,
-                        descendant_pop_sum,
-                        n_ancestors_sum / n,
-                        n_descendants_sum,
-                    )
-                }
-            except AttributeError:
-                # probably popularity values undefined for one of the children
-                pass
-    return num_new_nodes
-
-
 def create_leaf_popularity_rankings(tree):
     """
     Make a rank of all existing leaves by phylogenetic popularity
@@ -597,6 +555,7 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     """
     from .dendropy_extras import (
         group_genera_in_polytomies,
+        oz_resolve_polytomies,
         prune_children_of_otts,
         prune_non_species,
         remove_unifurcations_keeping_higher_taxa,
@@ -620,7 +579,7 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     Tree.create_leaf_popularity_rankings = (
         create_leaf_popularity_rankings  # not defined in dendropy_extras, but in this file
     )
-    Tree.resolve_polytomies_add_popularity = resolve_polytomies_add_popularity
+    Tree.oz_resolve_polytomies = oz_resolve_polytomies
     Node.write_brief_newick = write_brief_newick
 
     # For the extinct tree, we don't want to remove any species
@@ -650,7 +609,8 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     logging.info(f" ✔ removed {n_deleted_nodes} unifurcations")
 
     logging.info(" > splitting polytomies by genera and assigning popularities to new nodes")
-    n_new = tree.resolve_polytomies_add_popularity(seed)
+    n_new = tree.oz_resolve_polytomies(seed)
+    fill_popularity_gaps(tree)
     tree.create_leaf_popularity_rankings()
     logging.info(f" ✔ polytomies split with seed={seed}: {n_new} extra nodes created")
 
@@ -913,6 +873,39 @@ def percolate_popularity(
                     print(f"Ancestors: {node.label} = {node.pop_store:.2f}")
         except (IndexError, AttributeError) as e:
             logging.warning(f"Problem reporting on focal taxon '{focal_taxon}': {e}")
+
+
+def fill_popularity_gaps(tree):
+    """
+    After resolve_polytomies, we need to fill in the gaps in populatity
+    the additional nodes form.
+
+    Popularity is recalculated from the descendants and ancestors of the children.
+    """
+    # Postorder pass: assign popularity to new nodes from child sums.
+    for node in tree.postorder_node_iter():
+        if not hasattr(node, "data"):
+            # this is a new node - it should always have 2 children
+            try:
+                n = ancestor_pop_sum = descendant_pop_sum = n_ancestors_sum = n_descendants_sum = 0
+                for c in node.child_node_iter():
+                    n += 1
+                    ancestor_pop_sum += c.ancestors_popsum
+                    descendant_pop_sum += c.descendants_popsum
+                    n_ancestors_sum += c.n_ancestors
+                    n_descendants_sum += c.n_descendants
+
+                node.data = {
+                    "popularity": popularity_function(
+                        ancestor_pop_sum / n,
+                        descendant_pop_sum,
+                        n_ancestors_sum / n,
+                        n_descendants_sum,
+                    )
+                }
+            except AttributeError:
+                # probably popularity values undefined for one of the children
+                pass
 
 
 def switch_otts_to_qids(taxa_data_file, tree):

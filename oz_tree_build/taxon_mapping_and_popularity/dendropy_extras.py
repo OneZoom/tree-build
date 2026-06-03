@@ -10,8 +10,24 @@ These all assume that the tree has been loaded with suppress_leaf_node_taxa=True
 import collections
 import itertools
 import logging
+import random
 
 import dendropy
+
+
+def oz_resolve_polytomies(tree, seed):
+    """
+    If there are polytomies in the tree, resolve them.
+    """
+    prev_num_nodes = sum(1 for i in tree.postorder_node_iter())
+    random.seed(seed)  # so we get the same bifurcations each time
+
+    # We implement a slightly non-random resolution to group nodes with the same genus together
+    # See https://github.com/OneZoom/OZtree/issues/958
+    tree.group_genera_in_polytomies()
+    tree.resolve_polytomies(rng=random)
+    num_new_nodes = sum(1 for i in tree.postorder_node_iter()) - prev_num_nodes
+    return num_new_nodes
 
 
 def prune_children_of_otts(self, ott_species_list):

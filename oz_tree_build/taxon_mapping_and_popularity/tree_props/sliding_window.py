@@ -7,7 +7,9 @@ logger = logging.getLogger(__name__)
 def prop_sliding_window(tree, local_mean_width=5):
     """
     Given a DendroPy tree object, add "sliding_window" attribute to each node,
-    representing a moving average of width (local_mean_width) upwards.
+    representing the log-ratio between the node's edge length and the mean
+    edge length of nearby ancestors (up to local_mean_width upwards) and
+    descendants (up to local_mean_width deep).
 
     Return name of attribute just added.
     """
@@ -16,10 +18,15 @@ def prop_sliding_window(tree, local_mean_width=5):
         if edge_length == 0:
             node.sliding_window = 0
             continue
-
-        nn = node
+        if edge_length is None or edge_length < 0:
+            logger.warning(f"Node {node.label} has no / negative branch length {edge_length}")
+            node.sliding_window = 0.0
+            continue
         window_count = 0
         window_sum = 0
+
+        # Work upwards, adding parents to window
+        nn = node
         for _ in range(local_mean_width):
             if nn.parent_node is None:
                 break
@@ -30,6 +37,19 @@ def prop_sliding_window(tree, local_mean_width=5):
             window_sum += nn_length
             window_count += 1
             nn = nn.parent_node
+
+        # Work downwards, adding descendents to window
+        stack = [(c, 1) for c in node.child_node_iter()]
+        while stack:
+            dn, depth = stack.pop()
+            dn_length = dn.edge.length
+            if dn_length is None or dn_length < 0:
+                logger.warning(f"Node {dn.label} has no / negative branch length {dn_length}")
+                continue
+            window_sum += dn_length
+            window_count += 1
+            if depth < local_mean_width:
+                stack.extend((c, depth + 1) for c in dn.child_node_iter())
 
         if window_count == 0:
             node.sliding_window = 0.0

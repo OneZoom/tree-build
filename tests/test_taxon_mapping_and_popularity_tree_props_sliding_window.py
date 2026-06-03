@@ -39,18 +39,21 @@ def expected_results(dists, local_mean_width):
     n(k+1), and n(len-1) is the root.
 
     Traversal order is preorder: root (n_last) down to leaf (n0). The window
-    walks up to local_mean_width ancestors, but stops at the root (whose own
-    edge length is never counted because its loop iteration breaks at the
-    parent check) and at any None / negative edge length along the way. A node
-    whose own edge length is exactly 0 short-circuits to 0; a node that
-    contributes nothing to the window (root, or missing edge length) returns
-    0.0.
+    walks up to local_mean_width ancestors (stopping at the root, whose own
+    edge length is never counted, or at any None / negative edge length) and
+    up to local_mean_width descendants downwards (in this linear tree a single
+    chain; again stopping at a None / negative edge length). A node whose own
+    edge length is exactly 0 short-circuits to 0; a None / negative own edge
+    length short-circuits to 0.0; a node that contributes nothing to the
+    window returns 0.0.
     """
     n = len(dists)
 
     def node_sw(k):
         if dists[k] == 0:
             return 0
+        if dists[k] is None or dists[k] < 0:
+            return 0.0
         window = []
         kk = k
         for _ in range(local_mean_width):
@@ -60,6 +63,14 @@ def expected_results(dists, local_mean_width):
                 break
             window.append(dists[kk])
             kk += 1
+        kk = k - 1
+        for _ in range(local_mean_width):
+            if kk < 0:
+                break
+            if dists[kk] is None or dists[kk] < 0:
+                break
+            window.append(dists[kk])
+            kk -= 1
         if not window:
             return 0.0
         return math.log(dists[k] / (sum(window) / len(window)))

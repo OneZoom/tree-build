@@ -17,7 +17,16 @@ import dendropy
 
 def oz_resolve_polytomies(tree, seed):
     """
-    If there are polytomies in the tree, resolve them.
+    If there are polytomies in the tree, resolve them, but make sure that the newly
+    created nodes get popularity, age, and branch-length values too.
+
+    Age and edge length are set so the resolved structure stays internally consistent
+    with the surrounding dated tree: all internal nodes introduced when resolving a
+    single polytomy sit at the same point in time as the original polytomy node,
+    connected by zero-length edges (the convention used elsewhere in this module --
+    see set_real_parent_nodes and write_brief_newick, which treat edge.length == 0
+    as the polytomy marker). The original children retain their existing edge
+    lengths, which already span from their age up to the polytomy parent's age.
     """
     prev_num_nodes = sum(1 for i in tree.postorder_node_iter())
     random.seed(seed)  # so we get the same bifurcations each time
@@ -27,6 +36,17 @@ def oz_resolve_polytomies(tree, seed):
     tree.group_genera_in_polytomies()
     tree.resolve_polytomies(rng=random)
     num_new_nodes = sum(1 for i in tree.postorder_node_iter()) - prev_num_nodes
+
+    # Preorder pass: assign age and zero-length edges to new nodes. Preorder
+    # guarantees that any new ancestor (in a chain of nested polytomy-resolved
+    # nodes) has already had its age set before we read it as parent_node.age.
+    for node in tree.preorder_node_iter():
+        if not hasattr(node, "data") and node.parent_node is not None:
+            node.edge.length = 0
+            parent_age = getattr(node.parent_node, "age", None)
+            if parent_age is not None:
+                node.age = parent_age
+
     return num_new_nodes
 
 

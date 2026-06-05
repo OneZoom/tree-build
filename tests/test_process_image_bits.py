@@ -3,7 +3,7 @@ import types
 
 import pytest
 
-from oz_tree_build.images_and_vernaculars import process_image_bits
+from oz_tree_build.images import process_image_bits
 from oz_tree_build.utilities.db_helper import (
     connect_to_database,
     delete_all_by_ott,

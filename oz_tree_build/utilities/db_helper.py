@@ -5,6 +5,7 @@ Useful functions for getting database stuff when used as a standalone script
 import configparser
 import logging
 import os
+from typing import Optional, Tuple
 
 from pydal import DAL
 
@@ -52,6 +53,28 @@ def placeholder(db):
 def delete_all_by_ott(db, table, ott):
     sql = f"DELETE FROM {table} WHERE ott={placeholder(db)};"
     db.executesql(sql, (ott,))
+
+
+def resolve_clade_bounds(db, ott_or_taxon, logger) -> Optional[Tuple[int, int, Optional[int]]]:
+    """
+    Find the leaf_lft, leaf_rgt and ott for a clade root, specified either by
+    ott or by taxon name, by looking it up in the ordered_nodes table. Returns
+    None (after logging an error) if there are multiple matches; raises
+    ValueError if there are none.
+    """
+    s = placeholder(db)
+    sql = "SELECT leaf_lft,leaf_rgt,ott FROM ordered_nodes WHERE "
+    if ott_or_taxon.isnumeric():
+        sql += "ott={0};"
+    else:
+        sql += "name={0};"
+    rows = db.executesql(sql.format(s), (ott_or_taxon,))
+    if len(rows) == 0:
+        raise ValueError(f"'{ott_or_taxon}' not found in ordered_nodes table")
+    if len(rows) > 1:
+        logger.error(f"Multiple results for '{ott_or_taxon}', " f"choose out of these OTTs: {[r[2] for r in rows]}")
+        return None
+    return rows[0]
 
 
 def get_next_src_id_for_src(db, src):

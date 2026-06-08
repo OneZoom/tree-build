@@ -3,7 +3,10 @@ vars:
 
 stages:
   download_opentree:
-    cmd: download_opentree --version ${ot_version} --output-dir data/OpenTree
+    cmd:
+      - rm -rf data/OpenTree/${ot_version}/
+      - mkdir -p data/OpenTree/${ot_version}/
+      - .venv/bin/download_opentree --version ${ot_version} --output-dir data/OpenTree
     params:
       - ot_version
     outs:

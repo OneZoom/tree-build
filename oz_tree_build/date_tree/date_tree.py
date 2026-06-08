@@ -28,6 +28,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+import json
 import os
 import sys
 import gc
@@ -60,9 +61,13 @@ def generate_trees(args):
     # Load and prune tree
 
     # Load metadata for tree from Open Tree and Chronosynth
-    dates, phylogeny_nodes, taxa = tree_loading.load_metadata(date_cache=args.date_cache,
-                                                              annotations=args.annotations,
-                                                              taxonomy=args.taxonomy)
+    with open(args.date_cache) as f:
+        dates = json.load(f)
+    phylogeny_nodes, taxa = tree_loading.load_metadata(
+        date_cache=None,
+        annotations=args.annotations,
+        taxonomy=args.taxonomy,
+    )
 
     # Create ETE3 tree structure for entire Open Tree of Life, with my annotations
     whole_tre_unmodified = tree_loading.build_and_annotate_tree(phylogeny_nodes, taxa, tree_filename=args.supertree)

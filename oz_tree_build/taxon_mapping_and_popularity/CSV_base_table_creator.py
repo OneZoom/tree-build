@@ -597,7 +597,6 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
         set_node_ages,
         set_real_parent_nodes,
         write_brief_newick,
-        write_preorder_ages,
         write_preorder_to_csv,
     )
 
@@ -606,7 +605,6 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     Tree.prune_non_species = prune_non_species
     Tree.set_node_ages = set_node_ages
     Tree.set_real_parent_nodes = set_real_parent_nodes
-    Tree.write_preorder_ages = write_preorder_ages
     Tree.remove_unifurcations_keeping_higher_taxa = remove_unifurcations_keeping_higher_taxa
     Tree.write_preorder_to_csv = write_preorder_to_csv
     Tree.group_genera_in_polytomies = group_genera_in_polytomies
@@ -664,8 +662,6 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
         tree.seed_node.write_brief_newick(condensed_newick)
     with open(os.path.join(outdir, f"ordered_tree_{version}.poly"), "w+") as condensed_poly:
         tree.seed_node.write_brief_newick(condensed_poly, "{}")
-    with open(os.path.join(outdir, f"ordered_dates_{version}.js"), "w+") as json_dates:
-        tree.write_preorder_ages(json_dates, format="json")
 
     # these are the extra columns output to the leaf csv file
     leaf_extras = OrderedDict()

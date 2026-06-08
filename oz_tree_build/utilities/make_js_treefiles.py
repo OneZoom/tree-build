@@ -168,11 +168,6 @@ def write_js_file(outdir, input_path, version_number, args):
         # Trigger write_js_file for cut map so we gzip it
         write_js_file(outdir, cut_path, version_number, args)
 
-    elif input_name.startswith("ordered_dates_"):
-        output_path = re.sub(r"ordered_dates_", "dates_", output_path)
-        print(f"{input_path} -> {output_path}")
-        shutil.copyfile(input_path, output_path)
-
     elif input_path == output_path:
         # Nothing to do, already in output_path
         pass

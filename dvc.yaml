@@ -14,6 +14,20 @@ stages:
     outs:
       - data/node_ages.json
 
+  date_tree:
+    cmd:
+      - rm -rf data/dated_tree
+      - mkdir -p data/dated_tree
+      - >-
+        .venv/bin/date_tree
+        --output_folder=data/dated_tree
+        --date_cache data/node_ages.json
+        --annotations data/OpenTree/${ot_version}/annotations.json
+        --taxonomy data/OpenTree/${ot_version}/taxonomy.tsv
+        --supertree data/OpenTree/${ot_version}/labelled_supertree_ottnames.tre
+    outs:
+      - data/dated_tree/dated_tree_topo_sample_1.tre
+
   # ~20 secs
   add_ott_numbers_to_trees:
     cmd:

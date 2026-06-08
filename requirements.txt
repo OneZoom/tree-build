@@ -1,0 +1,7 @@
+dated_complete_tree @ git+https://github.com/lentinj/dated-complete-tree.git
+chronosynth @ git+https://github.com/OpenTreeOfLife/chronosynth@7fc31d2bb3bfbf0786d31530579c916499f3616a
+# Undeclared chronosynth dependencies
+peyotl @ git+https://github.com/OpenTreeOfLife/peyotl.git@72ccb5369bef07b76f57eb6852f5b90fe677b09b
+opentree @ git+https://github.com/OpenTreeOfLife/python-opentree@9b9afce7d0a526a3328af0f9c328ef1194aec1b9#egg=opentree
+
+-e .[dev]

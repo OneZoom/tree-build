@@ -28,6 +28,8 @@ exclude = [
     "*.PHY",
     "*.md",
     "*.markdown",
+    # date_tree is actually from https://github.com/jdduke24/dated-complete-tree/blob/main/main.py, preserve its formatting
+    "oz_tree_build/date_tree/date_tree.py",
 ]
 
 line-length = 120

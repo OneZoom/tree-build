@@ -22,10 +22,11 @@ dependencies = [
     "mwparserfromhell>=0.6.6",
     "requests-cache>=1.2.1",
     "dvc[s3]>=3.0",
-    "chronosynth @ git+https://github.com/OpenTreeOfLife/chronosynth@7fc31d2bb3bfbf0786d31530579c916499f3616a",
+    "dated_complete_tree",
+    "chronosynth",
     # Undeclared chronosynth dependencies
-    "peyotl @ git+https://github.com/lentinj/peyotl.git",
-    "opentree @ git+https://github.com/OpenTreeOfLife/python-opentree@9b9afce7d0a526a3328af0f9c328ef1194aec1b9#egg=opentree",
+    "peyotl",
+    "opentree",
 ]
 
 [project.optional-dependencies]

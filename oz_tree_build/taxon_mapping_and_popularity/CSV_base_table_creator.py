@@ -86,6 +86,7 @@ from math import log
 from dendropy import Node, Tree
 
 from ..images_and_vernaculars.get_wiki_images import get_qid_from_taxa_data
+from ..utilities.debug_util import parse_args_and_add_logging_switch
 from ..utilities.file_utils import open_file_based_on_extension
 from . import OTT_popularity_mapping
 
@@ -939,12 +940,6 @@ def switch_otts_to_qids(taxa_data_file, tree):
 def process_all(args):
     random_seed_addition = 42
     start = time.time()
-    if args.verbosity == 0:
-        logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
-    elif args.verbosity == 1:
-        logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
-    elif args.verbosity >= 2:
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     logging.info(f"OneZoom data generation started on {time.asctime(time.localtime(time.time()))}")
     skip_popularity = (
         args.popularity_file is None
@@ -1137,15 +1132,8 @@ def main():
         type=str,
         help="JSON file with persisted data about taxa, typically used for the extinct tree",
     )
-    parser.add_argument(
-        "--verbosity",
-        "-v",
-        action="count",
-        default=0,
-        help="verbosity: output extra non-essential info",
-    )
 
-    args = parser.parse_args()
+    args = parse_args_and_add_logging_switch(parser)
     process_all(args)
 
 

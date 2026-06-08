@@ -24,8 +24,25 @@ import chronosynth.chronogram  # noqa: E402 - we need to set env first
 
 
 def download_node_ages():
-    node_ages = chronosynth.chronogram.build_synth_node_source_ages(fresh=True)
-    return node_ages
+    dates = chronosynth.chronogram.build_synth_node_source_ages(fresh=True)
+
+    # Remove sources, from dated_complete_tree/tree_loading.py
+    sources_to_delete = set(["ot_1250@tree2"])
+    deletions = []
+    for ott_name in dates["node_ages"]:
+        for i, source in enumerate(dates["node_ages"][ott_name]):
+            if source["source_id"] in sources_to_delete:
+                deletions.append((ott_name, i))
+
+    deletions.sort(reverse=True)
+
+    for ott_name, i in deletions:
+        del dates["node_ages"][ott_name][i]
+        if len(dates["node_ages"][ott_name]) == 0:
+            del dates["node_ages"][ott_name]
+    ####
+
+    return dates
 
 
 def main():

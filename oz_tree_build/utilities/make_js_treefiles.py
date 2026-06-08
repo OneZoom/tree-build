@@ -6,6 +6,8 @@ import re
 import shutil
 from subprocess import call
 
+from ..utilities.debug_util import parse_args_and_add_logging_switch
+
 
 # string -> string
 # Given newick filepath(string), return a string without comma and semi comma
@@ -224,7 +226,7 @@ def main():
         help=("Version number / serial to append to file names, if not provided assume present on at least one file"),
     )
 
-    args = parser.parse_args()
+    args = parse_args_and_add_logging_switch(parser)
 
     if args.version:
         version_number = args.version

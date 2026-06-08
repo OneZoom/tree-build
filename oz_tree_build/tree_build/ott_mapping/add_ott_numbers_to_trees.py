@@ -22,7 +22,9 @@ perl -ne 'print if s|(^\$tree.*include_files/([^/\.]*\.phy).*)|$2|i' ../ATlife_s
 """  # noqa E501
 
 import argparse
+import collections
 import json
+import logging
 import os
 import re
 import sys
@@ -30,6 +32,8 @@ import urllib
 from itertools import islice
 
 from dendropy import Tree
+
+logger = logging.getLogger(__name__)
 
 unambiguous = 0
 synonyms = 0
@@ -318,6 +322,9 @@ def main():
 
             if len(remainder):
                 names = [(n.label).replace("_", " ") for n in remainder]
+                duplicates = [item for item, count in collections.Counter(names).items() if count > 1]
+                if len(duplicates) > 0:
+                    logging.error(f"File {f} has multiple nodes labelled: {duplicates}")
                 lookup_OTT(dict(zip(names, remainder)), context_name)
 
             if args.savein:

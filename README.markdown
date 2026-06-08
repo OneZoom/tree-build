@@ -85,4 +85,44 @@ Note that download_and_filter_wikidata and download_and_filter_pageviews take se
 
 4. Commit `dvc.lock` to git.
 
+
+## Uploading tree to server
+
+1. If you are running the tree building scripts on a different computer to the one running the web server, you will need to push the `completetree_XXXXXX.js`, `completetree_XXXXXX.js.gz`, `cut_position_map_XXXXXX.js`, `cut_position_map_XXXXXX.js.gz`, `dates_XXXXXX.js`, `dates_XXXXXX.js.gz` files onto your server, e.g. by pushing to your local Github repo then pulling the latest github changes to the server.
+
+2. (15 mins) load the CSV tables into the DB. Use the script generated in `data/output_files/import_XXXXXX.sql` to truncate and repopulate ordered_leaves/nodes/etc.
+
+   ```
+   echo "SET GLOBAL local_infile=ON;" | mysql -p OneZoom_dev
+   mysql --local-infile --host localhost --user onezoom --password --database OneZoom_dev < data/output_files/import_XXXXXX.sql
+   ```
+
+3. Check for dups, and if any sponsors are no longer on the tree, using something like the following SQL command:
+
+   ```
+   select * from reservations left outer join ordered_leaves on reservations.OTT_ID = ordered_leaves.ott where ordered_leaves.ott is null and reservations.verified_name IS NOT NULL;
+   select group_concat(id), group_concat(parent), group_concat(name), count(ott) from ordered_leaves group by ott having(count(ott) > 1)
+   ```
+
+### Fill in additional server fields
+
+ 11. (15 mins) create example pictures for each node by percolating up. This requires the most recent `images_by_ott` table, so either do this on the main server, or (if you are doing it locally) update your `images_by_ott` to the most recent server version.
+
+    ```
+    ${OZ_DIR}/OZprivate/ServerScripts/Utilities/picProcess.py -v
+    ```
+
+1. (5 mins) percolate the IUCN data up using
+
+   ```
+   ${OZ_DIR}/OZprivate/ServerScripts/Utilities/IUCNquery.py -v
+   ```
+
+   (note that this both updates the IUCN data in the DB and percolates up interior node info)
+
+1. (10 mins) If this is a site with sponsorship (only the main OZ site), set the pricing structure using SET_PRICES.html (accessible from the management pages).
+1. (5 mins - this does seem to be necessary for ordered nodes & ordered leaves). Make sure indexes are reset. Look at `OZprivate/ServerScripts/SQL/create_db_indexes.sql` for the SQL to do this - this may involve logging in to the SQL server (e.g. via Sequel Pro on Mac) and pasting all the drop index and create index commands.
+
+
+
 For detailed step-by-step documentation, see [oz_tree_build/README.markdown](oz_tree_build/README.markdown).

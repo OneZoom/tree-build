@@ -86,6 +86,7 @@ from math import log
 from dendropy import Node, Tree
 
 from ..images_and_vernaculars.get_wiki_images import get_qid_from_taxa_data
+from ..utilities.debug_util import parse_args_and_add_logging_switch
 from ..utilities.file_utils import open_file_based_on_extension
 from . import OTT_popularity_mapping
 
@@ -597,7 +598,6 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
         set_node_ages,
         set_real_parent_nodes,
         write_brief_newick,
-        write_preorder_ages,
         write_preorder_to_csv,
     )
 
@@ -606,7 +606,6 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
     Tree.prune_non_species = prune_non_species
     Tree.set_node_ages = set_node_ages
     Tree.set_real_parent_nodes = set_real_parent_nodes
-    Tree.write_preorder_ages = write_preorder_ages
     Tree.remove_unifurcations_keeping_higher_taxa = remove_unifurcations_keeping_higher_taxa
     Tree.write_preorder_to_csv = write_preorder_to_csv
     Tree.group_genera_in_polytomies = group_genera_in_polytomies
@@ -664,8 +663,6 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
         tree.seed_node.write_brief_newick(condensed_newick)
     with open(os.path.join(outdir, f"ordered_tree_{version}.poly"), "w+") as condensed_poly:
         tree.seed_node.write_brief_newick(condensed_poly, "{}")
-    with open(os.path.join(outdir, f"ordered_dates_{version}.js"), "w+") as json_dates:
-        tree.write_preorder_ages(json_dates, format="json")
 
     # these are the extra columns output to the leaf csv file
     leaf_extras = OrderedDict()
@@ -720,19 +717,22 @@ def output_simplified_tree(tree, taxonomy_file, outdir, version, seed, save_sql=
         from shutil import copyfile
         from subprocess import call
 
-        # make CSV files that can be imported into mySQL (subs \\N for null values)
-        logging.info(" > saving extra file copies in mySQL format: import them using:")
-        for tab in ["_leaves", "_nodes"]:
-            fn = os.path.join(outdir, "ordered" + tab + f"_{version}" + ".csv")
-            sqlfile = fn + ".mySQL"
-            copyfile(fn, sqlfile)
-            call(["perl", "-pi", "-e", r"s/,(?=(,|\n))/,\\N/g", sqlfile])
-            logging.info(
-                f"sql> TRUNCATE TABLE ordered{tab}; "
-                f"LOAD DATA LOCAL INFILE '{sqlfile}' REPLACE INTO TABLE `ordered{tab}` "
-                f"FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' "
-                f"IGNORE 1 LINES ({open(fn).readline().rstrip()}) SET id = NULL;"
-            )
+        with open(os.path.join(outdir, f"import_{version}.sql"), "w", encoding="utf-8") as sql_f:
+            # make CSV files that can be imported into mySQL (subs \\N for null values)
+            logging.info(" > saving extra file copies in mySQL format: import them using:")
+            for tab in ["_leaves", "_nodes"]:
+                fn = os.path.join(outdir, "ordered" + tab + f"_{version}" + ".csv")
+                sqlfile = fn + ".mySQL"
+                copyfile(fn, sqlfile)
+                call(["perl", "-pi", "-e", r"s/,(?=(,|\n))/,\\N/g", sqlfile])
+                sql_f.writelines(
+                    [
+                        f"TRUNCATE TABLE ordered{tab};\n"
+                        f"LOAD DATA LOCAL INFILE '{sqlfile}' REPLACE INTO TABLE `ordered{tab}` \n"
+                        f"    FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' \n"
+                        f"    IGNORE 1 LINES ({open(fn).readline().rstrip()}) SET id = NULL;\n"
+                    ]
+                )
 
 
 def display_WD_ott_stats(OTT_ptrs):
@@ -940,12 +940,6 @@ def switch_otts_to_qids(taxa_data_file, tree):
 def process_all(args):
     random_seed_addition = 42
     start = time.time()
-    if args.verbosity == 0:
-        logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
-    elif args.verbosity == 1:
-        logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
-    elif args.verbosity >= 2:
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     logging.info(f"OneZoom data generation started on {time.asctime(time.localtime(time.time()))}")
     skip_popularity = (
         args.popularity_file is None
@@ -1138,15 +1132,8 @@ def main():
         type=str,
         help="JSON file with persisted data about taxa, typically used for the extinct tree",
     )
-    parser.add_argument(
-        "--verbosity",
-        "-v",
-        action="count",
-        default=0,
-        help="verbosity: output extra non-essential info",
-    )
 
-    args = parser.parse_args()
+    args = parse_args_and_add_logging_switch(parser)
     process_all(args)
 
 

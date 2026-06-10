@@ -28,8 +28,10 @@ stages:
         --annotations data/OpenTree/${ot_version}/annotations.json
         --taxonomy data/OpenTree/${ot_version}/taxonomy.tsv
         --supertree data/OpenTree/${ot_version}/labelled_supertree_ottnames.tre
+    deps:
+      - data/node_ages.json
     outs:
-      - data/dated_tree/dated_tree_topo_sample_1.tre
+      - data/dated_tree/dated_tree_pre.tre
 
   # ~20 secs
   add_ott_numbers_to_trees:

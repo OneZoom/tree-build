@@ -51,43 +51,17 @@ stages:
     outs:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
 
-  # ~a few secs
-  get_open_trees_from_one_zoom:
+  tree_build:
     cmd:
       - >-
-        cd data/OZTreeBuild/${oz_tree} &&
-        get_open_trees_from_one_zoom
-        ../../OpenTree/${ot_version}/draftversion.tre
-        OpenTreeParts/OpenTree_all/
-        BespokeTree/include_OT_${ot_version}/*.PHY
+        .venv/bin/tree_build
+        --bespoke_dir data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
+        --orphan_dir data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
+        --opentree data/dated_tree/dated_tree_pre.tre
     deps:
-      - data/OpenTree/${ot_version}/draftversion.tre
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
       - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
-    params:
-      - oz_tree
-      - ot_version
-    outs:
-      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
-
-  build_oz_tree:
-    cmd:
-      - >-
-        cd data/OZTreeBuild/${oz_tree} &&
-        build_oz_tree
-        --nodeages ../../node_ages.json
-        BespokeTree/include_OT_${ot_version}/Base.PHY
-        OpenTreeParts/OpenTree_all/
-        ${oz_tree}_full_tree.phy
-    deps:
-      - data/node_ages.json
-      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
-      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
-    params:
-      - oz_tree
-      - ot_version
-    outs:
-      - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
+      - data/dated_tree/dated_tree_pre.tre
 
   download_eol:
     # EOL doesn't version the provider ids file, so capture the last-modified header instead

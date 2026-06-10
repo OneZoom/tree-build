@@ -1,0 +1,86 @@
+"""
+Splice together a set of trees using OZ inclusion syntax
+"""
+
+import argparse
+import logging
+
+from ..date_tree import date_tree
+from ..utilities.debug_util import parse_args_and_add_logging_switch
+from .step_graft import graft_extract_ot_subtrees, graft_tree
+from .step_parse import parse_bespoke_trees, parse_ot_orphans
+
+logger = logging.getLogger(__name__)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument(
+        "--bespoke_dir",
+        help=("Directory containing bespoke trees, including Base.PHY, the root"),
+    )
+    parser.add_argument(
+        "--orphan_dir",
+        help=("Directory containing orphan OpenTree subtrees"),
+    )
+    parser.add_argument(
+        "--opentree",
+        help=("Newick tree with OpenTree"),
+    )
+    parser.add_argument(
+        "--out_dir",
+        default="data/out",
+        help=("Directory to write output files to"),
+    )
+    args = parse_args_and_add_logging_switch(parser)
+
+    logger.info("Parse & graft bespoke tree together")
+    base_t, bespoke_ts = parse_bespoke_trees(args.bespoke_dir)
+    missing_inclusions = graft_tree(base_t, additional_trees=bespoke_ts, prefer_subtree_name=True)
+
+    logger.info("Random resoution of polytomies for bespoke trees")
+    # tidy_resolve_polytomy_random(base_t)
+
+    logger.info("Resolve branch lengths to dates bottom-up. Remove (or not care about) branch lengths")
+    # tidy_resolve_bl_to_dates(base_t)
+
+    logger.info("Top-down conflict resolution in bespoke tree, delete entries that conflict with higher ages")
+    # tidy_resolve_date_conflicts(base_t)
+
+    logger.info("Graft OT subtrees onto our trees. Already polytomy-resolved & date pins from chronosynth applied")
+    opentree_ts = graft_extract_ot_subtrees(date_tree.nwk_read(args.opentree), missing_inclusions)
+    opentree_ts.update(parse_ot_orphans(args.orphan_dir, missing_inclusions))
+    missing_inclusions = graft_tree(
+        base_t, additional_trees=opentree_ts, prefer_subtree_name=False, disable_recursion=True
+    )
+    for i in missing_inclusions:
+        logger.error(f"No subtree found for {i}")
+
+    logger.info(
+        "Popularity calculations for entire tree (including any remaining subspecies from bespoke tree, "
+        "Jonathan's will have them already removed) (stop caring about polytomy vs. popularity calculations, "
+        "and just apply them post-resolution). Apply popularity based on OTT -> popularity map, percolate "
+        "using existing rules (which preserves popularity from removed subspecies)"
+    )
+    # prop_add_popularity(base_t)
+
+    logger.info("Remove subspecies (now popularity has percolated)")
+    # tidy_remove_subspecies(base_t)
+
+    logger.info(
+        "Top-down conflict resolution. If there's conflict with higher ages, remove ages until conflict goes away"
+    )
+    # resolve_date_conflicts(base_t)
+
+    logger.info("Remove unary nodes (they are likely uninteresting, and make a mess of the tree rendering)")
+    # tidy_remove_unary(base_t)
+
+    logger.info("Re-interpoltate missing dates")
+    # interpolate_dates(base_t)
+
+    logger.info("Add properies to tree")
+    pass
+
+
+if __name__ == "__main__":
+    main()

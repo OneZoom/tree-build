@@ -54,7 +54,7 @@ def parse_args_and_add_logging_switch(parser):
         logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
     elif args.verbosity == 1:
         logging.basicConfig(stream=sys.stderr, level=logging.INFO)
-    elif args.verbosity == 2:
+    else:
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
     if _error_handler is None:

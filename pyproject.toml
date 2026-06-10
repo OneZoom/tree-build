@@ -67,6 +67,7 @@ add_dates_and_species_to_tree = "oz_tree_build.wiki_extraction.add_dates_and_spe
 download_node_ages = "oz_tree_build.download_node_ages.download_node_ages:main"
 date_tree = "oz_tree_build.date_tree.date_tree:main"
 tree_build = "oz_tree_build.tree_build.tree_build:main"
+taxon_map = "oz_tree_build.taxon_mapping_and_popularity.taxon_map:main"
 
 [tool.setuptools]
 packages = ["oz_tree_build"]

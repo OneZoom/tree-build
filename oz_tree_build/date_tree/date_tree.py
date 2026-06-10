@@ -35,6 +35,8 @@ import gc
 import numpy as np
 import datetime
 
+import ete4
+
 from dated_complete_tree import tree_loading
 from dated_complete_tree import tree_labelling
 from dated_complete_tree import tree_fixing
@@ -45,6 +47,32 @@ import argparse
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename="main.log", filemode="w", force=True, level=logging.ERROR)
+
+
+def nwk_write(tree, outfile):
+    """
+    Tidy properties and write out newick tree
+    """
+    for n in tree.traverse():
+        # Tidy up attributes, only output useful values
+        if "date" in n.props and n.props["date"] is None:
+            n.del_prop("date")
+    tree.write(
+        outfile=outfile,
+        props=["date"],
+        parser=1,
+    )
+
+
+def nwk_read(infile):
+    """
+    Re-reads trees written by nwk_write, used by downstream processes
+    """
+    tree = ete4.Tree(infile, parser=1)
+    for n in tree.traverse():
+        if "date" in n.props:
+            n.props["date"] = float(n.props["date"])
+    return tree
 
 
 def generate_trees(args):
@@ -150,19 +178,24 @@ def generate_trees(args):
         # Finally, fix step 3.
         tree_fixing.fix_polyphyly(fix_dict, rng, expand_parent_backbones=True)
 
-        tree_fixing.remove_nonspecies_leaves(whole_tre)
+        # tree_fixing.remove_nonspecies_leaves(whole_tre)
 
         # Last of all, polytomy resolution.
         tree_fixing.fix_all_polytomies(whole_tre, rng)
 
         # Remove one-child nodes. Gives a fully bifurcating tree.
-        whole_tre = tree_fixing.delete_one_child_nodes(whole_tre)
+        # whole_tre = tree_fixing.delete_one_child_nodes(whole_tre)
 
         #####################################################################################################################
         # Assign and interpolate median dates
 
         # Assign dates
         tree_dating.assign_dates(whole_tre, dates)
+
+        ############# Write out early, before imputing dates
+        nwk_write(whole_tre, "%s/%s_pre.tre" % (args.output_folder, args.output_tree_filename))
+        sys.exit(0)
+        ########################
 
         # Date cleaning to ensure time consistency down the tree
         tree_dating.label_older_descendants(whole_tre)

@@ -158,6 +158,25 @@ stages:
       - data/filtered/pageviews/:
           persist: true
 
+  # ~4 mins
+  taxon_map:
+    cmd: >-
+      .venv/bin/taxon_map
+      --OpenTreeTaxonomy data/OpenTree/${ot_version}/taxonomy.tsv
+      --wikidataDumpFile data/filtered/OneZoom_latest-all.json
+      --wikipediaSQLDumpFile data/filtered/OneZoom_enwiki-latest-page.sql
+      --wikipedia_totals_bz2_pageviews data/filtered/pageviews/
+      --EOLidentifiers data/filtered/OneZoom_provider_ids.csv
+      -o data/taxon_map.csv
+    deps:
+      - data/OpenTree/${ot_version}/taxonomy.tsv
+      - data/filtered/OneZoom_latest-all.json
+      - data/filtered/OneZoom_enwiki-latest-page.sql
+      - data/filtered/pageviews/
+      - data/filtered/OneZoom_provider_ids.csv
+    outs:
+      - data/taxon_map.csv
+
   # ~10 mins
   CSV_base_table_creator:
     cmd:

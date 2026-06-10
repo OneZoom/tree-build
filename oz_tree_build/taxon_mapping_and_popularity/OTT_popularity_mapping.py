@@ -187,6 +187,16 @@ class WikidataItem:
 
     exclude_langs = frozenset(("species", "commons"))
 
+    def __repr__(self):
+        return (
+            "WikidataItem["
+            + " ".join(
+                (f"{a}={getattr(self, a)} " if hasattr(self, a) else "")
+                for a in ("Q", "ipni", "EoL", "iucn", "wd_ott", "raw_popularity", "l")
+            )
+            + "]"
+        )
+
     def __init__(self, json_item):
         """
         Create a basic item with an (integer) 'Q' attribute and an 'l' for sitelinks.

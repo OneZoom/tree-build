@@ -5,6 +5,8 @@ Splice together a set of trees using OZ inclusion syntax
 import argparse
 import logging
 
+from dated_complete_tree import tree_fixing
+
 from ..date_tree import date_tree
 from ..taxon_mapping_and_popularity.taxon_map import read_taxon_map
 from ..utilities.debug_util import parse_args_and_add_logging_switch
@@ -12,6 +14,7 @@ from .step_graft import graft_extract_ot_subtrees, graft_tree
 from .step_parse import parse_bespoke_trees, parse_ot_orphans
 from .step_popularity import popularity_add_prop
 from .step_taxon import taxon_add_prop
+from .step_tidy import tidy_clear_conflicting_dates_topdown, tidy_infill_dates_bottomup
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +55,10 @@ def main():
     base_t.resolve_polytomy()
 
     logger.info("Resolve branch lengths to dates bottom-up. Remove (or not care about) branch lengths")
-    # tidy_resolve_bl_to_dates(base_t)
+    tidy_infill_dates_bottomup(base_t)
 
     logger.info("Top-down conflict resolution in bespoke tree, delete entries that conflict with higher ages")
-    # tidy_resolve_date_conflicts(base_t)
+    tidy_clear_conflicting_dates_topdown(base_t)
 
     logger.info("Graft OT subtrees onto our trees. Already polytomy-resolved & date pins from chronosynth applied")
     opentree_ts = graft_extract_ot_subtrees(date_tree.nwk_read(args.opentree), missing_inclusions)
@@ -83,10 +86,10 @@ def main():
     logger.info(
         "Top-down conflict resolution. If there's conflict with higher ages, remove ages until conflict goes away"
     )
-    # resolve_date_conflicts(base_t)
+    tidy_clear_conflicting_dates_topdown(base_t)
 
     logger.info("Remove unary nodes (they are likely uninteresting, and make a mess of the tree rendering)")
-    # tidy_remove_unary(base_t)
+    tree_fixing.delete_one_child_nodes(base_t)
 
     logger.info("Re-interpoltate missing dates")
     # interpolate_dates(base_t)

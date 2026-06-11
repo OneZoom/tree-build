@@ -494,3 +494,33 @@ def main():
             )
         )
     args.o.close()
+
+
+def read_taxon_map(path):
+    """Read a taxon map CSV (as written by :func:`main`) into a dict keyed by ott.
+
+    Empty fields become ``None``. Numeric fields are converted to ``int`` or
+    ``float``; ``iucn`` is left as a string because multiple values may be
+    joined with ``|``. Source IDs (``ncbi``, ``ifung``, ``worms``, ``irmng``,
+    ``gbif``) are converted to ``int`` where possible and otherwise left as
+    strings.
+    """
+    int_fields = ("ott", "wikidata", "wikipedia_lang_flag", "eol", "ipni")
+    float_fields = ("raw_popularity",)
+    source_fields = ("ncbi", "ifung", "worms", "irmng", "gbif")
+    out = {}
+    with open(path, encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f, dialect="excel")
+        for row in reader:
+            r = {k: (v if v != "" else None) for k, v in row.items()}
+            for k in int_fields:
+                if r.get(k) is not None:
+                    r[k] = int(r[k])
+            for k in float_fields:
+                if r.get(k) is not None:
+                    r[k] = float(r[k])
+            for k in source_fields:
+                if r.get(k) is not None and r[k].isdigit():
+                    r[k] = int(r[k])
+            out[r["ott"]] = r
+    return out

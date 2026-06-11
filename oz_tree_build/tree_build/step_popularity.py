@@ -1,3 +1,4 @@
+import collections
 import logging
 from math import log
 
@@ -55,6 +56,37 @@ def popularity_add_prop(
 
         # Round to 2 decimal places
         node.props["popularity"] = round(pop, 2)
+
+
+def popularity_add_rank(tree):
+    """
+    Rank every leaf by its ``node.props["popularity"]`` and write the position
+    to ``node.props["popularity_rank"]``. Rank 1 is the most popular leaf.
+
+    Ties use standard competition ranking ("1224"): tied leaves share the lower
+    rank and the next distinct value skips ahead by the size of the tie. For
+    example, popularities [100, 50, 50, 50, 1] produce ranks [1, 2, 2, 2, 5].
+
+    Internal nodes are neither ranked nor used as tie-breakers, and their
+    ``popularity`` prop (if any) is ignored.
+
+    Should be run after invalid tips and unary nodes have been removed, so the
+    ranking reflects the final set of leaves.
+    """
+    leaf_popularities = collections.defaultdict(int)
+    for node in tree.traverse():
+        if node.is_leaf:
+            leaf_popularities[node.props.get("popularity")] += 1
+    cumsum = 1
+    if None in leaf_popularities:
+        return
+    for k in sorted(leaf_popularities.keys(), reverse=True):
+        add_next = leaf_popularities[k]
+        leaf_popularities[k] = cumsum
+        cumsum += add_next
+    for node in tree.traverse():
+        if node.is_leaf:
+            node.props["popularity_rank"] = leaf_popularities[node.props.get("popularity")]
 
 
 def popularity_function(

@@ -13,3 +13,12 @@ def node_get_ott(n):
         return None
     m = NODE_OTT_RE.search(n.name)
     return m.group(1) if m else None
+
+
+def node_name_without_ott(n):
+    """
+    Remove any OTT at the end of the label, return node name
+    """
+    if not n.name:
+        return None
+    return NODE_OTT_RE.sub("", n.name)

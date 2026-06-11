@@ -11,6 +11,7 @@ from ..date_tree import date_tree
 from ..taxon_mapping_and_popularity.taxon_map import read_taxon_map
 from ..utilities.debug_util import parse_args_and_add_logging_switch
 from .step_graft import graft_extract_ot_subtrees, graft_tree
+from .step_output import output_add_prop_ids, output_mysqlexport
 from .step_parse import parse_bespoke_trees, parse_ot_orphans
 from .step_popularity import popularity_add_prop, popularity_add_rank
 from .step_taxon import taxon_add_prop
@@ -103,6 +104,10 @@ def main():
 
     logger.info("Add properies to tree")
     pass
+
+    logger.info("Output MySQL CSV files")
+    output_add_prop_ids(base_t)
+    output_mysqlexport(base_t, args.out_dir)
 
 
 if __name__ == "__main__":

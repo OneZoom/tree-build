@@ -7,6 +7,7 @@ import pytest
 from oz_tree_build.taxon_mapping_and_popularity.taxon_map import read_taxon_map
 from oz_tree_build.tree_build.step_popularity import (
     popularity_add_prop,
+    popularity_add_rank,
     popularity_function,
     sum_popularity_over_tree,
 )
@@ -262,3 +263,105 @@ class TestPopularityAddProp:
         root = next(n for n in t.traverse() if n.name == "Root_ott3")
         # Root pop=0, descendants_popsum=30, n_desc=2 -> 30/log(2).
         assert root.props["popularity"] == round(30.0 / log(2), 2)
+
+
+class TestPopularityAddRank:
+    @staticmethod
+    def _set_leaf_pops(tree, pops):
+        # Manually attach popularity values to leaves (bypassing the full
+        # pipeline). popularity_add_rank only reads node.props["popularity"].
+        for n in tree.traverse():
+            if n.is_leaf and n.name in pops:
+                n.props["popularity"] = pops[n.name]
+
+    def test_distinct_popularities_get_sequential_ranks(self):
+        # Higher popularity -> lower (better) rank, starting at 1.
+        t = ete4.Tree("(A,B,C)R;", parser=1)
+        self._set_leaf_pops(t, {"A": 30, "B": 20, "C": 10})
+
+        popularity_add_rank(t)
+
+        by_name = {n.name: n for n in t.traverse()}
+        assert by_name["A"].props["popularity_rank"] == 1
+        assert by_name["B"].props["popularity_rank"] == 2
+        assert by_name["C"].props["popularity_rank"] == 3
+
+    def test_ties_use_standard_competition_ranking(self):
+        # Two leaves tied at the top share rank 1; the next leaf gets
+        # rank 3 (not 2). Same for ties further down.
+        t = ete4.Tree("(A,B,C,D,E)R;", parser=1)
+        self._set_leaf_pops(t, {"A": 10, "B": 10, "C": 5, "D": 3, "E": 3})
+
+        popularity_add_rank(t)
+
+        by_name = {n.name: n for n in t.traverse()}
+        assert by_name["A"].props["popularity_rank"] == 1
+        assert by_name["B"].props["popularity_rank"] == 1
+        assert by_name["C"].props["popularity_rank"] == 3
+        assert by_name["D"].props["popularity_rank"] == 4
+        assert by_name["E"].props["popularity_rank"] == 4
+
+    def test_all_leaves_tied_share_rank_one(self):
+        t = ete4.Tree("(A,B,C)R;", parser=1)
+        self._set_leaf_pops(t, {"A": 7, "B": 7, "C": 7})
+
+        popularity_add_rank(t)
+
+        for name in ("A", "B", "C"):
+            leaf = next(n for n in t.traverse() if n.name == name)
+            assert leaf.props["popularity_rank"] == 1
+
+    def test_single_leaf_gets_rank_one(self):
+        # The function ranks even the root if it is a leaf.
+        t = ete4.Tree("A;", parser=1)
+        t.props["popularity"] = 42
+        popularity_add_rank(t)
+        assert t.props["popularity_rank"] == 1
+
+    def test_internal_nodes_do_not_get_a_rank(self):
+        # Only leaves are ranked; the internal node's popularity, even
+        # if set, is ignored both as a tie-breaker and as an output.
+        t = ete4.Tree("((A,B)I,C)R;", parser=1)
+        self._set_leaf_pops(t, {"A": 10, "B": 5, "C": 1})
+        by_name = {n.name: n for n in t.traverse()}
+        by_name["I"].props["popularity"] = 999  # should not affect anything
+        by_name["R"].props["popularity"] = 999
+
+        popularity_add_rank(t)
+
+        # Leaves ranked normally.
+        assert by_name["A"].props["popularity_rank"] == 1
+        assert by_name["B"].props["popularity_rank"] == 2
+        assert by_name["C"].props["popularity_rank"] == 3
+        # Internal nodes untouched by ranking.
+        assert "popularity_rank" not in by_name["I"].props
+        assert "popularity_rank" not in by_name["R"].props
+
+    def test_internal_node_without_popularity_does_not_trigger_skip(self):
+        # The None-guard only inspects leaves. An internal node that
+        # has no popularity prop must not cause the early return.
+        t = ete4.Tree("((A,B)I,C)R;", parser=1)
+        self._set_leaf_pops(t, {"A": 10, "B": 5, "C": 1})
+        # I and R deliberately have no popularity prop set.
+
+        popularity_add_rank(t)
+
+        by_name = {n.name: n for n in t.traverse()}
+        assert by_name["A"].props["popularity_rank"] == 1
+        assert by_name["B"].props["popularity_rank"] == 2
+        assert by_name["C"].props["popularity_rank"] == 3
+
+    def test_rank_cumsum_with_mixed_group_sizes(self):
+        # 1 leaf at top, 3 tied below, 1 at the bottom.
+        # Expected ranks: top=1, tied group=2, bottom=5.
+        t = ete4.Tree("(A,B,C,D,E)R;", parser=1)
+        self._set_leaf_pops(t, {"A": 100, "B": 50, "C": 50, "D": 50, "E": 1})
+
+        popularity_add_rank(t)
+
+        by_name = {n.name: n for n in t.traverse()}
+        assert by_name["A"].props["popularity_rank"] == 1
+        assert by_name["B"].props["popularity_rank"] == 2
+        assert by_name["C"].props["popularity_rank"] == 2
+        assert by_name["D"].props["popularity_rank"] == 2
+        assert by_name["E"].props["popularity_rank"] == 5

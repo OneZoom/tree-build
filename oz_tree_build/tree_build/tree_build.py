@@ -97,6 +97,10 @@ def main():
     logger.info("Rank popularities, post-node removal")
     popularity_add_rank(base_t)
 
+    logging.info("ladderizing tree (groups with fewer leaves first)")
+    # warning: ladderize ascending is needed for the short OZ newick-like form
+    base_t.ladderize(topological=False, reverse=False)
+
     logger.info("Add properies to tree")
     pass
 

@@ -58,10 +58,12 @@ stages:
         --bespoke_dir data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
         --orphan_dir data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
         --opentree data/dated_tree/dated_tree_pre.tre
+        --taxon_map data/taxon_map.csv
     deps:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
       - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
       - data/dated_tree/dated_tree_pre.tre
+      - data/taxon_map.csv
 
   download_eol:
     # EOL doesn't version the provider ids file, so capture the last-modified header instead

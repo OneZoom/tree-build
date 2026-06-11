@@ -47,7 +47,9 @@ def main():
     missing_inclusions = graft_tree(base_t, additional_trees=bespoke_ts, prefer_subtree_name=True)
 
     logger.info("Random resoution of polytomies for bespoke trees")
-    # tidy_resolve_polytomy_random(base_t)
+    # https://etetoolkit.org/docs/latest/reference/reference_tree.html#ete3.TreeNode.resolve_polytomy
+    # NB: Doesn't shuffle children like the DendroPy equivalent, but given a fixed seed do we care?
+    base_t.resolve_polytomy()
 
     logger.info("Resolve branch lengths to dates bottom-up. Remove (or not care about) branch lengths")
     # tidy_resolve_bl_to_dates(base_t)

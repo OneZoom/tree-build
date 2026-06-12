@@ -6,7 +6,7 @@ import argparse
 import json
 import logging
 
-from dated_complete_tree import tree_fixing
+from dated_complete_tree import tree_dating, tree_fixing
 
 from ..date_tree import date_tree
 from ..taxon_mapping_and_popularity.taxon_map import read_taxon_map
@@ -105,7 +105,24 @@ def main():
     tree_fixing.delete_one_child_nodes(base_t)
 
     logger.info("Re-interpoltate missing dates")
-    # interpolate_dates(base_t)
+    for n in base_t.traverse():  # First do some tidying to force tree_dating to work
+        if n.is_leaf and n.name == "mrcaimp":
+            # Bin imputed mrca nodes made by fix_polyphyly left dangling by grafting process
+            n.detach()
+            continue
+
+        if not n.name:
+            # dated-complete-tree will assume all nodes have a name
+            n.name = ""
+
+        if n.props.get("date") is None:
+            # Ensure we have a date property on every leaf
+            n.props["date"] = 0 if n.is_leaf else None
+        else:
+            # If we do have a date, we also have to set imputed date
+            n.props["imputed_date"] = n.props.get("imputed_date") or False
+    tree_dating.date_labelling(base_t)
+    tree_dating.impute_missing_dates(base_t, l=0.25)
 
     logger.info("Rank popularities, post-node removal")
     popularity_add_rank(base_t)

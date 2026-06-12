@@ -1,4 +1,5 @@
 import csv
+import json
 import os.path
 import struct
 
@@ -232,6 +233,17 @@ def output_mysqlexport(tree, out_dir):
                     f"    IGNORE 1 LINES ({open(os.path.join(out_dir,csvfile)).readline().rstrip()}) SET id = NULL;\n"
                 ]
             )
+
+
+def output_jssource(tree, out_dir, file_name, data):
+    """
+    Turn ``data`` dict into a js source file that defines it's keys as variables, with JSON encoded values
+    """
+    with open(os.path.join(out_dir, file_name), "w") as f:
+        for k, v in data.items():
+            f.write(f"var {k} = ")
+            json.dump(v, f)
+            f.write(";\n")
 
 
 def output_proparray(tree, out_dir, prop_name):

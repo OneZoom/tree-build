@@ -3,6 +3,7 @@ Splice together a set of trees using OZ inclusion syntax
 """
 
 import argparse
+import json
 import logging
 
 from dated_complete_tree import tree_fixing
@@ -11,7 +12,13 @@ from ..date_tree import date_tree
 from ..taxon_mapping_and_popularity.taxon_map import read_taxon_map
 from ..utilities.debug_util import parse_args_and_add_logging_switch
 from .step_graft import graft_extract_ot_subtrees, graft_tree
-from .step_output import output_add_prop_ids, output_mysqlexport
+from .step_jsnewick import jsnewick_brief_newick, jsnewick_cutpositionmap_binary, jsnewick_cutpositionmap_polytomy
+from .step_output import (
+    output_add_prop_ids,
+    output_jssource,
+    output_mysqlexport,
+    output_proparray,
+)
 from .step_parse import parse_bespoke_trees, parse_ot_orphans
 from .step_popularity import popularity_add_prop, popularity_add_rank
 from .step_taxon import taxon_add_prop
@@ -108,6 +115,30 @@ def main():
     logger.info("Output MySQL CSV files")
     output_add_prop_ids(base_t)
     output_mysqlexport(base_t, args.out_dir)
+
+    logger.info("Output JS newick / cut position map")
+    output_jssource(
+        base_t,
+        args.out_dir,
+        "completetree.js",
+        dict(
+            rawData=jsnewick_brief_newick(base_t, polytomy_braces="{}"),
+        ),
+    )
+    cutmap_threshold = 10000
+    output_jssource(
+        base_t,
+        args.out_dir,
+        "cut_position_map.js",
+        dict(
+            # NB: For legacy reasons the variable contains a JSON string, not JSON
+            cut_position_map_json_str=json.dumps(jsnewick_cutpositionmap_binary(base_t, threshold=cutmap_threshold)),
+            polytomy_cut_position_map_json_str=json.dumps(
+                jsnewick_cutpositionmap_polytomy(base_t, threshold=cutmap_threshold)
+            ),
+            threshold=cutmap_threshold,
+        ),
+    )
 
 
 if __name__ == "__main__":

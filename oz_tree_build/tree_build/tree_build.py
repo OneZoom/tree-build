@@ -23,6 +23,11 @@ from .step_parse import parse_bespoke_trees, parse_ot_orphans
 from .step_popularity import popularity_add_prop, popularity_add_rank
 from .step_taxon import taxon_add_prop
 from .step_tidy import tidy_clear_conflicting_dates_topdown, tidy_infill_dates_bottomup
+from .step_treeprop import (
+    treeprop_geological,
+    treeprop_sliding_window,
+    treeprop_weighted_mean,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,9 +114,6 @@ def main():
     # warning: ladderize ascending is needed for the short OZ newick-like form
     base_t.ladderize(topological=False, reverse=False)
 
-    logger.info("Add properies to tree")
-    pass
-
     logger.info("Output MySQL CSV files")
     output_add_prop_ids(base_t)
     output_mysqlexport(base_t, args.out_dir)
@@ -139,6 +141,11 @@ def main():
             threshold=cutmap_threshold,
         ),
     )
+
+    logger.info("Generate tree properties and output arrays")
+    output_proparray(base_t, args.out_dir, treeprop_geological(base_t))
+    output_proparray(base_t, args.out_dir, treeprop_sliding_window(base_t))
+    output_proparray(base_t, args.out_dir, treeprop_weighted_mean(base_t))
 
 
 if __name__ == "__main__":

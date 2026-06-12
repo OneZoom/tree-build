@@ -20,7 +20,7 @@ def tidy_clear_conflicting_dates_topdown(parent, mrad=None):
     if parent.props.get("date") is not None:
         if mrad is not None and (parent.props["date"] - mrad) > 1e-5:
             # date is greater than mrad, this shouldn't happen
-            del parent.props["date"]
+            parent.props["date"] = None
         else:
             mrad = parent.props["date"]
     for c in parent.children:

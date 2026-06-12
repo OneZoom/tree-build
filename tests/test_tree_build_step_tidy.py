@@ -112,7 +112,7 @@ class TestTidyClearConflictingDatesTopdown:
         nodes["A"].props["date"] = 20  # older than Root — conflict
         nodes["B"].props["date"] = 3
         tidy_clear_conflicting_dates_topdown(t)
-        assert "date" not in nodes["A"].props
+        assert nodes["A"].props["date"] is None
         assert nodes["B"].props["date"] == 3
         assert nodes["Root"].props["date"] == 10
 
@@ -128,9 +128,9 @@ class TestTidyClearConflictingDatesTopdown:
         nodes["B"].props["date"] = 50  # conflict — older than Root
         tidy_clear_conflicting_dates_topdown(t)
         assert nodes["Root"].props["date"] == 10
-        assert "date" not in nodes["I"].props
+        assert nodes["I"].props["date"] is None
         assert nodes["A"].props["date"] == 5
-        assert "date" not in nodes["B"].props
+        assert nodes["B"].props["date"] is None
 
     def test_missing_ancestor_date_does_not_constrain_descendants(self):
         # With no ancestor date set, the first node we meet on each path
@@ -146,7 +146,7 @@ class TestTidyClearConflictingDatesTopdown:
         assert nodes["A"].props["date"] == 100
         assert nodes["I"].props["date"] == 50
         assert nodes["B"].props["date"] == 1
-        assert "date" not in nodes["C"].props
+        assert nodes["C"].props["date"] is None
 
     def test_nodes_without_date_are_skipped_and_pass_mrad_through(self):
         # An intermediate node without a date must not reset the ceiling;
@@ -160,7 +160,7 @@ class TestTidyClearConflictingDatesTopdown:
         tidy_clear_conflicting_dates_topdown(t)
         assert nodes["Root"].props["date"] == 10
         assert "date" not in nodes["I"].props
-        assert "date" not in nodes["A"].props
+        assert nodes["A"].props["date"] is None
 
     def test_small_overshoot_within_tolerance_is_kept(self):
         # The function tolerates floating-point noise up to 1e-5.
@@ -177,7 +177,7 @@ class TestTidyClearConflictingDatesTopdown:
         nodes["Root"].props["date"] = 10
         nodes["A"].props["date"] = 10 + 1e-3  # outside tolerance
         tidy_clear_conflicting_dates_topdown(t)
-        assert "date" not in nodes["A"].props
+        assert nodes["A"].props["date"] is None
 
     def test_equal_dates_are_kept(self):
         # parent.date == ancestor.date is not a conflict.
@@ -199,7 +199,7 @@ class TestTidyClearConflictingDatesTopdown:
         nodes["B"].props["date"] = 50  # would be fine vs Root but conflicts with I
         tidy_clear_conflicting_dates_topdown(t)
         assert nodes["A"].props["date"] == 3
-        assert "date" not in nodes["B"].props
+        assert nodes["B"].props["date"] is None
 
     def test_runs_on_tree_with_no_dates_at_all(self):
         # Nothing to do; should not raise.
@@ -232,4 +232,4 @@ class TestTidyPipeline:
         t.props["date"] = 50
         tidy_clear_conflicting_dates_topdown(t)
         assert t.props["date"] == 50
-        assert "date" not in internal.props
+        assert internal.props["date"] is None

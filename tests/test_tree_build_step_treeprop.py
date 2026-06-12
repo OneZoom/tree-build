@@ -5,9 +5,10 @@ import random
 import ete4
 
 from oz_tree_build.tree_build.step_treeprop import (
-    prop_weighted_mean,
+    GEOLOGICAL_PERIODS,
+    prop_geological,
     prop_sliding_window,
-    GEOLOGICAL_PERIODS, prop_geological
+    prop_weighted_mean,
 )
 
 
@@ -82,6 +83,7 @@ def test_period_inclusive():
 
 
 #######
+
 
 def do_prop_weighted_mean(nwk, weighting=0.8):
     t = ete4.Tree(nwk, parser=1)
@@ -165,7 +167,9 @@ def test_missing_branch_length(caplog):
     assert [i for i, x in enumerate(result) if x[2] == 0.0] == [0, 9]
     assert any("n10" in r.message and r.levelno == logging.WARNING for r in caplog.records)
 
+
 ####################
+
 
 def do_prop_sliding_window(nwk, local_mean_width=5):
     t = ete4.Tree(nwk, parser=1)

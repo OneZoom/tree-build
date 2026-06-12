@@ -6,9 +6,9 @@ import ete4
 
 from oz_tree_build.tree_build.step_treeprop import (
     GEOLOGICAL_PERIODS,
-    prop_geological,
-    prop_sliding_window,
-    prop_weighted_mean,
+    treeprop_geological,
+    treeprop_sliding_window,
+    treeprop_weighted_mean,
 )
 
 
@@ -32,12 +32,12 @@ def set_ages_from_dist(tree):
         node.props["age"] = parent_age
 
 
-def do_prop_geological(nwk, date_tree=True):
+def do_treeprop_geological(nwk, date_tree=True):
     t = ete4.Tree(nwk, parser=1)
     # Our tree needs to have the age prop set for this to work
     if date_tree:
         set_ages_from_dist(t)
-    assert prop_geological(t) == "geological"
+    assert treeprop_geological(t) == "geological"
 
     # Traverse tree, returning all periods
     return [(n.name, n.props.get("age"), n.props["geological"]) for n in t.traverse("preorder")]
@@ -45,7 +45,7 @@ def do_prop_geological(nwk, date_tree=True):
 
 def test_undated_tree():
     """Undated trees get 0 set"""
-    assert do_prop_geological("(A:10)B;", date_tree=False) == [
+    assert do_treeprop_geological("(A:10)B;", date_tree=False) == [
         ("B", None, 0),
         ("A", None, 0),
     ]
@@ -53,9 +53,9 @@ def test_undated_tree():
 
 def test_incomplete_date_tree():
     """If not all dates set, we do what we can"""
-    assert do_prop_geological("((C:5,D:4)B)A:15;") == [
+    assert do_treeprop_geological("((C:5,D:4)B)A:15;") == [
         ("A", None, 0),
-        ("B", 5.0, 3),
+        ("B", 5.0, 4),
         ("C", 0, 1),
         ("D", 0, 1),
     ]
@@ -63,9 +63,9 @@ def test_incomplete_date_tree():
 
 def test_complete_date_tree():
     """If all dates set"""
-    assert do_prop_geological("((C:5,D:4)B:10)A:15;") == [
-        ("A", 15.0, 4),
-        ("B", 5.0, 3),
+    assert do_treeprop_geological("((C:5,D:4)B:10)A:15;") == [
+        ("A", 15.0, 5),
+        ("B", 5.0, 4),
         ("C", 0, 1),
         ("D", 0, 1),
     ]
@@ -75,19 +75,20 @@ def test_period_inclusive():
     """Mya ranges are incclusive"""
 
     def get_period(x):
-        return GEOLOGICAL_PERIODS[do_prop_geological(f"(B:{x})A;")[0][2]]
+        p = GEOLOGICAL_PERIODS[do_treeprop_geological(f"(B:{x})A;")[0][2]]
+        return (p["period"], p["epoch"], p["mya_start"])
 
-    assert get_period(520.99) == {"period": "Cambrian", "epoch": "Series 2", "mya_start": 521}
-    assert get_period(521) == {"period": "Cambrian", "epoch": "Series 2", "mya_start": 521}
-    assert get_period(521.01) == {"period": "Cambrian", "epoch": "Terreneuvian", "mya_start": 538.8}
+    assert get_period(520.99) == ("Cambrian", "Series 2", 521)
+    assert get_period(521) == ("Cambrian", "Series 2", 521)
+    assert get_period(521.01) == ("Cambrian", "Terreneuvian", 538.8)
 
 
 #######
 
 
-def do_prop_weighted_mean(nwk, weighting=0.8):
+def do_treeprop_weighted_mean(nwk, weighting=0.8):
     t = ete4.Tree(nwk, parser=1)
-    assert prop_weighted_mean(t, weighting=weighting) == "weighted_mean_ratio"
+    assert treeprop_weighted_mean(t, weighting=weighting) == "weighted_mean_ratio"
 
     # Traverse tree, returning all periods
     return [(n.name, n.props.get("date"), n.props["weighted_mean_ratio"]) for n in t.traverse("preorder")]
@@ -142,8 +143,8 @@ def test_weighting():
     dists = [random.randrange(10, 100) for _ in range(20)]
     tree_str = generate_tree(dists)
 
-    assert do_prop_weighted_mean(tree_str) == expected_results_wm(dists, weighting=0.8)
-    assert do_prop_weighted_mean(tree_str, weighting=3) == expected_results_wm(dists, weighting=3)
+    assert do_treeprop_weighted_mean(tree_str) == expected_results_wm(dists, weighting=0.8)
+    assert do_treeprop_weighted_mean(tree_str, weighting=3) == expected_results_wm(dists, weighting=3)
     assert expected_results_wm(dists, 0.8) != expected_results_wm(dists, 3)
 
 
@@ -159,7 +160,7 @@ def test_missing_branch_length(caplog):
     tree_str = generate_tree(dists)
 
     with caplog.at_level(logging.WARNING, logger="oz_tree_build.taxon_mapping_and_popularity.tree_props.weighted_mean"):
-        result = do_prop_weighted_mean(tree_str, weighting=3)
+        result = do_treeprop_weighted_mean(tree_str, weighting=3)
 
     assert result == expected_results_wm(dists, weighting=3)
     # Preorder visits n19..n0. Only the root (index 0 → n19) and the missing
@@ -171,9 +172,9 @@ def test_missing_branch_length(caplog):
 ####################
 
 
-def do_prop_sliding_window(nwk, local_mean_width=5):
+def do_treeprop_sliding_window(nwk, local_mean_width=5):
     t = ete4.Tree(nwk, parser=1)
-    assert prop_sliding_window(t, local_mean_width=local_mean_width) == "sliding_window"
+    assert treeprop_sliding_window(t, local_mean_width=local_mean_width) == "sliding_window"
 
     # Traverse tree, returning all periods
     return [(n.name, n.props.get("date"), n.props["sliding_window"]) for n in t.traverse("preorder")]
@@ -230,8 +231,8 @@ def test_local_mean_width():
     dists = [random.randrange(10, 100) for _ in range(20)]
     tree_str = generate_tree(dists)
 
-    assert do_prop_sliding_window(tree_str) == expected_results_sw(dists, local_mean_width=5)
-    assert do_prop_sliding_window(tree_str, local_mean_width=3) == expected_results_sw(dists, local_mean_width=3)
+    assert do_treeprop_sliding_window(tree_str) == expected_results_sw(dists, local_mean_width=5)
+    assert do_treeprop_sliding_window(tree_str, local_mean_width=3) == expected_results_sw(dists, local_mean_width=3)
     assert expected_results_sw(dists, 5) != expected_results_sw(dists, 3)
 
 
@@ -244,7 +245,7 @@ def test_missing_branch_length(caplog):
     with caplog.at_level(
         logging.WARNING, logger="oz_tree_build.taxon_mapping_and_popularity.tree_props.sliding_window"
     ):
-        result = do_prop_sliding_window(tree_str, local_mean_width=3)
+        result = do_treeprop_sliding_window(tree_str, local_mean_width=3)
 
     assert result == expected_results_sw(dists, local_mean_width=3)
     assert any("n10" in r.message and r.levelno == logging.WARNING for r in caplog.records)
@@ -256,7 +257,7 @@ def test_zero_branch_length():
     dists[10] = 0
     tree_str = generate_tree(dists)
 
-    result = do_prop_sliding_window(tree_str, local_mean_width=3)
+    result = do_treeprop_sliding_window(tree_str, local_mean_width=3)
 
     assert result == expected_results_sw(dists, local_mean_width=3)
     # n10 is at preorder index 9 and was given dist 0, so it should be exactly 0.

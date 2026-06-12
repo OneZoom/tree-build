@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import struct
 
@@ -7,6 +8,7 @@ import pytest
 
 from oz_tree_build.tree_build.step_output import (
     output_add_prop_ids,
+    output_jssource,
     output_mysqlexport,
     output_proparray,
 )
@@ -485,6 +487,58 @@ class TestOutputMysqlExport:
         assert "(" + ",".join(NODE_HEADER) + ")" in sql
         # `id` is auto-assigned by MySQL, not loaded from CSV.
         assert "SET id = NULL;" in sql
+
+
+########################################
+# output_jssource
+########################################
+
+
+class TestOutputJsSource:
+    def test_writes_file_at_given_path(self, tmp_path):
+        # The file is created at out_dir/file_name.
+        output_jssource(None, str(tmp_path), "out.js", {"x": 1})
+        assert (tmp_path / "out.js").exists()
+
+    def test_single_key_emits_var_declaration(self, tmp_path):
+        # Each dict key becomes a `var <key> = <json>;` line.
+        output_jssource(None, str(tmp_path), "out.js", {"rawData": "abc"})
+        assert (tmp_path / "out.js").read_text() == 'var rawData = "abc";\n'
+
+    def test_multiple_keys_emit_separate_lines(self, tmp_path):
+        # Every dict entry produces its own line, in insertion order.
+        data = {"a": 1, "b": "two", "c": [3, 4]}
+        output_jssource(None, str(tmp_path), "out.js", data)
+        assert (tmp_path / "out.js").read_text() == ("var a = 1;\n" 'var b = "two";\n' "var c = [3, 4];\n")
+
+    def test_values_are_json_encoded(self, tmp_path):
+        # Non-trivial Python values are serialised through json.dump, so
+        # nested dicts/lists and unicode survive a JSON round-trip.
+        value = {"nested": [1, 2, {"k": "v"}], "u": "café"}
+        output_jssource(None, str(tmp_path), "out.js", {"obj": value})
+        text = (tmp_path / "out.js").read_text()
+        # Strip the `var obj = ` prefix and trailing `;\n` to recover the JSON.
+        assert text.startswith("var obj = ")
+        assert text.endswith(";\n")
+        json_payload = text[len("var obj = ") : -len(";\n")]
+        assert json.loads(json_payload) == value
+
+    def test_string_values_are_quoted(self, tmp_path):
+        # JSON encoding wraps strings in double quotes — without it the
+        # generated JS would reference an undefined identifier.
+        output_jssource(None, str(tmp_path), "out.js", {"s": "hello"})
+        assert (tmp_path / "out.js").read_text() == 'var s = "hello";\n'
+
+    def test_empty_dict_writes_empty_file(self, tmp_path):
+        # An empty data dict still creates the file, just with no content.
+        output_jssource(None, str(tmp_path), "out.js", {})
+        assert (tmp_path / "out.js").read_text() == ""
+
+    def test_special_characters_in_strings_are_escaped(self, tmp_path):
+        # Quotes/backslashes/newlines inside values must be JSON-escaped so
+        # the emitted JS parses.
+        output_jssource(None, str(tmp_path), "out.js", {"s": 'a"b\\c\nd'})
+        assert (tmp_path / "out.js").read_text() == 'var s = "a\\"b\\\\c\\nd";\n'
 
 
 ######

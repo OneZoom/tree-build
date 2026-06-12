@@ -11,6 +11,10 @@ from oz_tree_build.tree_build.step_treeprop import (
     treeprop_weighted_mean,
 )
 
+########################################
+# treeprop_geological
+########################################
+
 
 def set_ages_from_dist(tree):
     """
@@ -43,47 +47,47 @@ def do_treeprop_geological(nwk, date_tree=True):
     return [(n.name, n.props.get("age"), n.props["geological"]) for n in t.traverse("preorder")]
 
 
-def test_undated_tree():
-    """Undated trees get 0 set"""
-    assert do_treeprop_geological("(A:10)B;", date_tree=False) == [
-        ("B", None, 0),
-        ("A", None, 0),
-    ]
+class TestTreepropGeological:
+    def test_undated_tree(self):
+        """Undated trees get 0 set"""
+        assert do_treeprop_geological("(A:10)B;", date_tree=False) == [
+            ("B", None, 0),
+            ("A", None, 0),
+        ]
+
+    def test_incomplete_date_tree(self):
+        """If not all dates set, we do what we can"""
+        assert do_treeprop_geological("((C:5,D:4)B)A:15;") == [
+            ("A", None, 0),
+            ("B", 5.0, 4),
+            ("C", 0, 1),
+            ("D", 0, 1),
+        ]
+
+    def test_complete_date_tree(self):
+        """If all dates set"""
+        assert do_treeprop_geological("((C:5,D:4)B:10)A:15;") == [
+            ("A", 15.0, 5),
+            ("B", 5.0, 4),
+            ("C", 0, 1),
+            ("D", 0, 1),
+        ]
+
+    def test_period_inclusive(self):
+        """Mya ranges are incclusive"""
+
+        def get_period(x):
+            p = GEOLOGICAL_PERIODS[do_treeprop_geological(f"(B:{x})A;")[0][2]]
+            return (p["period"], p["epoch"], p["mya_start"])
+
+        assert get_period(520.99) == ("Cambrian", "Series 2", 521)
+        assert get_period(521) == ("Cambrian", "Series 2", 521)
+        assert get_period(521.01) == ("Cambrian", "Terreneuvian", 538.8)
 
 
-def test_incomplete_date_tree():
-    """If not all dates set, we do what we can"""
-    assert do_treeprop_geological("((C:5,D:4)B)A:15;") == [
-        ("A", None, 0),
-        ("B", 5.0, 4),
-        ("C", 0, 1),
-        ("D", 0, 1),
-    ]
-
-
-def test_complete_date_tree():
-    """If all dates set"""
-    assert do_treeprop_geological("((C:5,D:4)B:10)A:15;") == [
-        ("A", 15.0, 5),
-        ("B", 5.0, 4),
-        ("C", 0, 1),
-        ("D", 0, 1),
-    ]
-
-
-def test_period_inclusive():
-    """Mya ranges are incclusive"""
-
-    def get_period(x):
-        p = GEOLOGICAL_PERIODS[do_treeprop_geological(f"(B:{x})A;")[0][2]]
-        return (p["period"], p["epoch"], p["mya_start"])
-
-    assert get_period(520.99) == ("Cambrian", "Series 2", 521)
-    assert get_period(521) == ("Cambrian", "Series 2", 521)
-    assert get_period(521.01) == ("Cambrian", "Terreneuvian", 538.8)
-
-
-#######
+########################################
+# treeprop_weighted_mean
+########################################
 
 
 def do_treeprop_weighted_mean(nwk, weighting=0.8):
@@ -138,38 +142,43 @@ def expected_results_wm(dists, weighting):
     return results
 
 
-def test_weighting():
-    """weighting param honoured"""
-    dists = [random.randrange(10, 100) for _ in range(20)]
-    tree_str = generate_tree(dists)
+class TestTreepropWeightedMean:
+    def test_weighting(self):
+        """weighting param honoured"""
+        dists = [random.randrange(10, 100) for _ in range(20)]
+        tree_str = generate_tree(dists)
 
-    assert do_treeprop_weighted_mean(tree_str) == expected_results_wm(dists, weighting=0.8)
-    assert do_treeprop_weighted_mean(tree_str, weighting=3) == expected_results_wm(dists, weighting=3)
-    assert expected_results_wm(dists, 0.8) != expected_results_wm(dists, 3)
+        assert do_treeprop_weighted_mean(tree_str) == expected_results_wm(dists, weighting=0.8)
+        assert do_treeprop_weighted_mean(tree_str, weighting=3) == expected_results_wm(dists, weighting=3)
+        assert expected_results_wm(dists, 0.8) != expected_results_wm(dists, 3)
+
+    def test_missing_branch_length(self, caplog):
+        """Nodes with missing branch length get a 0.0 weighted_mean and emit a warning.
+
+        The missing node's 0.0 feeds back into the recurrence for its descendants
+        like any other value, so only the missing node itself (and the root, which
+        is always 0.0) shows a zero ratio.
+        """
+        dists = [random.randrange(10, 100) for _ in range(20)]
+        dists[10] = None
+        tree_str = generate_tree(dists)
+
+        with caplog.at_level(
+            logging.WARNING,
+            logger="oz_tree_build.taxon_mapping_and_popularity.tree_props.weighted_mean",
+        ):
+            result = do_treeprop_weighted_mean(tree_str, weighting=3)
+
+        assert result == expected_results_wm(dists, weighting=3)
+        # Preorder visits n19..n0. Only the root (index 0 → n19) and the missing
+        # node (index 9 → n10) have ratio 0.0; descendants of n10 compute normally.
+        assert [i for i, x in enumerate(result) if x[2] == 0.0] == [0, 9]
+        assert any("n10" in r.message and r.levelno == logging.WARNING for r in caplog.records)
 
 
-def test_missing_branch_length(caplog):
-    """Nodes with missing branch length get a 0.0 weighted_mean and emit a warning.
-
-    The missing node's 0.0 feeds back into the recurrence for its descendants
-    like any other value, so only the missing node itself (and the root, which
-    is always 0.0) shows a zero ratio.
-    """
-    dists = [random.randrange(10, 100) for _ in range(20)]
-    dists[10] = None
-    tree_str = generate_tree(dists)
-
-    with caplog.at_level(logging.WARNING, logger="oz_tree_build.taxon_mapping_and_popularity.tree_props.weighted_mean"):
-        result = do_treeprop_weighted_mean(tree_str, weighting=3)
-
-    assert result == expected_results_wm(dists, weighting=3)
-    # Preorder visits n19..n0. Only the root (index 0 → n19) and the missing
-    # node (index 9 → n10) have ratio 0.0; descendants of n10 compute normally.
-    assert [i for i, x in enumerate(result) if x[2] == 0.0] == [0, 9]
-    assert any("n10" in r.message and r.levelno == logging.WARNING for r in caplog.records)
-
-
-####################
+########################################
+# treeprop_sliding_window
+########################################
 
 
 def do_treeprop_sliding_window(nwk, local_mean_width=5):
@@ -226,39 +235,40 @@ def expected_results_sw(dists, local_mean_width):
     return [(f"n{i}", None, node_sw(i)) for i in range(n - 1, -1, -1)]
 
 
-def test_local_mean_width():
-    """local_mean_width param honoured"""
-    dists = [random.randrange(10, 100) for _ in range(20)]
-    tree_str = generate_tree(dists)
+class TestSlidingWindow:
+    def test_local_mean_width(self):
+        """local_mean_width param honoured"""
+        dists = [random.randrange(10, 100) for _ in range(20)]
+        tree_str = generate_tree(dists)
 
-    assert do_treeprop_sliding_window(tree_str) == expected_results_sw(dists, local_mean_width=5)
-    assert do_treeprop_sliding_window(tree_str, local_mean_width=3) == expected_results_sw(dists, local_mean_width=3)
-    assert expected_results_sw(dists, 5) != expected_results_sw(dists, 3)
+        assert do_treeprop_sliding_window(tree_str) == expected_results_sw(dists, local_mean_width=5)
+        assert do_treeprop_sliding_window(tree_str, local_mean_width=3) == expected_results_sw(
+            dists, local_mean_width=3
+        )
+        assert expected_results_sw(dists, 5) != expected_results_sw(dists, 3)
 
+    def test_missing_branch_length(self, caplog):
+        """Nodes with missing branch length get sliding_window 0.0 and emit a warning"""
+        dists = [random.randrange(10, 100) for _ in range(20)]
+        dists[10] = None
+        tree_str = generate_tree(dists)
 
-def test_missing_branch_length(caplog):
-    """Nodes with missing branch length get sliding_window 0.0 and emit a warning"""
-    dists = [random.randrange(10, 100) for _ in range(20)]
-    dists[10] = None
-    tree_str = generate_tree(dists)
+        with caplog.at_level(
+            logging.WARNING, logger="oz_tree_build.taxon_mapping_and_popularity.tree_props.sliding_window"
+        ):
+            result = do_treeprop_sliding_window(tree_str, local_mean_width=3)
 
-    with caplog.at_level(
-        logging.WARNING, logger="oz_tree_build.taxon_mapping_and_popularity.tree_props.sliding_window"
-    ):
+        assert result == expected_results_sw(dists, local_mean_width=3)
+        assert any("n10" in r.message and r.levelno == logging.WARNING for r in caplog.records)
+
+    def test_zero_branch_length(self):
+        """Nodes with edge length == 0 short-circuit to sliding_window 0 without affecting siblings"""
+        dists = [random.randrange(10, 100) for _ in range(20)]
+        dists[10] = 0
+        tree_str = generate_tree(dists)
+
         result = do_treeprop_sliding_window(tree_str, local_mean_width=3)
 
-    assert result == expected_results_sw(dists, local_mean_width=3)
-    assert any("n10" in r.message and r.levelno == logging.WARNING for r in caplog.records)
-
-
-def test_zero_branch_length():
-    """Nodes with edge length == 0 short-circuit to sliding_window 0 without affecting siblings"""
-    dists = [random.randrange(10, 100) for _ in range(20)]
-    dists[10] = 0
-    tree_str = generate_tree(dists)
-
-    result = do_treeprop_sliding_window(tree_str, local_mean_width=3)
-
-    assert result == expected_results_sw(dists, local_mean_width=3)
-    # n10 is at preorder index 9 and was given dist 0, so it should be exactly 0.
-    assert result[9] == ("n10", None, 0)
+        assert result == expected_results_sw(dists, local_mean_width=3)
+        # n10 is at preorder index 9 and was given dist 0, so it should be exactly 0.
+        assert result[9] == ("n10", None, 0)

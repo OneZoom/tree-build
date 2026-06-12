@@ -70,6 +70,19 @@ stages:
     outs:
       - data/out
 
+  versioned_outputs:
+    cmd:
+      # NB: Don't delete it, we can keep old versions at this point
+      - mkdir -p data/out_versioned
+      - >-
+        .venv/bin/versioned_outputs
+        --out_dir data/out_versioned
+        data/out/*
+        -vv
+    deps:
+      - data/out/
+    always_changed: true
+
   download_eol:
     # EOL doesn't version the provider ids file, so capture the last-modified header instead
     cmd:
@@ -216,14 +229,3 @@ stages:
       - exclude_from_popularity
     outs:
       - data/output_files/
-
-  make_js_treefiles:
-    cmd:
-      - rm -r data/js_output ; mkdir -p data/js_output
-      - >-
-        make_js_treefiles
-        --outdir data/js_output
-        data/output_files/ordered_tree_*.poly
-    deps:
-      - data/output_files/
-    always_changed: true

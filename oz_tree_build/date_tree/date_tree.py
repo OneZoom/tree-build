@@ -70,8 +70,7 @@ def nwk_read(infile):
     """
     tree = ete4.Tree(infile, parser=1)
     for n in tree.traverse():
-        if "date" in n.props:
-            n.props["date"] = float(n.props["date"])
+        n.props["date"] = float(n.props["date"]) if "date" in n.props else None
     return tree
 
 

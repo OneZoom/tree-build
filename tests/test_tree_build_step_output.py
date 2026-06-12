@@ -486,7 +486,9 @@ class TestOutputMysqlExport:
         # `id` is auto-assigned by MySQL, not loaded from CSV.
         assert "SET id = NULL;" in sql
 
+
 ######
+
 
 def build_tree(nwk, prop_name, prop_values, prop_format="u8"):
     """Parse (nwk), assigning node.props[prop_name] = prop_values[node.name] where set."""
@@ -527,7 +529,6 @@ class TestOutputPropArray:
         assert read_packed(leaf_path, "B") == [1, 2, 3]
         assert read_packed(node_path, "B") == [5, 12]
 
-
     def test_float_packing(self, tmp_path):
         """Float properties pack as 2-byte half-floats."""
         t = build_tree(
@@ -545,7 +546,6 @@ class TestOutputPropArray:
         assert read_packed(leaf_path, "f") == [1.0, 2.0, 3.0]
         assert read_packed(node_path, "f") == [5.0, 12.0]
 
-
     def test_preorder_matches_traversal(self, tmp_path):
         """Order of packed values follows preorder traversal of leaves / internals."""
         # Asymmetric tree to make ordering unambiguous
@@ -560,7 +560,6 @@ class TestOutputPropArray:
         # Preorder visits: root, y, x, a, b, c, z, d, e
         assert read_packed(leaf_path, "B") == [1, 2, 3, 4, 5]
         assert read_packed(node_path, "B") == [100, 50, 25, 75]
-
 
     def test_unsupported_type_raises(self, tmp_path):
         """Non-numeric property type raises ValueError."""

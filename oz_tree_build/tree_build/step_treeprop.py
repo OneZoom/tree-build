@@ -177,7 +177,7 @@ def treeprop_weighted_mean(tree, weighting=0.8):
             node.props["weighted_mean_ratio"] = 0.0
         else:
             node.props["weighted_mean"] = (edge_length + (parent.props["weighted_mean"] * weighting)) / (1 + weighting)
-            node.props["weighted_mean_ratio"] = edge_length / node.props["weighted_mean"]
+            node.props["weighted_mean_ratio"] = edge_length / max(node.props["weighted_mean"], 1e-6)
 
     prop_format = tree.root.props.setdefault("prop_format", {})
     prop_format["weighted_mean"] = "f16"

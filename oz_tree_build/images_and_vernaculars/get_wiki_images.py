@@ -212,16 +212,19 @@ def get_image_license_info(escaped_image_name):
     """
 
     image_metadata_url = (
-        "https://api.wikimedia.org/w/api.php"
+        "https://commons.wikimedia.org/w/api.php"
         f"?action=query&titles=File%3a{escaped_image_name}&format=json&prop=imageinfo"
         "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
     )
     r = make_http_request_with_retries(image_metadata_url)
-    try:
-        extmetadata = r.json()["query"]["pages"]["-1"]["imageinfo"][0]["extmetadata"]
-    except KeyError:
-        logger.warning(f"Unknown image '{escaped_image_name}'")
+    data = r.json()
+    pages = data.get("query", {}).get("pages", {})
+    page = next(iter(pages.values()), None)
+    if not page or "imageinfo" not in page:
+        logger.warning("Unknown image '%s'", escaped_image_name)
         return None
+
+    extmetadata = page["imageinfo"][0].get("extmetadata", {})
 
     license_info = {}
 

@@ -222,13 +222,12 @@ class RemoteAPIs:
         return {"url": url, "querystring": querystring, "response": response}
 
     def mock_patch_all_web_request_methods(self, f):
-        @mock.patch("requests.get", side_effect=self.mocked_requests_get)
-        @mock.patch(
-            "azure.ai.vision.imageanalysis.ImageAnalysisClient.analyze_from_url",
-            side_effect=self.mocked_analyze_from_url,
-        )
         def functor(*args, **kwargs):
-            return f(*args, **kwargs)
+            with mock.patch("requests.get", side_effect=self.mocked_requests_get), mock.patch(
+                "azure.ai.vision.imageanalysis.ImageAnalysisClient.analyze_from_url",
+                side_effect=self.mocked_analyze_from_url,
+            ):
+                return f(*args, **kwargs)
 
         return functor
 

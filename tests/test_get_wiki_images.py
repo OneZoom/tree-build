@@ -2,6 +2,7 @@ import logging
 import os
 from types import SimpleNamespace
 from unittest import mock
+from urllib.parse import quote
 
 import pytest
 from PIL import Image
@@ -154,8 +155,9 @@ class RemoteAPIs:
     def wikimedia_file_response(self, image_name, url=None):
         if url is None:
             url = "https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg"
+        file_title = quote(f"File:{image_name}", safe="")
         return {
-            "url": f"https://api.wikimedia.org/core/v1/commons/file/{image_name}",
+            "url": f"https://commons.wikimedia.org/w/rest.php/v1/file/{file_title}",
             "response": {
                 "preferred": {"url": url}  # means preferred image *size* not preferred image
             },
@@ -164,7 +166,7 @@ class RemoteAPIs:
     def wikimedia_response(self, image_name, licence="cc0", artist="John Doe"):
         # NB use british spelling of licence to avoid shadowing python builtin
         url = (
-            "https://api.wikimedia.org/w/api.php"
+            "https://commons.wikimedia.org/w/api.php"
             f"?action=query&titles=File%3a{image_name}&format=json&prop=imageinfo"
             "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
         )

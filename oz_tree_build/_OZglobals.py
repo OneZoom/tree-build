@@ -57,6 +57,7 @@ src_flags = cache.ram(
         "arkive": 5,
         "wiki": 20,
         "eol": 30,
+        "inat": 40,
         "short_imprecise_name": 50,
         "eol_old": 99,
     },

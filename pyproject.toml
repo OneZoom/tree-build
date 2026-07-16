@@ -21,6 +21,7 @@ dependencies = [
     "cryptography>=42.0",
     "mwparserfromhell>=0.6.6",
     "requests-cache>=1.2.1",
+    "duckdb>=1.0",
     "dvc[s3]>=3.0",
 ]
 
@@ -48,6 +49,7 @@ discover_latest_enwiki_sql_url = "oz_tree_build.utilities.filter_wikipedia_sql:d
 download_opentree = "oz_tree_build.utilities.download_opentree:main"
 CSV_base_table_creator = "oz_tree_build.taxon_mapping_and_popularity.CSV_base_table_creator:main"
 get_wiki_images = "oz_tree_build.images_and_vernaculars.get_wiki_images:main"
+get_inat_images = "oz_tree_build.images_and_vernaculars.get_inat_images:main"
 process_image_bits = "oz_tree_build.images_and_vernaculars.process_image_bits:main"
 make_js_treefiles = "oz_tree_build.utilities.make_js_treefiles:main"
 format_newick = "oz_tree_build.newick.format_newick:main"

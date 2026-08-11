@@ -7,13 +7,13 @@ stages:
     deps:
     - path: data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
       hash: md5
-      md5: e094b0f57c0c14e1016842c2dac5482e
+      md5: aa1692624401f4a1c759bc9526787fd7
       size: 90
     outs:
     - path: data/filtered/OneZoom_latest-all.json
       hash: md5
-      md5: 65b22a5c761c78d79b30faf871d1e404
-      size: 1542990225
+      md5: e6f69def9d6fa2bb4b90060509c079bb
+      size: 1567956473
   extract_wikidata_titles:
     cmd: extract_wikidata_titles data/filtered/OneZoom_latest-all.json -o 
       data/filtered/wikidata_titles.txt
@@ -269,7 +269,7 @@ stages:
     outs:
     - path: data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
       hash: md5
-      md5: e094b0f57c0c14e1016842c2dac5482e
+      md5: aa1692624401f4a1c759bc9526787fd7
       size: 90
   discover_latest_enwiki_sql_url:
     cmd: discover_latest_enwiki_sql_url > 

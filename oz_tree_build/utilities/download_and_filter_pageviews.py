@@ -16,6 +16,8 @@ import sys
 import tempfile
 import urllib.request
 
+from oz_tree_build.user_agent import USER_AGENT_HEADERS
+
 from .file_utils import stream_bz2_lines_from_url
 from .filter_pageviews import filter_pageview_lines, write_filtered_pageviews
 from .filter_wikidata import load_titles_file
@@ -28,7 +30,7 @@ WGET_READ_TIMEOUT = 120  # seconds of no data before wget gives up
 def _fetch_index(url):
     """Fetch an Apache directory index page and return its HTML."""
     print(f"Fetching index from {url}")
-    req = urllib.request.Request(url, headers={"User-Agent": "OneZoom-tree-build/1.0"})
+    req = urllib.request.Request(url, headers=USER_AGENT_HEADERS)
     with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read().decode("utf-8")
 

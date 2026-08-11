@@ -9,6 +9,8 @@ import os
 import shutil
 import subprocess
 
+from oz_tree_build.user_agent import USER_AGENT
+
 __author__ = "David Ebbo"
 
 
@@ -40,7 +42,7 @@ def stream_bz2_lines_from_url(url, read_timeout=120):
             "-",
             "--connect-timeout=30",
             f"--read-timeout={read_timeout}",
-            "--header=User-Agent: OneZoom-tree-build/1.0",
+            f"--header=User-Agent: {USER_AGENT}",
             url,
         ],
         stdout=subprocess.PIPE,

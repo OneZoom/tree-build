@@ -9,13 +9,15 @@ import time
 import mwparserfromhell
 import requests_cache
 
+from oz_tree_build.user_agent import USER_AGENT_HEADERS
+
 session = requests_cache.CachedSession("http_cache")
 
 API_URL = "https://en.wikipedia.org/w/api.php"
 
 
 def wiki_api_request(params):
-    headers = {"User-Agent": "My-Bot-Name/1.0"}
+    headers = USER_AGENT_HEADERS
     # Use this line to avoid caching when testing
     # headers["Cache-Control"] = "no-cache"
     max_retries = 30

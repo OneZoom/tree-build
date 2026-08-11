@@ -44,6 +44,7 @@ import requests
 from PIL import Image
 
 from .._OZglobals import src_flags
+from ..user_agent import USER_AGENT_HEADERS
 from ..utilities.db_helper import (
     connect_to_database,
     default_appconfig,
@@ -70,9 +71,6 @@ default_outdir = os.path.join(
     "img",
 )
 
-# See https://meta.wikimedia.org/wiki/User-Agent_policy
-wiki_http_headers = {"User-Agent": "OneZoomBot/0.1 (https://www.onezoom.org/; mail@onezoom.org) get-wiki-images/0.1"}
-
 
 # Copied from OZTree/OZprivate/ServerScripts/Utilities/getEOL_crops.py
 def subdir_name(doID):
@@ -95,7 +93,7 @@ def make_http_request_with_retries(url):
     retries = 6
     delay = 1
     for i in range(retries):
-        r = requests.get(url, headers=wiki_http_headers)
+        r = requests.get(url, headers=USER_AGENT_HEADERS)
         if r.status_code == 200:
             return r
 
@@ -371,7 +369,7 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
 
     # Download the uncropped image
     uncropped_image_path = f"{image_dir}/{src_id}_uncropped.jpg"
-    response = requests.get(image_url, headers=wiki_http_headers)
+    response = requests.get(image_url, headers=USER_AGENT_HEADERS)
     response.raise_for_status()
     with open(uncropped_image_path, "wb") as f:
         for chunk in response.iter_content(1024):

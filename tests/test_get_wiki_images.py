@@ -1,263 +1,20 @@
 import logging
 import os
 from types import SimpleNamespace
-from unittest import mock
 
 import pytest
 from PIL import Image
 
 from oz_tree_build._OZglobals import src_flags
-from oz_tree_build.images_and_vernaculars import get_wiki_images
-from oz_tree_build.utilities.db_helper import (
-    delete_all_by_ott,
-    get_next_src_id_for_src,
-    placeholder,
+from oz_tree_build.images import get_wiki_images
+from oz_tree_build.utilities.db_helper import get_next_src_id_for_src, placeholder
+
+from .wiki_test_helpers import (
+    RemoteAPIs,
+    default_rating,
+    delete_rows,
+    second_lion_image_name,
 )
-
-# These need to be real images to make the --real-apis mode work
-first_lion_image_name = "Okonjima_Lioness.jpg"
-second_lion_image_name = "Lioness_12.jpg"
-
-# Bytes for tiny JPEG
-TINY_JPEG_HEAD = bytes.fromhex(
-    "".join(
-        """
-ffd8 ffe0 0010 4a46 4946 0001 0101 012c
-012c 0000 ffdb 0043 00ff ffff ffff ffff
-ffff ffff ffff ffff ffff ffff ffff ffff
-ffff ffff ffff ffff ffff ffff ffff ffff
-ffff ffff ffff ffff ffff ffff ffff ffff
-ffff ffff ffff ffff ffff db00 4301 ffff
-ffff ffff ffff ffff ffff ffff ffff ffff
-ffff ffff ffff ffff ffff ffff ffff ffff
-ffff ffff ffff ffff ffff ffff ffff ffff
-ffff ffff ffff ffff ffff ffff ffff ffc0
-0011 0801 f401 f403 0111 0002 1101 0311
-01ff c400 1500 0101 0000 0000 0000 0000
-0000 0000 0000 0003 ffc4 0014 1001 0000
-0000 0000 0000 0000 0000 0000 0000 ffc4
-0014 0101 0000 0000 0000 0000 0000 0000
-0000 0000 ffc4 0014 1101 0000 0000 0000
-0000 0000 0000 0000 0000 ffda 000c 0301
-0002 1103 1100 3f00 a000 0000 0000 0000
-""".split()
-    )
-)
-TINY_JPEG_FOOT = bytes.fromhex(
-    "".join(
-        """
-003f ffd9
-""".split()
-    )
-)
-TINY_JPEG = TINY_JPEG_HEAD + b"\x00" * (3260 - len(TINY_JPEG_HEAD) - len(TINY_JPEG_FOOT)) + TINY_JPEG_FOOT
-
-
-class MockResponse:
-    def __init__(self, status_code, json_data=None, content=None):
-        self.status_code = status_code
-        self.json_data = json_data
-        self.text = ""
-        self.content = content
-
-    def json(self):
-        return self.json_data
-
-    def raise_for_status(self):
-        if self.status_code != 200:
-            raise ValueError("status = %d" % self.status_code)
-
-    def iter_content(self, chunk_size):
-        return [self.content]  # NB: Ignoring chunk size
-
-
-class RemoteAPIs:
-    """
-    Use the lion as a test case
-    """
-
-    def add_mocked_request(self, url, querystring=None, *, response):
-        if querystring is not None:
-            url += "?" + querystring
-        self.mocked_requests[url] = response
-
-    def __init__(self, mock_qid):
-        self.mock_qid = mock_qid
-        self.true_qid = 140
-        self.mocked_requests = {}  # Maps URLs to JSON responses to return
-        self.license_urls = {
-            "cc0": "https://creativecommons.org/publicdomain/zero/1.0/",
-            "flickr_commons": "https://www.flickr.com/commons/usage/",
-            "lal": "http://artlibre.org/licence/lal/en",
-            "cc-by-3.0": "https://creativecommons.org/licenses/by/3.0",
-        }
-
-        self.add_mocked_request(
-            **self.wikidata_response(
-                image_data=[
-                    {"name": first_lion_image_name, "rank": "normal"},
-                    {"name": second_lion_image_name, "rank": "preferred"},
-                ],
-                vernacular_data=[
-                    {"name": "Löwe", "language": "de", "rank": "normal"},  # -> preferred
-                    {"name": "Lion", "language": "en", "rank": "normal"},
-                    {"name": "Lion", "language": "fr", "rank": "preferred"},
-                    {"name": "African Lion", "language": "en", "rank": "preferred"},
-                    # Next should save as not preferred, as there are 2 fr preferred
-                    {"name": "Lion d'Afrique", "language": "fr", "rank": "preferred"},
-                ],
-            ),
-        )
-        self.expected_mock_vn_order = (  # by preferred and then lang
-            ("Löwe", "de"),  # test with accents
-            ("African Lion", "en"),
-            ("Lion", "en"),
-            ("Lion", "fr"),
-            ("Lion d'Afrique", "fr"),
-        )
-
-        self.add_mocked_request(**self.wikimedia_response(second_lion_image_name))
-        self.add_mocked_request(**self.wikimedia_file_response(second_lion_image_name))
-        self.add_mocked_request(**self.wikimedia_response("NoArtist.jpg", artist=None))
-        self.add_mocked_request(**self.wikimedia_file_response("NoArtist.jpg"))
-        self.add_mocked_request(**self.wikimedia_response("PublicDomain.jpg", licence="pd-NOOA"))
-        self.add_mocked_request(**self.wikimedia_file_response("PublicDomain.jpg"))
-        self.add_mocked_request(**self.wikimedia_response("CC-BY3.jpg", licence="cc-by-3.0"))
-        self.add_mocked_request(**self.wikimedia_file_response("CC-BY3.jpg"))
-        self.add_mocked_request(**self.wikimedia_response("Flickr.jpg", licence="flickr_commons"))
-        self.add_mocked_request(**self.wikimedia_file_response("Flickr.jpg"))
-        self.add_mocked_request(**self.wikimedia_response("BadLicence.jpg", "GPL"))
-        self.add_mocked_request(
-            # This should not be called: if license is bad => don't download
-            **self.wikimedia_file_response("BadLicence.jpg", "xxx")
-        )
-        self.add_mocked_request(
-            url="https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg",
-            response=None,  # NB: This maps to MockResponse.json_data, we have none, but content is replaced later
-        )
-
-    # Mock the requests.get function
-    def mocked_requests_get(self, *args, **kwargs):
-        if args[0] in self.mocked_requests:
-            content = TINY_JPEG if args[0].endswith(".jpg") else None
-            return MockResponse(200, self.mocked_requests[args[0]], content)
-        return MockResponse(404)
-
-    # Mock the Azure Vision API smart crop response
-    def mocked_analyze_from_url(self, *args, **kwargs):
-        return SimpleNamespace(
-            smart_crops=SimpleNamespace(
-                list=[SimpleNamespace(bounding_box=SimpleNamespace(x=50, y=75, width=300, height=300))]
-            )
-        )
-
-    def wikimedia_file_response(self, image_name, url=None):
-        if url is None:
-            url = "https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg"
-        return {
-            "url": f"https://api.wikimedia.org/core/v1/commons/file/{image_name}",
-            "response": {
-                "preferred": {"url": url}  # means preferred image *size* not preferred image
-            },
-        }
-
-    def wikimedia_response(self, image_name, licence="cc0", artist="John Doe"):
-        # NB use british spelling of licence to avoid shadowing python builtin
-        url = (
-            "https://api.wikimedia.org/w/api.php"
-            f"?action=query&titles=File%3a{image_name}&format=json&prop=imageinfo"
-            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
-        )
-        response = {
-            "query": {
-                "pages": {
-                    "-1": {
-                        "title": "File:Blah.jpg",
-                        "imageinfo": [{"extmetadata": {}}],
-                    }
-                }
-            }
-        }
-        extmetadata = response["query"]["pages"]["-1"]["imageinfo"][0]["extmetadata"]
-        if artist is not None:
-            extmetadata["Artist"] = {"value": artist}
-        if licence in self.license_urls:
-            extmetadata["License"] = {"value": licence}
-            extmetadata["LicenseUrl"] = {"value": self.license_urls[licence]}
-        else:
-            extmetadata["License"] = {"value": licence}
-        return {"url": url, "response": response}
-
-    def wikidata_response(self, image_data, vernacular_data):
-        qid = f"Q{self.mock_qid}"
-        url = "https://www.wikidata.org/w/api.php"
-        querystring = f"action=wbgetentities&ids={qid}&format=json"
-        response = {}
-        images = []
-        vernaculars = []
-        for img in image_data:
-            images.append(
-                {
-                    "mainsnak": {
-                        "datavalue": {
-                            "value": img["name"],
-                        },
-                    },
-                    "rank": img["rank"],
-                }
-            )
-        for vn in vernacular_data:
-            vernaculars.append(
-                {
-                    "mainsnak": {
-                        "datavalue": {
-                            "value": {"language": vn["language"], "text": vn["name"]},
-                        },
-                    },
-                    "rank": vn["rank"],
-                }
-            )
-        response["entities"] = {qid: {"claims": {"P18": images, "P1843": vernaculars}}}
-
-        return {"url": url, "querystring": querystring, "response": response}
-
-    def mock_patch_all_web_request_methods(self, f):
-        def functor(*args, **kwargs):
-            with mock.patch("requests.get", side_effect=self.mocked_requests_get), mock.patch(
-                "azure.ai.vision.imageanalysis.ImageAnalysisClient.analyze_from_url",
-                side_effect=self.mocked_analyze_from_url,
-            ):
-                return f(*args, **kwargs)
-
-        return functor
-
-
-def delete_rows(db, ott):
-    delete_all_by_ott(db, "images_by_ott", ott)
-    delete_all_by_ott(db, "vernacular_by_ott", ott)
-    # The negative OTT should have been added to the end of the ordered_leaves table
-    # and so adding and removing it shouldn't mess up the nested set structure, we hope
-    delete_all_by_ott(db, "ordered_leaves", ott)
-
-
-def get_command_arguments(subcommand, ott_or_taxa, image, rating, output_dir, conf_file):
-    return SimpleNamespace(
-        subcommand=subcommand,
-        ott_or_taxa=ott_or_taxa,
-        image=image,
-        rating=rating,
-        skip_images=None,
-        output_dir=output_dir,
-        conf_file=conf_file,
-        taxa_data_file=None,
-        no_azure_crop=False,
-    )
-
-
-def default_rating(image=None):
-    if image is None:
-        return get_wiki_images.default_wiki_image_rating
-    return get_wiki_images.bespoke_wiki_image_rating
 
 
 class TestFunctions:
@@ -324,12 +81,6 @@ class TestAPI:
             return True
         return False
 
-    def vernaculars_in_db(self, ott=None):
-        sql = f"SELECT vernacular FROM vernacular_by_ott WHERE ott={placeholder(self.db)};"
-        if ott is None:
-            ott = self.ott
-        return {r[0] for r in self.db.executesql(sql, (ott,))}
-
     def image_rows_in_db(self, ott=None):
         sql = "SELECT src_id, rating, rights, licence FROM images_by_ott " f"WHERE ott={placeholder(self.db)};"
         if ott is None:
@@ -337,14 +88,13 @@ class TestAPI:
         return self.db.executesql(sql, (ott,))
 
     @apis.mock_patch_all_web_request_methods
-    def verify_process_leaf(self, image=None, rating=None, skip_images=None, cropper=None, *args):
+    def verify_process_leaf(self, image=None, rating=None, cropper=None, *args):
         get_wiki_images.process_leaf(
             self.db,
             self.ott or self.taxon_name,
             image,
             rating=rating,
             output_dir=self.tmp_dir,
-            skip_images=skip_images,
             cropper=cropper,
         )
 
@@ -362,10 +112,9 @@ class TestAPI:
         rating = 40123
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, ott=ott, name=sp_name)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, rating, False, cropper)
+            self.verify_process_leaf(image, rating, cropper)
         assert caplog.text == ""
         assert self.check_downloaded_wiki_image(self.qid, cropper, image is None)
-        assert "Lion" in self.vernaculars_in_db(ott)
         rows = self.image_rows_in_db(ott)
         assert len(rows) == 1
         assert rows[0] == (
@@ -376,17 +125,6 @@ class TestAPI:
         )
         self.teardown_lookups(ott=ott)
 
-    def test_process_default_leaf_skip_images(self, db, tmp_path, keep_rows):
-        self.ott = "-552"
-        cropper = None
-        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
-        self.verify_process_leaf(None, None, True, cropper)
-        # Images skipped, so should have no row
-        assert "Lion" in self.vernaculars_in_db()
-        assert not self.check_downloaded_wiki_image(self.qid, cropper)
-        assert len(self.image_rows_in_db()) == 0
-        self.teardown_lookups()
-
     def test_alt_cc_license(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-553"
         cropper = None
@@ -394,10 +132,12 @@ class TestAPI:
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, None, False, cropper)
+            self.verify_process_leaf(image, None, cropper)
         response = self.apis.mocked_requests[self.apis.wikimedia_response(image)["url"]]
         # Check response is lowercase
-        assert response["query"]["pages"]["-1"]["imageinfo"][0]["extmetadata"]["License"]["value"].startswith("cc-by")
+        assert response["query"]["pages"]["12345"]["imageinfo"][0]["extmetadata"]["License"]["value"].startswith(
+            "cc-by"
+        )
         rows = self.image_rows_in_db()
         assert len(rows) == 1
         assert rows[0][1:] == (
@@ -415,7 +155,7 @@ class TestAPI:
         image = "PublicDomain.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, None, False, cropper)
+            self.verify_process_leaf(image, None, cropper)
         rows = self.image_rows_in_db()
         assert len(rows) == 1
         assert rows[0][1:] == (
@@ -433,8 +173,7 @@ class TestAPI:
         image = "Flickr.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, rating, False, cropper)
-        assert "Lion" in self.vernaculars_in_db()
+            self.verify_process_leaf(image, rating, cropper)
         rows = self.image_rows_in_db()
         assert len(rows) == 1
         assert rows[0][1:] == (
@@ -453,9 +192,8 @@ class TestAPI:
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, rating, False, cropper)
+            self.verify_process_leaf(image, rating, cropper)
         assert "Artist not found" in caplog.text
-        assert "Lion" in self.vernaculars_in_db()
         rows = self.image_rows_in_db()
         assert len(rows) == 1
         assert rows[0][1:] == (
@@ -472,9 +210,8 @@ class TestAPI:
         image = "BadLicence.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(image, None, False, cropper)
+            self.verify_process_leaf(image, None, cropper)
         assert "Unacceptable license" in caplog.text
-        assert "Lion" in self.vernaculars_in_db()
         assert not self.check_downloaded_wiki_image(self.qid, cropper, image is None)
         assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups()
@@ -484,9 +221,8 @@ class TestAPI:
         cropper = None
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, repeat_rows=2)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(None, None, False, cropper)
+            self.verify_process_leaf(None, None, cropper)
         assert "Multiple" in caplog.text
-        assert len(self.vernaculars_in_db()) == 0
         assert not self.check_downloaded_wiki_image(self.qid, cropper)
         assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups()
@@ -497,9 +233,8 @@ class TestAPI:
         cropper = None
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows, ott=ordered_leaf_ott)
         with caplog.at_level(logging.WARNING):
-            self.verify_process_leaf(None, None, False, cropper)
+            self.verify_process_leaf(None, None, cropper)
         assert "not found in ordered_leaves table" in caplog.text
-        assert len(self.vernaculars_in_db()) == 0
         assert not self.check_downloaded_wiki_image(self.qid, cropper)
         assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups(ott=ordered_leaf_ott)
@@ -509,12 +244,12 @@ class TestAPI:
         self.ott = "-560"
         cropper = None
         self.setup(db, self.apis.mock_qid, tmp_path, keep_rows)
-        self.verify_process_leaf(None, None, None, cropper)
+        self.verify_process_leaf(None, None, cropper)
         rows = self.image_rows_in_db()
         assert rows[0][1] == default_rating()
-        self.verify_process_leaf(None, 44444, None, cropper)
+        self.verify_process_leaf(None, 44444, cropper)
         assert rows[0][1] == 44444
-        self.verify_process_leaf(None, None, None, cropper)
+        self.verify_process_leaf(None, None, cropper)
         assert rows[0][1] == 44444
         self.verify_process_leaf(None, 40123)
         assert rows[0][1] == 40123
@@ -576,7 +311,16 @@ class TestCLI:
         )
         self.db.commit()
         # Call the method that we want to test
-        params = get_command_arguments("leaf", [self.ott], image, rating, self.tmp_path, self.conf_file)
+        params = SimpleNamespace(
+            subcommand="leaf",
+            ott_or_taxa=[self.ott],
+            image=image,
+            rating=rating,
+            output_dir=self.tmp_path,
+            conf_file=self.conf_file,
+            taxa_data_file=None,
+            no_azure_crop=True,
+        )
 
         if self.real_apis:
             get_wiki_images.process_args(params)
@@ -603,25 +347,6 @@ class TestCLI:
         # set the overall_best_any bit to 0 for the dummy image (we set it to 1 above)
         if src == src_flags["onezoom_bespoke"]:
             assert rows[1][4] == 0
-        # Check the vernacular names
-        rows = self.db.executesql(
-            "SELECT ott, vernacular, lang_primary, lang_full, preferred "
-            f"FROM vernacular_by_ott WHERE ott={s} ORDER BY lang_full, preferred DESC",
-            (self.ott,),
-        )
-        count_preferred = {}
-        for r in rows:
-            full_lang = r[3]
-            assert full_lang.startswith(r[2])
-            if full_lang not in count_preferred:
-                count_preferred[full_lang] = 0
-            count_preferred[full_lang] += int(r[4])
-        assert all([v == 1 for v in count_preferred.values()])
-
-        if not self.real_apis:
-            # Check the expected values
-            names = tuple((r[1], r[2]) for r in rows)
-            assert names == self.apis.expected_mock_vn_order
 
     @apis.mock_patch_all_web_request_methods
     def mock_process_args(self, params, *args):

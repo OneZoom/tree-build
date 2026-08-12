@@ -24,7 +24,7 @@ class AzureImageCropper:
         try:
             azure_vision_endpoint = config.get("azure_vision", "endpoint")
             azure_vision_key = config.get("azure_vision", "key")
-        except configparser.NoOptionError:
+        except (configparser.NoSectionError, configparser.NoOptionError):
             logger.error("Azure Vision API key not found in config file")
             sys.exit()
 

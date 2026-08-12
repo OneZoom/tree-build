@@ -1,0 +1,49 @@
+name: DVC
+
+on:
+  pull_request_target:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  dvc:
+    name: DVC
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install '.[dev]'
+      - name: Checkout merge ref
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@v7
+        with:
+          # Caution: pulling untrusted code into a priveleged pull_request_target environment
+          allow-unsafe-pr-checkout: true
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+      - name: Pin DVC remote config to base branch
+        # Use the trusted base branch's .dvc/config so a PR can't e.g. send creds to another remote
+        if: github.event_name == 'pull_request_target'
+        run: git show ${{ github.event.pull_request.base.sha }}:.dvc/config > .dvc/config
+      - name: Check DVC status
+        # Note the --dry is important here! Without it, we're running untrusted dvc stages
+        run: |
+          [ -n "${{ secrets.DVC_READONLY_ACCESS_KEY_ID }}" ] || { echo "DVC_READONLY_ACCESS_KEY_ID secret is not set"; exit 1; }
+          [ -n "${{ secrets.DVC_READONLY_SECRET_ACCESS_KEY }}" ] || { echo "DVC_READONLY_SECRET_ACCESS_KEY secret is not set"; exit 1; }
+          dvc remote modify onezoom-r2 access_key_id ${{ secrets.DVC_READONLY_ACCESS_KEY_ID }}
+          dvc remote modify onezoom-r2 secret_access_key ${{ secrets.DVC_READONLY_SECRET_ACCESS_KEY }}
+          dvc freeze make_js_treefiles
+          dvc repro --allow-missing --dry | tee /dev/stderr | grep -q "Data and pipelines are up to date."
+          if dvc data status --not-in-remote | grep -q "Not in remote"; then exit 1; fi

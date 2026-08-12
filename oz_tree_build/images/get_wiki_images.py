@@ -479,9 +479,7 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper=No
                 logger.info(f"Saved image for ott={leaves_data[qid]['ott']} (qid={qid})")
             processed_count += 1
             elapsed = time.time() - start_time
-            logger.info(
-                f"Processed {processed_count} of {total_to_process} ({elapsed:.1f}s)"
-            )
+            logger.info(f"Processed {processed_count} of {total_to_process} ({elapsed:.1f}s)")
 
     # Log the leaves for which we couldn't find images
     info = ""

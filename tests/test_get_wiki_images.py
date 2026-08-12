@@ -255,7 +255,7 @@ class TestAPI:
         assert rows[0][1] == 40123
         self.teardown()
 
-    @pytest.mark.skip_real_apis
+    @pytest.mark.skip_real_apis()
     def test_process_clade(self):
         # TODO! We need to creata a fake filtered wikidata JSON dump with a 2 taxa
         # with different (negative) qIDs.

@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from oz_tree_build.vernaculars import get_wiki_vernaculars
 from oz_tree_build.utilities.db_helper import placeholder
+from oz_tree_build.vernaculars import get_wiki_vernaculars
 
 from .wiki_test_helpers import (
     RemoteAPIs,

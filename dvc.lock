@@ -20,13 +20,13 @@ stages:
     deps:
     - path: data/filtered/OneZoom_latest-all.json
       hash: md5
-      md5: 65b22a5c761c78d79b30faf871d1e404
-      size: 1542990225
+      md5: e6f69def9d6fa2bb4b90060509c079bb
+      size: 1567956473
     outs:
     - path: data/filtered/wikidata_titles.txt
       hash: md5
-      md5: e498b85311c8a84a0d5157a0bbbcb23f
-      size: 9382189
+      md5: 8a8d1fc7e30c8c90890a761a4ba22f2d
+      size: 9540289
   download_wikipedia_sql:
     cmd: wget --progress=bar:force -O data/Wiki/wp_SQL/enwiki-page.sql.gz "$(cat
       data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt)"
@@ -46,13 +46,13 @@ stages:
     deps:
     - path: data/filtered/wikidata_titles.txt
       hash: md5
-      md5: e498b85311c8a84a0d5157a0bbbcb23f
-      size: 9382189
+      md5: 8a8d1fc7e30c8c90890a761a4ba22f2d
+      size: 9540289
     outs:
     - path: data/filtered/pageviews/
       hash: md5
-      md5: f021afa12f9d7c893412a0b2980ab187.dir
-      size: 104535557
+      md5: 701c03fc874aa8a4d5578a6a74267bee.dir
+      size: 128216689
       nfiles: 13
   filter_wikipedia_sql:
     cmd: filter_wikipedia_sql data/Wiki/wp_SQL/enwiki-page.sql.gz 
@@ -65,13 +65,13 @@ stages:
       size: 2397370114
     - path: data/filtered/wikidata_titles.txt
       hash: md5
-      md5: e498b85311c8a84a0d5157a0bbbcb23f
-      size: 9382189
+      md5: 8a8d1fc7e30c8c90890a761a4ba22f2d
+      size: 9540289
     outs:
     - path: data/filtered/OneZoom_enwiki-latest-page.sql
       hash: md5
-      md5: af577077774060f78a752f22e2f1c6d3
-      size: 21445833
+      md5: f7437ba9e2a89ff658749e434a38b39a
+      size: 21507159
   download_opentree:
     cmd: download_opentree --version v16.1 --output-dir data/OpenTree
     params:
@@ -225,20 +225,20 @@ stages:
       size: 417054016
     - path: data/filtered/OneZoom_enwiki-latest-page.sql
       hash: md5
-      md5: af577077774060f78a752f22e2f1c6d3
-      size: 21445833
+      md5: f7437ba9e2a89ff658749e434a38b39a
+      size: 21507159
     - path: data/filtered/OneZoom_latest-all.json
       hash: md5
-      md5: 65b22a5c761c78d79b30faf871d1e404
-      size: 1542990225
+      md5: e6f69def9d6fa2bb4b90060509c079bb
+      size: 1567956473
     - path: data/filtered/OneZoom_provider_ids.csv
       hash: md5
       md5: f7c9bb8374957c07168bec36d6591347
       size: 221682224
     - path: data/filtered/pageviews/
       hash: md5
-      md5: f021afa12f9d7c893412a0b2980ab187.dir
-      size: 104535557
+      md5: 701c03fc874aa8a4d5578a6a74267bee.dir
+      size: 128216689
       nfiles: 13
     params:
       params.yaml:
@@ -249,8 +249,8 @@ stages:
     outs:
     - path: data/output_files/
       hash: md5
-      md5: 81dfa9c3747bbe94c57161cc8e22d5c9.dir
-      size: 1158499655
+      md5: 3a18d1302a90a924d080c6a84b2429ad.dir
+      size: 1158320679
       nfiles: 7
   make_js_treefiles:
     cmd:
@@ -260,8 +260,8 @@ stages:
     deps:
     - path: data/output_files/
       hash: md5
-      md5: 81dfa9c3747bbe94c57161cc8e22d5c9.dir
-      size: 1158499655
+      md5: 3a18d1302a90a924d080c6a84b2429ad.dir
+      size: 1158320679
       nfiles: 7
   discover_latest_wikidata_dump_url:
     cmd: discover_latest_wikidata_dump_url > 

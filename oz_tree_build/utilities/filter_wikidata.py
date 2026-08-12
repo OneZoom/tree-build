@@ -40,7 +40,15 @@ WIKIDATA_MASK = {
         "P961": [{"mainsnak": {"datavalue": {"value": KEEP}}}],
         "P9157": [{"mainsnak": {"datavalue": {"value": KEEP}}}],
         "P3151": [{"mainsnak": {"datavalue": {"value": KEEP}}}],
-        "P141": [{"references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}]}],
+        "P627": [{"mainsnak": {"datavalue": {"value": KEEP}}}],
+        "P141": [
+            {
+                "mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}},
+                "rank": KEEP,
+                "qualifiers": {"P585": [{"datavalue": {"value": {"time": KEEP}}}]},
+                "references": [{"snaks": {"P627": [{"datavalue": {"value": KEEP}}]}}],
+            }
+        ],
         "P1420": [{"mainsnak": {"datavalue": {"value": {"numeric-id": KEEP}}}}],
         "P18": [
             {
@@ -136,9 +144,7 @@ def filter_wikidata(
             else:
                 potential_extra_json_items.append(("vernacular", vernaculars_matches, json_item))
 
-        logging.info(
-            "Writing extra lines at the end of the file " f"(subset of {len(potential_extra_json_items)} lines)"
-        )
+        logging.info(f"Writing extra lines at the end of the file (subset of {len(potential_extra_json_items)} lines)")
 
         for desc, linked_qids, json_item in potential_extra_json_items:
             for qid in linked_qids:

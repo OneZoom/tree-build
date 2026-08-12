@@ -13,6 +13,8 @@ import sys
 import tempfile
 import urllib.request
 
+from oz_tree_build.user_agent import USER_AGENT_HEADERS
+
 from .file_utils import stream_bz2_lines_from_url
 from .filter_wikidata import filter_wikidata
 
@@ -28,7 +30,14 @@ def discover_latest_wikidata_dump_url(base_url=WIKIDATA_ENTITIES_URL, timeout=30
     folder_re = re.compile(r'href="(\d{8})/"')
     file_re_template = r'href="(wikidata-{date}-all\.json\.bz2)"'
 
-    index_html = urllib.request.urlopen(base_url, timeout=timeout).read().decode()
+    index_html = (
+        urllib.request.urlopen(
+            urllib.request.Request(base_url, headers=USER_AGENT_HEADERS),
+            timeout=timeout,
+        )
+        .read()
+        .decode()
+    )
 
     dates = sorted(folder_re.findall(index_html), reverse=True)
     if not dates:
@@ -38,7 +47,14 @@ def discover_latest_wikidata_dump_url(base_url=WIKIDATA_ENTITIES_URL, timeout=30
         folder_url = f"{base_url}{date}/"
         logger.info("Checking %s", folder_url)
         try:
-            folder_html = urllib.request.urlopen(folder_url, timeout=timeout).read().decode()
+            folder_html = (
+                urllib.request.urlopen(
+                    urllib.request.Request(folder_url, headers=USER_AGENT_HEADERS),
+                    timeout=timeout,
+                )
+                .read()
+                .decode()
+            )
         except urllib.error.URLError as exc:
             logger.warning("Could not fetch %s: %s", folder_url, exc)
             continue

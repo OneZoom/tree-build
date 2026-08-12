@@ -8,6 +8,8 @@ import sys
 import urllib.parse
 import urllib.request
 
+from oz_tree_build.user_agent import USER_AGENT_HEADERS
+
 from .file_utils import open_file_based_on_extension
 from .filter_wikidata import load_titles_file
 
@@ -97,7 +99,14 @@ def discover_latest_enwiki_sql_url(base_url=ENWIKI_DUMPS_URL, timeout=30):
     folder_re = re.compile(r'href="(\d{8})/"')
     file_re_template = r'href="([^"]*enwiki-{date}-page\.sql\.gz)"'
 
-    index_html = urllib.request.urlopen(base_url, timeout=timeout).read().decode()
+    index_html = (
+        urllib.request.urlopen(
+            urllib.request.Request(base_url, headers=USER_AGENT_HEADERS),
+            timeout=timeout,
+        )
+        .read()
+        .decode()
+    )
 
     dates = sorted(folder_re.findall(index_html), reverse=True)
     if not dates:
@@ -107,7 +116,14 @@ def discover_latest_enwiki_sql_url(base_url=ENWIKI_DUMPS_URL, timeout=30):
         folder_url = f"{base_url}{date}/"
         logger.info("Checking %s", folder_url)
         try:
-            folder_html = urllib.request.urlopen(folder_url, timeout=timeout).read().decode()
+            folder_html = (
+                urllib.request.urlopen(
+                    urllib.request.Request(folder_url, headers=USER_AGENT_HEADERS),
+                    timeout=timeout,
+                )
+                .read()
+                .decode()
+            )
         except urllib.error.URLError as exc:
             logger.warning("Could not fetch %s: %s", folder_url, exc)
             continue

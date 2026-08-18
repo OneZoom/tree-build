@@ -30,6 +30,8 @@ stages:
         --supertree data/OpenTree/${ot_version}/labelled_supertree_ottnames.tre
     deps:
       - data/node_ages.json
+    params:
+      - ot_version
     outs:
       - data/dated_tree/dated_tree_pre.tre
 
@@ -67,6 +69,9 @@ stages:
       - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
       - data/dated_tree/dated_tree_pre.tre
       - data/taxon_map.csv
+    params:
+      - oz_tree
+      - ot_version
     outs:
       - data/out
 
@@ -194,6 +199,8 @@ stages:
       - data/filtered/OneZoom_enwiki-latest-page.sql
       - data/filtered/pageviews/
       - data/filtered/OneZoom_provider_ids.csv
+    params:
+      - ot_version
     outs:
       - data/taxon_map.csv
 

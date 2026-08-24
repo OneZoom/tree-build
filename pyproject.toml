@@ -55,7 +55,6 @@ CSV_base_table_creator = "oz_tree_build.taxon_mapping_and_popularity.CSV_base_ta
 get_wiki_images = "oz_tree_build.images.get_wiki_images:main"
 get_wiki_vernaculars = "oz_tree_build.vernaculars.get_wiki_vernaculars:main"
 process_image_bits = "oz_tree_build.images.process_image_bits:main"
-make_js_treefiles = "oz_tree_build.utilities.make_js_treefiles:main"
 format_newick = "oz_tree_build.newick.format_newick:main"
 extract_minimal_tree = "oz_tree_build.newick.extract_minimal_tree:main"
 extract_trees = "oz_tree_build.newick.extract_trees:main"

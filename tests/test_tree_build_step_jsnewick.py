@@ -1,6 +1,3 @@
-import json
-import random
-
 import ete4
 
 from oz_tree_build.tree_build.step_jsnewick import (
@@ -8,7 +5,6 @@ from oz_tree_build.tree_build.step_jsnewick import (
     jsnewick_cutpositionmap_binary,
     jsnewick_cutpositionmap_polytomy,
 )
-from oz_tree_build.utilities import make_js_treefiles
 
 ########################################
 # jsnewick_brief_newick
@@ -113,21 +109,6 @@ def test_cutmap_binary_threshold_skips_small_subtrees():
     assert jsnewick_cutpositionmap_binary(t, threshold=6) == {7: 0}
 
 
-def test_cutmap_binary_matches_legacy_on_ladderized_tree():
-    """On a tree ladderized smallest-subtree-first, the new map matches the legacy
-    string-based generator byte-for-byte. The legacy algorithm assumes leaf-first
-    child ordering — ladderize(ascending=True) is what the OZ pipeline runs to
-    enforce that."""
-    random.seed(1234)
-    nwk = _random_binary_newick(25)
-    t = ete4.Tree(nwk, parser=1)
-    t.ladderize()  # ete4 ladderize is ascending by default
-
-    brief = jsnewick_brief_newick(t)
-    new_map = jsnewick_cutpositionmap_binary(t, threshold=0)
-    assert new_map == _legacy_binary_map(brief, 0)
-
-
 ########################################
 # jsnewick_cutpositionmap_polytomy
 ########################################
@@ -187,45 +168,3 @@ def test_cutmap_polytomy_threshold_off_by_one_vs_binary():
         7: [1, 0, 1, 6],
         6: [2, 1, 2, 5],
     }
-
-
-def test_cutmap_polytomy_matches_legacy_on_ladderized_tree():
-    """Matches the legacy polytomy generator on a leaf-first-ordered tree."""
-    random.seed(5678)
-    nwk = _random_binary_newick(25)
-    t = ete4.Tree(nwk, parser=1)
-    t.ladderize()
-
-    brief = jsnewick_brief_newick(t)
-    new_map = jsnewick_cutpositionmap_polytomy(t, threshold=0)
-    assert new_map == _legacy_polytomy_map(brief, 0)
-
-
-########################################
-# helpers
-########################################
-
-
-def _random_binary_newick(n_leaves):
-    """Generate a random binary newick string with ``n_leaves`` leaves."""
-
-    def rec(i, j):
-        if j - i == 1:
-            return f"L{i}"
-        m = random.randint(i + 1, j - 1)
-        return f"({rec(i, m)},{rec(m, j)})"
-
-    return rec(0, n_leaves) + ";"
-
-
-def _legacy_binary_map(brief, threshold):
-    """Run the legacy generator and parse the embedded JSON back into a dict."""
-    js = make_js_treefiles.generate_binary_cut_position_map(brief, threshold)
-    payload = js.split("'", 2)[1]
-    return {int(k): v for k, v in json.loads(payload).items()}
-
-
-def _legacy_polytomy_map(brief, threshold):
-    js = make_js_treefiles.generate_polytomy_cut_position_map(brief, threshold)
-    payload = js.split("'", 2)[1]
-    return {int(k): v for k, v in json.loads(payload).items()}

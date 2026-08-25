@@ -193,6 +193,7 @@ stages:
       --wikipediaSQLDumpFile data/filtered/OneZoom_enwiki-latest-page.sql
       --wikipedia_totals_bz2_pageviews data/filtered/pageviews/
       --EOLidentifiers data/filtered/OneZoom_provider_ids.csv
+      --extra_source_file data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
       -o data/taxon_map.csv
     deps:
       - data/OpenTree/${ot_version}/taxonomy.tsv
@@ -200,7 +201,9 @@ stages:
       - data/filtered/OneZoom_enwiki-latest-page.sql
       - data/filtered/pageviews/
       - data/filtered/OneZoom_provider_ids.csv
+      - data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
     params:
+      - oz_tree
       - ot_version
     outs:
       - data/taxon_map.csv

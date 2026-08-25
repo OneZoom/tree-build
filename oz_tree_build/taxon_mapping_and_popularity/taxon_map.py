@@ -324,6 +324,17 @@ def populate_iucn(OTT_ptrs, identifiers_filename, verbosity=0, iucn_num=5):
     logger.info(f" > Increased IUCN coverage to {used} taxa using wikidata")
 
 
+def parse_sourceinfo(sourceinfo):
+    """Deparse a sourceinfo string, e.g. "ncbi:1274384,gbif:8094325", into a dict of IDs"""
+    out = {}
+    for i in sourceinfo.split(","):
+        if not i:
+            continue
+        k, v = i.split(":", 1)
+        out[k] = int(v) if v.isdigit() else v
+    return out
+
+
 def read_ot_taxonomy(path="./data/OpenTree/v16.1/taxonomy.tsv"):
     """Yield each row of an OpenTree taxonomy file as a dict keyed by header.
 
@@ -338,15 +349,49 @@ def read_ot_taxonomy(path="./data/OpenTree/v16.1/taxonomy.tsv"):
 
             out["uid"] = int(out["uid"])
             out["parent_uid"] = None if out["parent_uid"] == "" else int(out["parent_uid"])
-
-            # Deparse sourceinfo to a dict of IDs
-            sourceinfo = {}
-            for i in out["sourceinfo"].split(","):
-                k, v = i.split(":", 1)
-                sourceinfo[k] = int(v) if v.isdigit() else v
-            out["sourceinfo"] = sourceinfo
+            out["sourceinfo"] = parse_sourceinfo(out["sourceinfo"])
 
             yield out
+
+
+def read_extra_source_file(path):
+    """Yield each row of an extra source file, in the same form as read_ot_taxonomy().
+
+    Unlike the OpenTree taxonomy this is a plain TSV, requiring only "uid" and
+    "sourceinfo" columns. The uid need not be a number (e.g. "mrcaott409215ott616649").
+    """
+    try:
+        with open(path, encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f, delimiter="\t"):
+                out = dict(row)
+                out["uid"] = int(row["uid"]) if row["uid"].isdigit() else row["uid"]
+                out["sourceinfo"] = parse_sourceinfo(row["sourceinfo"])
+                yield out
+    except FileNotFoundError:
+        logger.warning(f" Extra source file '{path}' not found, so ignored")
+
+
+def add_taxon_sources(OTT_ptrs, source_ptrs, ott, sourceinfo, rank=None):
+    """
+    Point OTT_ptrs[ott] at an entry in source_ptrs for each source in sourceinfo,
+    adding the OTT if not already there, and overwriting any existing source of
+    the same name.
+    """
+    ott_data = OTT_ptrs.setdefault(ott, {"ott": ott, "sources": {}})
+    if rank is not None:
+        ott_data["rank"] = rank
+
+    has_ncbi = False
+    for src in reversed(sourceinfo.keys()):
+        # NB: look at sources in reverse order, overwriting, so 1st ones take priority
+        src_id = sourceinfo[src]
+        if src == "ncbi":
+            has_ncbi = True
+        elif not has_ncbi and src == "ncbi_silva":
+            # only use the ncbi_via_silva id if no 'normal' ncbi already set
+            src = "ncbi"
+        source_ptrs.setdefault(src, {})[src_id] = {"id": src_id}
+        ott_data["sources"][src] = source_ptrs[src][src_id]
 
 
 def main():
@@ -398,6 +443,18 @@ def main():
         help=("EOL identifiers file, from " "https://opendata.eol.org/dataset/identifiers-csv-gz"),
     )
     parser.add_argument(
+        "--extra_source_file",
+        default=None,
+        type=str,
+        help=(
+            "An optional additional file to supplement the taxonomy.tsv file, "
+            "providing additional mappings from OTTs to source ids (useful for overriding). "
+            'The first line should be a header contining "uid" and "sourceinfo" column '
+            "headers, similar to those in the taxonomy.tsv file. NB the OTT can be a "
+            'number, or an ID of the form "mrcaott409215ott616649").'
+        ),
+    )
+    parser.add_argument(
         "-o",
         type=argparse.FileType("w"),
         default="-",
@@ -416,24 +473,15 @@ def main():
     OTT_ptrs = {}
     source_ptrs = {}
     for r in read_ot_taxonomy(args.OpenTreeTaxonomy):
-        OTTid = r["uid"]
-        OTT_ptrs[OTTid] = {"ott": OTTid, "sources": {}}
+        add_taxon_sources(OTT_ptrs, source_ptrs, r["uid"], r["sourceinfo"], r["rank"])
 
-        has_ncbi = False
-        for src in reversed(
-            r["sourceinfo"].keys()
-        ):  # NB: look at sources in reverse order, overwriting, so 1st ones take priority
-            src_id = r["sourceinfo"][src]
-            if src == "ncbi":
-                has_ncbi = True
-            elif not has_ncbi and src == "ncbi_silva":
-                # only use the ncbi_via_silva id if no 'normal' ncbi already set
-                src = "ncbi"
-            if src not in source_ptrs:
-                source_ptrs[src] = {}
-            source_ptrs[src][src_id] = {"id": src_id}
-            OTT_ptrs[OTTid]["sources"][src] = source_ptrs[src][src_id]
-            OTT_ptrs[OTTid]["rank"] = r["rank"]
+    if args.extra_source_file is not None:
+        logger.info(f"Supplementing source IDs from {args.extra_source_file}")
+        extra_otts = 0
+        for r in read_extra_source_file(args.extra_source_file):
+            add_taxon_sources(OTT_ptrs, source_ptrs, r["uid"], r["sourceinfo"], r.get("rank"))
+            extra_otts += 1
+        logger.info(f"✔ {extra_otts} OTTs supplemented from {args.extra_source_file}")
 
     eol_sources = {
         "ncbi": 676,

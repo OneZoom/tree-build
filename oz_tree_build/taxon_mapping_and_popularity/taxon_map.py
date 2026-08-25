@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 # (silva, h2007, "additions-6520052-6520144", ...) is ignored.
 SOURCES = ("ncbi", "if", "worms", "irmng", "gbif")
 
+# The EoL "resource_id" identifying IUCN rows in the EoL identifiers file
+iucn_num = 5
+
 
 def map_wiki_info(
     source_ptrs,
@@ -272,7 +275,7 @@ def identify_best_EoLdata(OTT_ptrs, sources):
     )
 
 
-def populate_iucn(OTT_ptrs, identifiers_filename, verbosity=0, iucn_num=5):
+def populate_iucn(OTT_ptrs, identifiers_filename, verbosity=0, iucn_num=iucn_num):
     """
     Port the IUCN number from both EoL and Wikidata, and keep both if there is a conflict
     """

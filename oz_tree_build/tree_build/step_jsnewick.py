@@ -28,8 +28,7 @@ def jsnewick_brief_newick(tree, polytomy_braces="()"):
     ``polytomy_braces`` is a two-character string overriding the
     brackets used for any *non-root* internal whose ``dist == 0`` —
     the marker ``resolve_polytomy`` leaves on an artificial split.
-    Pass e.g. ``"{}"`` to flag those nodes for the frontend (matches
-    ``dendropy_extras.write_brief_newick``).
+    Pass e.g. ``"{}"`` to flag those nodes for the frontend.
     """
     parts = []
     for node, action in _walk_internal(tree):

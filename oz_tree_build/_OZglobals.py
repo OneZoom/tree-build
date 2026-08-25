@@ -14,7 +14,6 @@ except ImportError:
     current = type("", (), {})()  # allow us to set e.g. current.OZglobals
 
 # bitwise flags for existence of different language wikipedia articles
-# this variable is also used in construct_wiki_info in CSV_base_table_creator.py
 wikiflags = cache.ram(
     "wikiflags",
     lambda: {

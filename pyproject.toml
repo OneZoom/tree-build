@@ -49,7 +49,6 @@ download_and_filter_wikidata = "oz_tree_build.utilities.download_and_filter_wiki
 discover_latest_wikidata_dump_url = "oz_tree_build.utilities.download_and_filter_wikidata:discover_main"
 discover_latest_enwiki_sql_url = "oz_tree_build.utilities.filter_wikipedia_sql:discover_main"
 download_opentree = "oz_tree_build.utilities.download_opentree:main"
-CSV_base_table_creator = "oz_tree_build.taxon_mapping_and_popularity.CSV_base_table_creator:main"
 get_wiki_images = "oz_tree_build.images.get_wiki_images:main"
 get_wiki_vernaculars = "oz_tree_build.vernaculars.get_wiki_vernaculars:main"
 process_image_bits = "oz_tree_build.images.process_image_bits:main"

@@ -63,6 +63,7 @@ stages:
         --orphan_dir data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
         --opentree data/dated_tree/dated_tree_pre.tre
         --taxon_map data/taxon_map.csv
+        --exclude ${exclude_from_popularity}
         --out_dir data/out
     deps:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/

@@ -16,6 +16,11 @@ from ..utilities.file_utils import open_file_based_on_extension
 
 logger = logging.getLogger(__name__)
 
+# The taxonomy sources we can map to wikidata, most trusted first (the order is used to
+# choose between wikidata items when they disagree). Any other source in the taxonomy
+# (silva, h2007, "additions-6520052-6520144", ...) is ignored.
+SOURCES = ("ncbi", "if", "worms", "irmng", "gbif")
+
 
 def map_wiki_info(
     source_ptrs,
@@ -371,11 +376,12 @@ def read_extra_source_file(path):
         logger.warning(f" Extra source file '{path}' not found, so ignored")
 
 
-def add_taxon_sources(OTT_ptrs, source_ptrs, ott, sourceinfo, rank=None):
+def add_taxon_sources(OTT_ptrs, source_ptrs, ott, sourceinfo, rank=None, unused_sources=None):
     """
     Point OTT_ptrs[ott] at an entry in source_ptrs for each source in sourceinfo,
     adding the OTT if not already there, and overwriting any existing source of
-    the same name.
+    the same name. Sources not in SOURCES are ignored, their names being added to
+    the unused_sources set, if given.
     """
     ott_data = OTT_ptrs.setdefault(ott, {"ott": ott, "sources": {}})
     if rank is not None:
@@ -384,6 +390,10 @@ def add_taxon_sources(OTT_ptrs, source_ptrs, ott, sourceinfo, rank=None):
     for src in reversed(sourceinfo.keys()):
         # NB: look at sources in reverse order, overwriting, so 1st ones take priority
         src_id = sourceinfo[src]
+        if src not in SOURCES:
+            if unused_sources is not None:
+                unused_sources.add(src)
+            continue
         # NB: reuse any existing entry, so OTTs sharing a source id share its (wikidata) data
         ott_data["sources"][src] = source_ptrs.setdefault(src, {}).setdefault(src_id, {"id": src_id})
 
@@ -465,17 +475,23 @@ def main():
     # Replaces get_OTT_list & OTT_popularity_mapping.create_from_taxonomy respectively
     logger.info("Generating OTT_ptrs / source_ptrs from taxonomy")
     OTT_ptrs = {}
-    source_ptrs = {}
+    source_ptrs = {s: {} for s in SOURCES}  # NB: all sources must exist, even if empty
+    unused_sources = set()
     for r in read_ot_taxonomy(args.OpenTreeTaxonomy):
-        add_taxon_sources(OTT_ptrs, source_ptrs, r["uid"], r["sourceinfo"], r["rank"])
+        add_taxon_sources(OTT_ptrs, source_ptrs, r["uid"], r["sourceinfo"], r["rank"], unused_sources)
 
     if args.extra_source_file is not None:
         logger.info(f"Supplementing source IDs from {args.extra_source_file}")
         extra_otts = 0
         for r in read_extra_source_file(args.extra_source_file):
-            add_taxon_sources(OTT_ptrs, source_ptrs, r["uid"], r["sourceinfo"], r.get("rank"))
+            add_taxon_sources(OTT_ptrs, source_ptrs, r["uid"], r["sourceinfo"], r.get("rank"), unused_sources)
             extra_otts += 1
         logger.info(f"✔ {extra_otts} OTTs supplemented from {args.extra_source_file}")
+
+    logger.info(
+        f"✔ {len(OTT_ptrs)} OTTs with sources {[f'{s}: {len(source_ptrs[s])}' for s in SOURCES]}. "
+        f"Ignored {len(unused_sources)} unused sources, e.g. {sorted(unused_sources)[:5]}"
+    )
 
     eol_sources = {
         "ncbi": 676,
@@ -487,7 +503,7 @@ def main():
 
     map_wiki_info(
         source_ptrs=source_ptrs,
-        source_order=["ncbi", "if", "worms", "irmng", "gbif"],
+        source_order=SOURCES,
         OTT_ptrs=OTT_ptrs,
         WD_filename=args.wikidataDumpFile,
         lang=args.wikilang,

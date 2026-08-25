@@ -179,9 +179,26 @@ class TestAddTaxonSources:
 
     def test_non_numeric_source_ids_are_usable(self):
         OTT_ptrs, source_ptrs = {}, {}
-        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"silva": "JX948102"})
+        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"gbif": "D11377/#1"})
 
-        assert source_ptrs["silva"]["JX948102"] == {"id": "JX948102"}
+        assert source_ptrs["gbif"]["D11377/#1"] == {"id": "D11377/#1"}
+
+    def test_unknown_sources_are_ignored(self):
+        # The taxonomy carries ~150 source names we can't map to wikidata
+        OTT_ptrs, source_ptrs = {}, {}
+        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"silva": 0, "h2007": 1, "additions-6520052-6520144": 2})
+
+        assert OTT_ptrs == {1: {"ott": 1, "sources": {}}}
+        assert source_ptrs == {}
+
+    def test_unknown_sources_are_collected_when_asked(self):
+        OTT_ptrs, source_ptrs = {}, {}
+        unused = set()
+        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"silva": 0, "ncbi": 1}, unused_sources=unused)
+        add_taxon_sources(OTT_ptrs, source_ptrs, 2, {"silva": 3, "h2007": 4}, unused_sources=unused)
+
+        assert unused == {"silva", "h2007"}
+        assert set(source_ptrs) == {"ncbi"}
 
     def test_a_second_call_overrides_only_the_sources_given(self):
         # i.e. how an extra_source_file supplements the OpenTree taxonomy
@@ -213,7 +230,7 @@ class TestAddTaxonSources:
         OTT_ptrs, source_ptrs = {}, {}
         add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"silva": "JX948102", "ncbi": 1274384})
 
-        assert OTT_ptrs[1]["sources"]["ncbi"] == {"id": 1274384}
+        assert OTT_ptrs[1]["sources"] == {"ncbi": {"id": 1274384}}
 
     def test_empty_sourceinfo_still_adds_the_ott(self):
         OTT_ptrs, source_ptrs = {}, {}

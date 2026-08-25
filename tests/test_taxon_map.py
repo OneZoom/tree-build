@@ -208,18 +208,12 @@ class TestAddTaxonSources:
 
         assert "rank" not in OTT_ptrs[1]
 
-    def test_ncbi_silva_is_used_as_ncbi_if_no_ncbi(self):
+    def test_a_silva_derived_ncbi_id_is_used_like_any_other(self):
+        # NCBI ids from SILVA-sourced rows used to be singled out as "ncbi_silva"
         OTT_ptrs, source_ptrs = {}, {}
-        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"ncbi_silva": 777, "irmng": 3})
+        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"silva": "JX948102", "ncbi": 1274384})
 
-        assert OTT_ptrs[1]["sources"] == {"ncbi": {"id": 777}, "irmng": {"id": 3}}
-
-    def test_a_normal_ncbi_id_takes_priority(self):
-        # Sources are read in reverse, so the first ncbi in the row wins
-        OTT_ptrs, source_ptrs = {}, {}
-        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"ncbi": 5, "ncbi_silva": 777})
-
-        assert OTT_ptrs[1]["sources"]["ncbi"] == {"id": 5}
+        assert OTT_ptrs[1]["sources"]["ncbi"] == {"id": 1274384}
 
     def test_empty_sourceinfo_still_adds_the_ott(self):
         OTT_ptrs, source_ptrs = {}, {}

@@ -381,15 +381,9 @@ def add_taxon_sources(OTT_ptrs, source_ptrs, ott, sourceinfo, rank=None):
     if rank is not None:
         ott_data["rank"] = rank
 
-    has_ncbi = False
     for src in reversed(sourceinfo.keys()):
         # NB: look at sources in reverse order, overwriting, so 1st ones take priority
         src_id = sourceinfo[src]
-        if src == "ncbi":
-            has_ncbi = True
-        elif not has_ncbi and src == "ncbi_silva":
-            # only use the ncbi_via_silva id if no 'normal' ncbi already set
-            src = "ncbi"
         # NB: reuse any existing entry, so OTTs sharing a source id share its (wikidata) data
         ott_data["sources"][src] = source_ptrs.setdefault(src, {}).setdefault(src_id, {"id": src_id})
 

@@ -365,11 +365,12 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
     unused_sources = set()
     source_ptrs = {s: {} for s in sources}
 
-    # hack for NCBI_via_silva
-    # (see https://groups.google.com/d/msg/opentreeoflife/L2x3Ond16c4/CVp6msiiCgAJ)
-    silva_regexp = re.compile(r"ncbi:(\d+),silva:([^,$]+)")
-    # keep ncbi_id as ncbi_silva, but chop off the silva ID as it's not used in wikidata/EoL
-    silva_sub = r"ncbi_silva:\1"
+    # NB: NCBI ids that OpenTree got via SILVA used to be marked as "ncbi_silva" and
+    # treated with suspicion (see
+    # https://groups.google.com/d/msg/opentreeoflife/L2x3Ond16c4/CVp6msiiCgAJ).
+    # Against taxonomy v16.1 they behave just like any other NCBI id: they agree with
+    # the wikidata item found via gbif/irmng/worms 95.5% of the time, vs 96.2% for
+    # non-SILVA ids, so they are now used as-is.
 
     data_files = [OTTtax_filename]
     if extra_taxonomy_file is not None:
@@ -395,16 +396,9 @@ def create_from_taxonomy(OTTtax_filename, sources, OTT_ptrs, extra_taxonomy_file
                     OTTid = OTTrow["uid"]
                     logging.warning(f" Found an ott value which is not an integer: {OTTid}")
 
-                sourceinfo = silva_regexp.sub(silva_sub, OTTrow["sourceinfo"])
-                ncbi = False
-                for srcs in reversed(sourceinfo.split(",")):
+                for srcs in reversed(OTTrow["sourceinfo"].split(",")):
                     # look at sources in reverse order, overwriting, so 1st ones take priority
                     src, src_id = srcs.split(":", 1)
-                    if src == "ncbi":
-                        ncbi = True
-                    elif (src == "ncbi_silva") and (not ncbi):
-                        # only use the ncbi_via_silva id if no 'normal' ncbi already set
-                        src = "ncbi"
                     if src not in source_ptrs:
                         if src not in unused_sources:
                             logging.info(f" New and unused source: {src} (in '{srcs}')")

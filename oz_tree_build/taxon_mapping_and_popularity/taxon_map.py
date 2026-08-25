@@ -390,8 +390,8 @@ def add_taxon_sources(OTT_ptrs, source_ptrs, ott, sourceinfo, rank=None):
         elif not has_ncbi and src == "ncbi_silva":
             # only use the ncbi_via_silva id if no 'normal' ncbi already set
             src = "ncbi"
-        source_ptrs.setdefault(src, {})[src_id] = {"id": src_id}
-        ott_data["sources"][src] = source_ptrs[src][src_id]
+        # NB: reuse any existing entry, so OTTs sharing a source id share its (wikidata) data
+        ott_data["sources"][src] = source_ptrs.setdefault(src, {}).setdefault(src_id, {"id": src_id})
 
 
 def main():

@@ -157,6 +157,26 @@ class TestAddTaxonSources:
 
         assert OTT_ptrs[1]["sources"]["ncbi"] is source_ptrs["ncbi"][5]
 
+    def test_otts_sharing_a_source_id_share_its_entry(self):
+        # Otherwise the first OTT is left pointing at an orphaned dict, which never
+        # gets the wikidata item that is added via source_ptrs
+        OTT_ptrs, source_ptrs = {}, {}
+        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"ncbi": 5})
+        add_taxon_sources(OTT_ptrs, source_ptrs, 2, {"ncbi": 5})
+
+        source_ptrs["ncbi"][5]["wd"] = "Q123"
+        assert OTT_ptrs[1]["sources"]["ncbi"] is OTT_ptrs[2]["sources"]["ncbi"]
+        assert OTT_ptrs[1]["sources"]["ncbi"]["wd"] == "Q123"
+
+    def test_reading_a_source_keeps_data_added_to_its_entry(self):
+        # An extra_source_file row re-stating an id must not wipe out its wikidata item
+        OTT_ptrs, source_ptrs = {}, {}
+        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"ncbi": 5})
+        source_ptrs["ncbi"][5]["wd"] = "Q123"
+        add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"ncbi": 5})
+
+        assert OTT_ptrs[1]["sources"]["ncbi"] == {"id": 5, "wd": "Q123"}
+
     def test_non_numeric_source_ids_are_usable(self):
         OTT_ptrs, source_ptrs = {}, {}
         add_taxon_sources(OTT_ptrs, source_ptrs, 1, {"silva": "JX948102"})

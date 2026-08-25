@@ -22,7 +22,7 @@ TAXON_CSV_FIELDS = [
     "rank",
     "raw_popularity",
     "ncbi",
-    "ifung",
+    "if",
     "worms",
     "irmng",
     "gbif",

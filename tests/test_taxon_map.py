@@ -7,6 +7,8 @@ from oz_tree_build.taxon_mapping_and_popularity.taxon_map import (
     parse_sourceinfo,
     read_extra_source_file,
     read_ot_taxonomy,
+    read_taxon_map,
+    write_taxon_map,
 )
 
 
@@ -238,3 +240,28 @@ class TestAddTaxonSources:
 
         assert OTT_ptrs == {1: {"ott": 1, "rank": "species", "sources": {}}}
         assert source_ptrs == {}
+
+
+class TestWriteTaxonMap:
+    def build(self, tmp_path, sourceinfo):
+        OTT_ptrs, source_ptrs = {}, {}
+        add_taxon_sources(OTT_ptrs, source_ptrs, 1, parse_sourceinfo(sourceinfo), "species")
+        path = tmp_path / "taxon_map.csv"
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            write_taxon_map(f, OTT_ptrs)
+        return path
+
+    def test_every_source_reaches_its_column(self, tmp_path):
+        # NB: sources are named as the taxonomy names them, i.e. index fungorum is "if"
+        path = self.build(tmp_path, "ncbi:1,if:2,worms:3,irmng:4,gbif:5")
+        row = read_taxon_map(path)[1]
+
+        assert (row["ncbi"], row["if"], row["worms"], row["irmng"], row["gbif"]) == (1, 2, 3, 4, 5)
+
+    def test_absent_sources_are_empty(self, tmp_path):
+        path = self.build(tmp_path, "ncbi:1")
+        row = read_taxon_map(path)[1]
+
+        assert row["ncbi"] == 1
+        assert (row["if"], row["worms"], row["irmng"], row["gbif"]) == (None, None, None, None)
+        assert (row["ott"], row["rank"]) == (1, "species")

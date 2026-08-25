@@ -514,10 +514,20 @@ def main():
     )
     populate_iucn(OTT_ptrs, args.EOLidentifiers)
 
-    # Write collated data out into CSV format
-    writer = csv.writer(args.o, dialect="excel")
+    write_taxon_map(args.o, OTT_ptrs)
+    args.o.close()
+
+
+def write_taxon_map(out_file, OTT_ptrs):
+    """Write the collated OTT data out as CSV, as read back by read_taxon_map()
+
+    Source columns are named as the taxonomy names them, i.e. index fungorum is "if".
+    They are only renamed ("ifung") when written to the ordered_leaves/ordered_nodes
+    files, whose header is used as the column list when importing into the database.
+    """
+    writer = csv.writer(out_file, dialect="excel")
     writer.writerow(
-        (
+        [
             "ott",
             "wikidata",
             "wikipedia_lang_flag",
@@ -525,17 +535,13 @@ def main():
             "eol",
             "rank",
             "raw_popularity",
-            "ncbi",
-            "ifung",
-            "worms",
-            "irmng",
-            "gbif",
+            *SOURCES,
             "ipni",
-        )
+        ]
     )
     for o in OTT_ptrs.values():
         writer.writerow(
-            (
+            [
                 o["ott"],
                 o.get("wd", {}).get("Q"),
                 o.get("wd", {}).get("wikipedia_lang_flag"),
@@ -543,15 +549,10 @@ def main():
                 o.get("eol"),
                 o.get("rank"),
                 o.get("wd", {}).get("raw_popularity"),
-                o["sources"].get("ncbi", {}).get("id"),
-                o["sources"].get("ifung", {}).get("id"),
-                o["sources"].get("worms", {}).get("id"),
-                o["sources"].get("irmng", {}).get("id"),
-                o["sources"].get("gbif", {}).get("id"),
+                *(o["sources"].get(src, {}).get("id") for src in SOURCES),
                 o.get("ipni"),
-            )
+            ]
         )
-    args.o.close()
 
 
 def read_taxon_map(path):
@@ -559,13 +560,12 @@ def read_taxon_map(path):
 
     Empty fields become ``None``. Numeric fields are converted to ``int`` or
     ``float``; ``iucn`` is left as a string because multiple values may be
-    joined with ``|``. Source IDs (``ncbi``, ``ifung``, ``worms``, ``irmng``,
-    ``gbif``) are converted to ``int`` where possible and otherwise left as
-    strings.
+    joined with ``|``. Source IDs (see ``SOURCES``) are converted to ``int``
+    where possible and otherwise left as strings.
     """
     int_fields = ("ott", "wikidata", "wikipedia_lang_flag", "eol", "ipni")
     float_fields = ("raw_popularity",)
-    source_fields = ("ncbi", "ifung", "worms", "irmng", "gbif")
+    source_fields = SOURCES
     out = {}
     with open(path, encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f, dialect="excel")

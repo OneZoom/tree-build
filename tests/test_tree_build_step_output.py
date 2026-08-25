@@ -377,6 +377,7 @@ class TestOutputMysqlExport:
                     "iucn": "LC",
                     "eol": "42",
                     "ncbi": "999",
+                    "if": "531546",
                 },
             },
         )
@@ -389,6 +390,8 @@ class TestOutputMysqlExport:
         assert a[LEAF_HEADER.index("iucn")] == "LC"
         assert a[LEAF_HEADER.index("eol")] == "42"
         assert a[LEAF_HEADER.index("ncbi")] == "999"
+        # The taxonomy's "if" source is the DB's "ifung" column
+        assert a[LEAF_HEADER.index("ifung")] == "531546"
         # B had no overrides → \N everywhere taxon-derived.
         b = rows["B"]
         assert b[LEAF_HEADER.index("ott")] == "\\N"
@@ -398,12 +401,13 @@ class TestOutputMysqlExport:
         # Internal nodes get the same taxon projection — but with `rnk`
         # in place of the leaf-only `iucn`/`extinction_date` columns.
         t = ete4.Tree("(A,B)R;", parser=1)
-        _prep(t, taxon_overrides={"R": {"ott": "777", "rnk": "family"}})
+        _prep(t, taxon_overrides={"R": {"ott": "777", "rnk": "family", "if": "9257"}})
         output_mysqlexport(t, str(tmp_path))
         nodes = _read_csv(tmp_path, "ordered_nodes.csv")
         root = next(r for r in nodes[1:] if r[NODE_HEADER.index("name")] == "R")
         assert root[NODE_HEADER.index("ott")] == "777"
         assert root[NODE_HEADER.index("rnk")] == "family"
+        assert root[NODE_HEADER.index("ifung")] == "9257"
 
     def test_missing_extinction_date_and_popularity_are_backslash_N(self, tmp_path):
         # Leaf-only props (extinction_date, popularity, popularity_rank)

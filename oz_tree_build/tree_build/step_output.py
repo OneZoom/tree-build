@@ -119,7 +119,7 @@ def output_mysqlexport(tree, out_dir):
                 "popularity_rank",
                 "price",
                 "ncbi",
-                "ifung",
+                "ifung",  # NB: the DB's name for the taxonomy's "if" source
                 "worms",
                 "irmng",
                 "gbif",
@@ -143,7 +143,7 @@ def output_mysqlexport(tree, out_dir):
                 "raw_popularity",
                 "popularity",
                 "ncbi",
-                "ifung",
+                "ifung",  # NB: the DB's name for the taxonomy's "if" source
                 "worms",
                 "irmng",
                 "gbif",
@@ -186,7 +186,7 @@ def output_mysqlexport(tree, out_dir):
                         node.props.get("popularity_rank", "\\N"),
                         None,  # "price"
                         node.props["taxon"].get("ncbi", "\\N"),
-                        node.props["taxon"].get("ifung", "\\N"),
+                        node.props["taxon"].get("if", "\\N"),  # NB: "ifung" in the DB
                         node.props["taxon"].get("worms", "\\N"),
                         node.props["taxon"].get("irmng", "\\N"),
                         node.props["taxon"].get("gbif", "\\N"),
@@ -211,7 +211,7 @@ def output_mysqlexport(tree, out_dir):
                         node.props["taxon"].get("raw_popularity", "\\N"),
                         node.props.get("popularity", "\\N"),
                         node.props["taxon"].get("ncbi", "\\N"),
-                        node.props["taxon"].get("ifung", "\\N"),
+                        node.props["taxon"].get("if", "\\N"),  # NB: "ifung" in the DB
                         node.props["taxon"].get("worms", "\\N"),
                         node.props["taxon"].get("irmng", "\\N"),
                         node.props["taxon"].get("gbif", "\\N"),

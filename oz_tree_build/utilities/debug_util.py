@@ -51,15 +51,26 @@ def parse_args_and_add_logging_switch(parser):
     args = parser.parse_args()
 
     if args.verbosity == 0:
-        logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
+        level = logging.WARNING
     elif args.verbosity == 1:
-        logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+        level = logging.INFO
     else:
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+        level = logging.DEBUG
+
+    # NB: force=True, since importing ete4 configures the root logger for us
+    # (see ete4/smartview/explorer.py), which would make this call a no-op.
+    # For the same reason we spell out the format rather than inheriting one.
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=level,
+        format="%(asctime)s %(levelname)s %(module)s: %(message)s",
+        force=True,
+    )
 
     if _error_handler is None:
         _error_handler = _ErrorCountingHandler()
-        logging.getLogger().addHandler(_error_handler)
         atexit.register(_exit_if_errors_logged)
+    # NB: Added after basicConfig(), which removes any pre-existing handlers
+    logging.getLogger().addHandler(_error_handler)
 
     return args

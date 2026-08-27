@@ -46,7 +46,6 @@ from dated_complete_tree import tree_metrics
 import argparse
 import logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename="main.log", filemode="w", force=True, level=logging.ERROR)
 
 
 def nwk_write(tree, outfile):
@@ -271,6 +270,10 @@ def generate_trees(args):
 
 
 def main():
+    # NB: Only configure logging when run as a script, not on import, otherwise
+    # we clobber the logging config of anything importing us
+    logging.basicConfig(filename="main.log", filemode="w", force=True, level=logging.ERROR)
+
     parser = argparse.ArgumentParser(
         description=(
             "Generate a set of dated trees of all life, based on the Open Tree of Life and Chronosynth. "

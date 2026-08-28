@@ -31,8 +31,6 @@ from .step_tidy import (
 )
 from .step_treeprop import (
     treeprop_geological,
-    treeprop_sliding_window,
-    treeprop_weighted_mean,
 )
 
 logger = logging.getLogger(__name__)
@@ -191,8 +189,6 @@ def main():
 
     logger.info("Generate tree properties and output arrays")
     output_proparray(base_t, args.out_dir, treeprop_geological(base_t))
-    output_proparray(base_t, args.out_dir, treeprop_sliding_window(base_t))
-    output_proparray(base_t, args.out_dir, treeprop_weighted_mean(base_t))
 
 
 if __name__ == "__main__":

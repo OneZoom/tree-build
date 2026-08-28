@@ -1,3 +1,5 @@
+import re
+
 # Prop marking a node as an artificial split inserted to break up a polytomy.
 # Its value says *how* the topology was chosen, since the two stages that
 # resolve polytomies do so very differently. Any node carrying the prop is
@@ -16,6 +18,12 @@ POLYTOMY_RANDOM = "random"
 # Name fix_polytomy gives the nodes it inserts, and the only trace of them that
 # survives into the newick date_tree writes out
 OT_POLYTOMY_NAME = "mrcapoly"
+
+# Names belonging to synthetic nodes that stand in for an ancestor rather than
+# naming a taxon: OpenTree's own MRCA labels, plus those dated_complete_tree
+# gives the nodes it inserts resolving polyphyly ("mrcaimp") and polytomies
+# ("mrcapoly"). None of them is ever a taxon in its own right.
+SYNTHETIC_NAME_RE = re.compile(r"^mrca(ott\d+ott\d+|imp|poly)$")
 
 
 def tidy_resolve_polytomies(tree, kind=POLYTOMY_COMB):
@@ -60,6 +68,38 @@ def tidy_mark_resolved_polytomies(tree, kind=POLYTOMY_RANDOM, name=OT_POLYTOMY_N
             node.props[POLYTOMY_PROP] = kind
             count += 1
     return count
+
+
+def tidy_prune_synthetic_leaves(tree, name_re=SYNTHETIC_NAME_RE):
+    """
+    Drop childless synthetic nodes, repeating until none are left.
+
+    ``graft_extract_ot_subtrees`` detaches each requested subtree from the
+    OpenTree tree in place and does not tidy up the ancestors that empties. An
+    emptied node has no children, so it reads as a leaf from then on and is
+    written out as though it were a species -- keeping the date it had as an
+    internal node, which is what makes ``date_labelling`` complain that a leaf
+    has a non-zero date.
+
+    Removing one can empty its parent in turn (an OT MRCA node above a
+    ``mrcaimp`` node above two extracted subtrees, say), hence the fixed point.
+    Nodes that were *already* childless in the input are debris for the same
+    reason and go the same way.
+
+    Only synthetic names are pruned. A named taxon left childless is left alone
+    deliberately: it would be a real taxon losing its whole subtree, which is
+    worth noticing rather than quietly deleting.
+
+    Return number of nodes removed.
+    """
+    removed = 0
+    while True:
+        emptied = [n for n in tree.traverse() if n.is_leaf and n.up is not None and name_re.match(n.name or "")]
+        if not emptied:
+            return removed
+        for node in emptied:
+            node.detach()
+        removed += len(emptied)
 
 
 def tidy_infill_dates_bottomup(tree):

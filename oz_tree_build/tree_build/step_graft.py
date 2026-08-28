@@ -77,7 +77,8 @@ def graft_extract_ot_subtrees(opentree_t, inclusions):
     (see ``decypher_inclusion_syntax``). ``opentree_t`` is walked and any node
     whose OTT matches one of those base OTTs is detached and returned as a
     standalone subtree. ``opentree_t`` is mutated in place — every extracted
-    subtree is removed from it.
+    subtree is removed from it, along with any ancestor left with no
+    descendants as a result (see the loop below).
 
     The extraction recurses into each detached subtree, so a requested OTT
     that lies inside another requested subtree is still extracted (and its
@@ -110,9 +111,20 @@ def graft_extract_ot_subtrees(opentree_t, inclusions):
             del start_otts[node_ott]
 
             # Prune this tree, extract any required subtrees from this subtree
+            parent = n.up
             sub_t = n.detach()
             out_trees.update(prune_ot_subtrees(sub_t))  # NB: node_ott now removed from start_otts, so won't loop
             out_trees[r["orig_name"]] = sub_t
+
+            # Detaching can leave (parent) with nothing below it -- every one of its
+            # descendants was requested separately, so the whole clade now lives in
+            # the bespoke tree. An emptied node reads as a leaf from here on and
+            # would be written out as though it were a species, so drop it, and any
+            # ancestor it empties in turn. Only nodes emptied by *us* are removed:
+            # a node that was already a tip is a real taxon and is left alone.
+            while parent is not None and parent.up is not None and not parent.children:
+                emptied, parent = parent, parent.up
+                emptied.detach()
             return True
 
         for _ in ot_t.traverse(strategy="preorder", is_leaf_fn=is_leaf_fn):

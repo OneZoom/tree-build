@@ -7,8 +7,58 @@ from oz_tree_build.tree_build.step_tidy import (
     tidy_clear_conflicting_dates_topdown,
     tidy_infill_dates_bottomup,
     tidy_mark_resolved_polytomies,
+    tidy_prune_synthetic_leaves,
     tidy_resolve_polytomies,
 )
+
+
+class TestTidyPruneSyntheticLeaves:
+    def test_childless_ot_mrca_node_is_pruned(self):
+        # An OT MRCA label left childless because both its children were
+        # extracted as separate subtrees.
+        t = ete4.Tree("(mrcaott118778ott781203,B:1)Root;", parser=1)
+        assert tidy_prune_synthetic_leaves(t) == 1
+        assert [n.name for n in t.leaves()] == ["B"]
+
+    def test_mrcaimp_and_mrcapoly_are_pruned(self):
+        t = ete4.Tree("(mrcaimp,mrcapoly,B:1)Root;", parser=1)
+        assert tidy_prune_synthetic_leaves(t) == 2
+        assert [n.name for n in t.leaves()] == ["B"]
+
+    def test_cascades_upwards(self):
+        # Root -> M (OT mrca) -> mrcaimp -> nothing. Pruning the mrcaimp
+        # empties M, which must then go too.
+        t = ete4.Tree("((mrcaimp)mrcaott90320ott145150,B:1)Root;", parser=1)
+        assert tidy_prune_synthetic_leaves(t) == 2
+        assert [n.name for n in t.leaves()] == ["B"]
+
+    def test_named_taxa_are_left_alone(self):
+        # A real taxon left childless is not ours to delete silently.
+        t = ete4.Tree("(Berycidae_ott118776,B:1)Root;", parser=1)
+        assert tidy_prune_synthetic_leaves(t) == 0
+        assert sorted(n.name for n in t.leaves()) == ["B", "Berycidae_ott118776"]
+
+    def test_synthetic_node_with_children_is_kept(self):
+        # Only *childless* synthetic nodes are debris; one still holding a
+        # subtree is doing its job as an ancestor.
+        t = ete4.Tree("((X:1,Y:1)mrcaimp,B:1)Root;", parser=1)
+        assert tidy_prune_synthetic_leaves(t) == 0
+        assert sorted(n.name for n in t.leaves()) == ["B", "X", "Y"]
+
+    def test_similar_names_are_not_matched(self):
+        # Guard the regex against eating real taxa that merely start "mrca".
+        t = ete4.Tree("(mrcaimposter,Mrcaimp,mrcaott12,B:1)Root;", parser=1)
+        assert tidy_prune_synthetic_leaves(t) == 0
+
+    def test_returns_zero_on_a_clean_tree(self):
+        t = ete4.Tree("(A:1,B:1)Root;", parser=1)
+        assert tidy_prune_synthetic_leaves(t) == 0
+
+    def test_root_is_never_detached(self):
+        # A tree that collapses entirely must not try to detach its own root.
+        t = ete4.Tree("(mrcaimp)mrcapoly;", parser=1)
+        tidy_prune_synthetic_leaves(t)
+        assert t.up is None
 
 
 def _by_name(tree):

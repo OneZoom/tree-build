@@ -26,6 +26,7 @@ from .step_tidy import (
     tidy_clear_conflicting_dates_topdown,
     tidy_infill_dates_bottomup,
     tidy_mark_resolved_polytomies,
+    tidy_prune_synthetic_leaves,
     tidy_resolve_polytomies,
 )
 from .step_treeprop import (
@@ -122,13 +123,10 @@ def main():
     )
     tidy_clear_conflicting_dates_topdown(base_t)
 
-    logger.info("Bin imputed mrca nodes made by fix_polyphyly left dangling by grafting process")
+    logger.info("Bin synthetic mrca nodes left childless by the grafting process")
     # NB: Has to happen before delete_one_child_nodes. Detaching a leaf leaves its parent
     # with one child, and there is no second unary-node pass to tidy those up afterwards.
-    dangling = [n for n in base_t.traverse() if n.is_leaf and n.name == "mrcaimp"]
-    for n in dangling:
-        n.detach()
-    logger.info(f"Detached {len(dangling)} dangling mrcaimp leaves")
+    logger.info(f"Pruned {tidy_prune_synthetic_leaves(base_t)} childless synthetic nodes")
 
     logger.info("Remove unary nodes (they are likely uninteresting, and make a mess of the tree rendering)")
     # NB: Returns the tree, which is a *new* root if the old one was itself unary

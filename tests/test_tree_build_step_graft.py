@@ -133,8 +133,57 @@ class TestGraftExtractOtSubtrees:
         result = graft_extract_ot_subtrees(ete4.Tree(str(ot_file), parser=1), ["Outer_ott2@", "Nested_ott1@"])
         assert set(result.keys()) == {"Outer_ott2@", "Nested_ott1@"}
         assert result["Nested_ott1@"].write() == "(I1_ott11,I2_ott12);"
-        # NB: Outer tree no longer contains inner tree
-        assert result["Outer_ott2@"].write() == "(Filler_ott99);"
+        # NB: Outer tree no longer contains inner tree. Filler_ott99 held nothing
+        # but the nested subtree, so extracting it emptied Filler too and Filler
+        # goes with it -- leaving the outer subtree with nothing in it at all.
+        assert result["Outer_ott2@"].write() == ";"
+
+    def test_ancestor_emptied_by_extraction_is_removed(self, tmp_path):
+        # Every child of Inner_ott3 is requested separately, so Inner is left
+        # with nothing below it. It would otherwise survive as a childless node,
+        # reading as a leaf and being written out as though it were a species.
+        ot_file = tmp_path / "ot.nwk"
+        ot_file.write_text("(((X_ott11)Sub1_ott1,(Y_ott21)Sub2_ott2)Inner_ott3,Z_ott4)Root_ott99;")
+        ot_t = ete4.Tree(str(ot_file), parser=1)
+        graft_extract_ot_subtrees(ot_t, ["Sub1_ott1@", "Sub2_ott2@"])
+        assert [n.name for n in ot_t.traverse()] == ["Root_ott99", "Z_ott4"]
+
+    def test_emptying_cascades_up_the_ancestry(self, tmp_path):
+        # Removing Inner empties Middle, which empties Outer.
+        ot_file = tmp_path / "ot.nwk"
+        ot_file.write_text("((((((X_ott11)Sub_ott1)Inner_ott5)Middle_ott6)Outer_ott7),Z_ott4)Root_ott99;")
+        ot_t = ete4.Tree(str(ot_file), parser=1)
+        graft_extract_ot_subtrees(ot_t, ["Sub_ott1@"])
+        assert not any(n.name.startswith(("Inner", "Middle", "Outer")) for n in ot_t.traverse())
+        assert "Z_ott4" in [n.name for n in ot_t.traverse()]
+
+    def test_ancestor_keeping_a_child_is_left_alone(self, tmp_path):
+        # Inner still holds Keep_ott9, so it is a genuine ancestor, not debris.
+        ot_file = tmp_path / "ot.nwk"
+        ot_file.write_text("(((X_ott11)Sub_ott1,Keep_ott9)Inner_ott3,Z_ott4)Root_ott99;")
+        ot_t = ete4.Tree(str(ot_file), parser=1)
+        graft_extract_ot_subtrees(ot_t, ["Sub_ott1@"])
+        names = [n.name for n in ot_t.traverse()]
+        assert "Inner_ott3" in names
+        assert "Keep_ott9" in names
+
+    def test_pre_existing_tips_are_not_pruned(self, tmp_path):
+        # A node that was already a tip is a real taxon, not something we
+        # emptied, so it must survive even though it has no children.
+        ot_file = tmp_path / "ot.nwk"
+        ot_file.write_text("(((X_ott11)Sub_ott1,Tip_ott8)Inner_ott3,Z_ott4)Root_ott99;")
+        ot_t = ete4.Tree(str(ot_file), parser=1)
+        graft_extract_ot_subtrees(ot_t, ["Sub_ott1@"])
+        assert "Tip_ott8" in [n.name for n in ot_t.traverse()]
+
+    def test_root_is_never_detached(self, tmp_path):
+        # Extracting everything leaves the root childless; it must stay put.
+        ot_file = tmp_path / "ot.nwk"
+        ot_file.write_text("((X_ott11)Sub_ott1)Root_ott99;")
+        ot_t = ete4.Tree(str(ot_file), parser=1)
+        graft_extract_ot_subtrees(ot_t, ["Sub_ott1@"])
+        assert ot_t.up is None
+        assert ot_t.name == "Root_ott99"
 
 
 class TestPresentInTree:

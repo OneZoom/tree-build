@@ -399,16 +399,96 @@ class TestOutputMysqlExport:
         assert b[LEAF_HEADER.index("ncbi")] == "\\N"
 
     def test_taxon_props_are_written_to_node_row(self, tmp_path):
-        # Internal nodes get the same taxon projection — but with `rnk`
+        # Internal nodes get the same taxon projection — but with the rank
         # in place of the leaf-only `iucn`/`extinction_date` columns.
         t = ete4.Tree("(A,B)R;", parser=1)
-        _prep(t, taxon_overrides={"R": {"ott": "777", "rnk": "family", "if": "9257"}})
+        _prep(t, taxon_overrides={"R": {"ott": "777", "rank": "family", "if": "9257"}})
         output_mysqlexport(t, str(tmp_path))
         nodes = _read_csv(tmp_path, "ordered_nodes.csv")
         root = next(r for r in nodes[1:] if r[NODE_HEADER.index("name")] == "R")
         assert root[NODE_HEADER.index("ott")] == "777"
+        # The taxon map's "rank" is the DB's "rnk" column
         assert root[NODE_HEADER.index("rnk")] == "family"
         assert root[NODE_HEADER.index("ifung")] == "9257"
+
+    def test_none_taxon_values_are_backslash_N(self, tmp_path):
+        # read_taxon_map() gives every taxon a full set of keys, using None for
+        # the columns that were empty, so a present-but-None value has to be
+        # written as \N just like an absent key would be.
+        t = ete4.Tree("(A,B)R;", parser=1)
+        none_taxon = dict.fromkeys(
+            (
+                "ott",
+                "wikidata",
+                "wikipedia_lang_flag",
+                "iucn",
+                "eol",
+                "rank",
+                "raw_popularity",
+                "ncbi",
+                "if",
+                "worms",
+                "irmng",
+                "gbif",
+                "ipni",
+            )
+        )
+        _prep(t, taxon_overrides={"A": none_taxon, "R": none_taxon})
+        output_mysqlexport(t, str(tmp_path))
+
+        leaves = _read_csv(tmp_path, "ordered_leaves.csv")
+        a = next(r for r in leaves[1:] if r[LEAF_HEADER.index("name")] == "A")
+        for col in ("ott", "wikidata", "wikipedia_lang_flag", "iucn", "eol", "raw_popularity"):
+            assert a[LEAF_HEADER.index(col)] == "\\N", col
+        for col in ("ncbi", "ifung", "worms", "irmng", "gbif", "ipni"):
+            assert a[LEAF_HEADER.index(col)] == "\\N", col
+
+        nodes = _read_csv(tmp_path, "ordered_nodes.csv")
+        root = next(r for r in nodes[1:] if r[NODE_HEADER.index("name")] == "R")
+        for col in ("ott", "wikidata", "wikipedia_lang_flag", "eol", "rnk", "raw_popularity"):
+            assert root[NODE_HEADER.index(col)] == "\\N", col
+        for col in ("ncbi", "ifung", "worms", "irmng", "gbif", "ipni"):
+            assert root[NODE_HEADER.index(col)] == "\\N", col
+
+    def test_none_node_props_are_backslash_N(self, tmp_path):
+        # Ditto for props set on the node itself rather than its taxon.
+        t = ete4.Tree("(A,B)R;", parser=1)
+        _prep(t)
+        nodes_by_name = _by_name(t)
+        nodes_by_name["A"].props["extinction_date"] = None
+        nodes_by_name["A"].props["popularity"] = None
+        nodes_by_name["A"].props["popularity_rank"] = None
+        nodes_by_name["R"].props["date"] = None
+        nodes_by_name["R"].props["popularity"] = None
+        output_mysqlexport(t, str(tmp_path))
+
+        leaves = _read_csv(tmp_path, "ordered_leaves.csv")
+        a = next(r for r in leaves[1:] if r[LEAF_HEADER.index("name")] == "A")
+        for col in ("extinction_date", "popularity", "popularity_rank"):
+            assert a[LEAF_HEADER.index(col)] == "\\N", col
+
+        nodes = _read_csv(tmp_path, "ordered_nodes.csv")
+        root = next(r for r in nodes[1:] if r[NODE_HEADER.index("name")] == "R")
+        for col in ("age", "popularity"):
+            assert root[NODE_HEADER.index(col)] == "\\N", col
+
+    def test_unpopulated_columns_are_backslash_N(self, tmp_path):
+        # Columns tree_build doesn't (yet) generate are still NULL, not empty
+        # strings — "price" for leaves, "vern_synth" and the rep/rtr/rpd/iucn*
+        # summary columns for internal nodes.
+        t = ete4.Tree("(A,B)R;", parser=1)
+        _prep(t)
+        output_mysqlexport(t, str(tmp_path))
+
+        leaves = _read_csv(tmp_path, "ordered_leaves.csv")
+        for row in leaves[1:]:
+            assert row[LEAF_HEADER.index("price")] == "\\N"
+
+        nodes = _read_csv(tmp_path, "ordered_nodes.csv")
+        for row in nodes[1:]:
+            assert row[NODE_HEADER.index("vern_synth")] == "\\N"
+            assert row[NODE_HEADER.index("rep1")] == "\\N"
+            assert row[NODE_HEADER.index("iucnEX")] == "\\N"
 
     def test_missing_extinction_date_and_popularity_are_backslash_N(self, tmp_path):
         # Leaf-only props (extinction_date, popularity, popularity_rank)

@@ -62,6 +62,17 @@ def output_add_prop_ids(tree):
         prev_node = node
 
 
+def mysql_null(value):
+    """
+    Map a missing value to the ``\\N`` marker MySQL's ``LOAD DATA`` reads as NULL
+
+    Values are missing if either absent or None: read_taxon_map() produces a full
+    set of keys for every taxon, with None for the columns that were empty, so
+    ``dict.get(key, "\\N")`` is not enough on its own.
+    """
+    return "\\N" if value is None else value
+
+
 def output_mysqlexport(tree, out_dir):
     """
     Write the three files needed to load the tree into the OneZoom MySQL
@@ -75,8 +86,8 @@ def output_mysqlexport(tree, out_dir):
     Preconditions
     -------------
     Every node must carry ``props["taxon"]``, a dict of taxon-derived
-    columns (``ott``, ``wikidata``, ``ncbi``, ...); missing keys are
-    written as ``\\N``. Every internal node must additionally carry
+    columns (``ott``, ``wikidata``, ``ncbi``, ...); keys that are absent
+    or None are written as ``\\N``. Every internal node must additionally carry
     ``id`` / ``node_rgt`` / ``leaf_lft`` / ``leaf_rgt`` as produced by
     `output_add_prop_ids`.
 
@@ -176,22 +187,22 @@ def output_mysqlexport(tree, out_dir):
                         # TODO: negative real_parent ids if this is a polytomy
                         real_parent_id,
                         node_name_without_ott(node),
-                        node.props.get("extinction_date", "\\N"),
-                        node.props["taxon"].get("ott", "\\N"),
-                        node.props["taxon"].get("wikidata", "\\N"),
-                        node.props["taxon"].get("wikipedia_lang_flag", "\\N"),
-                        node.props["taxon"].get("iucn", "\\N"),
-                        node.props["taxon"].get("eol", "\\N"),
-                        node.props["taxon"].get("raw_popularity", "\\N"),
-                        node.props.get("popularity", "\\N"),
-                        node.props.get("popularity_rank", "\\N"),
-                        None,  # "price"
-                        node.props["taxon"].get("ncbi", "\\N"),
-                        node.props["taxon"].get("if", "\\N"),  # NB: "ifung" in the DB
-                        node.props["taxon"].get("worms", "\\N"),
-                        node.props["taxon"].get("irmng", "\\N"),
-                        node.props["taxon"].get("gbif", "\\N"),
-                        node.props["taxon"].get("ipni", "\\N"),
+                        mysql_null(node.props.get("extinction_date")),
+                        mysql_null(node.props["taxon"].get("ott")),
+                        mysql_null(node.props["taxon"].get("wikidata")),
+                        mysql_null(node.props["taxon"].get("wikipedia_lang_flag")),
+                        mysql_null(node.props["taxon"].get("iucn")),
+                        mysql_null(node.props["taxon"].get("eol")),
+                        mysql_null(node.props["taxon"].get("raw_popularity")),
+                        mysql_null(node.props.get("popularity")),
+                        mysql_null(node.props.get("popularity_rank")),
+                        "\\N",  # "price"
+                        mysql_null(node.props["taxon"].get("ncbi")),
+                        mysql_null(node.props["taxon"].get("if")),  # NB: "ifung" in the DB
+                        mysql_null(node.props["taxon"].get("worms")),
+                        mysql_null(node.props["taxon"].get("irmng")),
+                        mysql_null(node.props["taxon"].get("gbif")),
+                        mysql_null(node.props["taxon"].get("ipni")),
                     ]
                 )
             else:
@@ -203,21 +214,21 @@ def output_mysqlexport(tree, out_dir):
                         node.props["leaf_lft"],
                         node.props["leaf_rgt"],
                         node_name_without_ott(node),
-                        node.props.get("date", "\\N"),  # TODO: But only if it's not imputed
-                        node.props["taxon"].get("ott", "\\N"),
-                        node.props["taxon"].get("wikidata", "\\N"),
-                        node.props["taxon"].get("wikipedia_lang_flag", "\\N"),
-                        node.props["taxon"].get("eol", "\\N"),
-                        node.props["taxon"].get("rnk", "\\N"),
-                        node.props["taxon"].get("raw_popularity", "\\N"),
-                        node.props.get("popularity", "\\N"),
-                        node.props["taxon"].get("ncbi", "\\N"),
-                        node.props["taxon"].get("if", "\\N"),  # NB: "ifung" in the DB
-                        node.props["taxon"].get("worms", "\\N"),
-                        node.props["taxon"].get("irmng", "\\N"),
-                        node.props["taxon"].get("gbif", "\\N"),
-                        node.props["taxon"].get("ipni", "\\N"),
-                        None,  # "vern_synth"
+                        mysql_null(node.props.get("date")),  # TODO: But only if it's not imputed
+                        mysql_null(node.props["taxon"].get("ott")),
+                        mysql_null(node.props["taxon"].get("wikidata")),
+                        mysql_null(node.props["taxon"].get("wikipedia_lang_flag")),
+                        mysql_null(node.props["taxon"].get("eol")),
+                        mysql_null(node.props["taxon"].get("rank")),  # NB: "rnk" in the DB
+                        mysql_null(node.props["taxon"].get("raw_popularity")),
+                        mysql_null(node.props.get("popularity")),
+                        mysql_null(node.props["taxon"].get("ncbi")),
+                        mysql_null(node.props["taxon"].get("if")),  # NB: "ifung" in the DB
+                        mysql_null(node.props["taxon"].get("worms")),
+                        mysql_null(node.props["taxon"].get("irmng")),
+                        mysql_null(node.props["taxon"].get("gbif")),
+                        mysql_null(node.props["taxon"].get("ipni")),
+                        "\\N",  # "vern_synth"
                     ]
                     + ["\\N" for _ in ("rep", "rtr", "rpd") for _ in range(8)]
                     + ["\\N" for _ in ("NE", "DD", "LC", "NT", "VU", "EN", "CR", "EW", "EX")]

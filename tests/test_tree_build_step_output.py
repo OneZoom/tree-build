@@ -12,6 +12,7 @@ from oz_tree_build.tree_build.step_output import (
     output_mysqlexport,
     output_proparray,
 )
+from oz_tree_build.tree_build.step_tidy import POLYTOMY_COMB, POLYTOMY_PROP
 
 
 def _by_name(tree):
@@ -447,13 +448,14 @@ class TestOutputMysqlExport:
         assert root[NODE_HEADER.index("age")] == "12.5"
 
     def test_polytomy_parent_is_skipped_for_real_parent(self, tmp_path):
-        # A non-polytomy node whose immediate parent has dist==0 (a
-        # randomly-resolved polytomy node) should attribute its
-        # real_parent to the next ancestor with dist!=0.
-        # Tree shape: G -> P (dist=0 polytomy) -> X (dist=1 leaf).
+        # A non-polytomy node whose immediate parent carries the polytomy
+        # prop (a randomly-resolved polytomy node) should attribute its
+        # real_parent to the next unmarked ancestor.
+        # Tree shape: G -> P (polytomy) -> X (leaf).
         # X's real_parent must be G, not P.
-        t = ete4.Tree("((X:1,Y:1)P:0,Z:1)G:1;", parser=1)
+        t = ete4.Tree("((X:1,Y:1)P:1,Z:1)G:1;", parser=1)
         nodes = _by_name(t)
+        nodes["P"].props[POLYTOMY_PROP] = POLYTOMY_COMB
         _prep(t)
         output_mysqlexport(t, str(tmp_path))
         leaves = _read_csv(tmp_path, "ordered_leaves.csv")
@@ -463,16 +465,31 @@ class TestOutputMysqlExport:
         assert x[LEAF_HEADER.index("real_parent")] == str(nodes["G"].props["id"])
 
     def test_polytomy_self_emits_negative_real_parent(self, tmp_path):
-        # A node that is itself a polytomy resolution (dist=0) writes a
-        # negative real_parent_id, flagging the relationship as artificial.
+        # A node that is itself a polytomy resolution writes a negative
+        # real_parent_id, flagging the relationship as artificial.
+        t = ete4.Tree("((X:1,Y:1)P:1,Z:1)G:1;", parser=1)
+        nodes = _by_name(t)
+        nodes["P"].props[POLYTOMY_PROP] = POLYTOMY_COMB
+        _prep(t)
+        output_mysqlexport(t, str(tmp_path))
+        node_rows = _read_csv(tmp_path, "ordered_nodes.csv")
+        p = next(r for r in node_rows[1:] if r[NODE_HEADER.index("name")] == "P")
+        # P is marked as a polytomy; G is its (unmarked) parent.
+        assert p[NODE_HEADER.index("real_parent")] == str(-nodes["G"].props["id"])
+
+    def test_zero_dist_is_not_a_polytomy_marker(self, tmp_path):
+        # Branch lengths are regenerated from dates, so a zero-length branch
+        # no longer implies an artificial split.
         t = ete4.Tree("((X:1,Y:1)P:0,Z:1)G:1;", parser=1)
         nodes = _by_name(t)
         _prep(t)
         output_mysqlexport(t, str(tmp_path))
         node_rows = _read_csv(tmp_path, "ordered_nodes.csv")
         p = next(r for r in node_rows[1:] if r[NODE_HEADER.index("name")] == "P")
-        # P's dist is 0; G is its (non-polytomy) parent.
-        assert p[NODE_HEADER.index("real_parent")] == str(-nodes["G"].props["id"])
+        assert p[NODE_HEADER.index("real_parent")] == str(nodes["G"].props["id"])
+        leaves = _read_csv(tmp_path, "ordered_leaves.csv")
+        x = next(r for r in leaves[1:] if r[LEAF_HEADER.index("name")] == "X")
+        assert x[LEAF_HEADER.index("real_parent")] == str(nodes["P"].props["id"])
 
     def test_import_sql_contains_load_data_for_both_tables(self, tmp_path):
         # The SQL script should truncate-and-load both CSV files. The

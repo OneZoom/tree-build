@@ -14,6 +14,8 @@ back off disk and string-munging it (see
 output directly from an ete4 tree, with no on-disk round-trip.
 """
 
+from .step_tidy import POLYTOMY_PROP
+
 
 def jsnewick_brief_newick(tree, polytomy_braces="()"):
     """
@@ -26,13 +28,13 @@ def jsnewick_brief_newick(tree, polytomy_braces="()"):
     ``"(())"``.
 
     ``polytomy_braces`` is a two-character string overriding the
-    brackets used for any *non-root* internal whose ``dist == 0`` —
-    the marker ``resolve_polytomy`` leaves on an artificial split.
-    Pass e.g. ``"{}"`` to flag those nodes for the frontend.
+    brackets used for any *non-root* internal carrying the ``polytomy``
+    prop — the marker ``tidy_resolve_polytomies`` leaves on an artificial
+    split. Pass e.g. ``"{}"`` to flag those nodes for the frontend.
     """
     parts = []
     for node, action in _walk_internal(tree):
-        braces = polytomy_braces if (node.up is not None and node.dist == 0) else "()"
+        braces = polytomy_braces if (node.up is not None and node.props.get(POLYTOMY_PROP)) else "()"
         parts.append(braces[0] if action == "open" else braces[1])
     return "".join(parts)
 

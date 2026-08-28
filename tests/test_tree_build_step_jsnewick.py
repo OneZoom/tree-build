@@ -5,6 +5,15 @@ from oz_tree_build.tree_build.step_jsnewick import (
     jsnewick_cutpositionmap_binary,
     jsnewick_cutpositionmap_polytomy,
 )
+from oz_tree_build.tree_build.step_tidy import POLYTOMY_COMB, POLYTOMY_PROP
+
+
+def _mark_polytomies(tree, *names):
+    """Flag the named internal nodes as polytomy resolutions."""
+    for node in tree.traverse():
+        if node.name in names:
+            node.props[POLYTOMY_PROP] = POLYTOMY_COMB
+
 
 ########################################
 # jsnewick_brief_newick
@@ -36,29 +45,39 @@ def test_brief_newick_deep_caterpillar():
 
 
 def test_brief_newick_polytomy_braces_default():
-    """With the default polytomy_braces the dist=0 marker is invisible."""
-    t = ete4.Tree("((A:1,B:1):0,C:2);", parser=1)
+    """With the default polytomy_braces the polytomy prop is invisible."""
+    t = ete4.Tree("((A:1,B:1)P:1,C:2);", parser=1)
+    _mark_polytomies(t, "P")
     assert jsnewick_brief_newick(t) == "(())"
 
 
 def test_brief_newick_polytomy_braces_overridden():
-    """An internal with dist=0 gets the override braces; non-zero dist does not."""
-    t = ete4.Tree("((A:1,B:1):0,C:2);", parser=1)
+    """An internal with the polytomy prop gets the override braces; one without does not."""
+    t = ete4.Tree("((A:1,B:1)P:1,C:2);", parser=1)
+    _mark_polytomies(t, "P")
     assert jsnewick_brief_newick(t, polytomy_braces="{}") == "({})"
 
-    t_nonzero = ete4.Tree("((A:1,B:1):3,C:2);", parser=1)
-    assert jsnewick_brief_newick(t_nonzero, polytomy_braces="{}") == "(())"
+    t_unmarked = ete4.Tree("((A:1,B:1)P:1,C:2);", parser=1)
+    assert jsnewick_brief_newick(t_unmarked, polytomy_braces="{}") == "(())"
+
+
+def test_brief_newick_polytomy_ignores_zero_dist():
+    """A zero-length branch is no longer a polytomy marker on its own."""
+    t = ete4.Tree("((A:1,B:1)P:0,C:2);", parser=1)
+    assert jsnewick_brief_newick(t, polytomy_braces="{}") == "(())"
 
 
 def test_brief_newick_polytomy_root_excluded():
-    """The root's own dist is ignored even when set to 0."""
-    t = ete4.Tree("(A:1,B:1):0;", parser=1)
+    """The root is never treated as a polytomy resolution, even if marked."""
+    t = ete4.Tree("(A:1,B:1)R:1;", parser=1)
+    _mark_polytomies(t, "R")
     assert jsnewick_brief_newick(t, polytomy_braces="{}") == "()"
 
 
 def test_brief_newick_polytomy_braces_nested():
-    """Multiple dist=0 ancestors each get the polytomy braces."""
-    t = ete4.Tree("(((A:1,B:1):0,C:2):0,D:1);", parser=1)
+    """Multiple marked ancestors each get the polytomy braces."""
+    t = ete4.Tree("(((A:1,B:1)P:1,C:2)Q:1,D:1);", parser=1)
+    _mark_polytomies(t, "P", "Q")
     assert jsnewick_brief_newick(t, polytomy_braces="{}") == "({{}})"
 
 

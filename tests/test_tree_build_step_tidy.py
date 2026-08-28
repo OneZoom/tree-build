@@ -1,13 +1,99 @@
 import ete4
 
 from oz_tree_build.tree_build.step_tidy import (
+    POLYTOMY_COMB,
+    POLYTOMY_PROP,
+    POLYTOMY_RANDOM,
     tidy_clear_conflicting_dates_topdown,
     tidy_infill_dates_bottomup,
+    tidy_mark_resolved_polytomies,
+    tidy_resolve_polytomies,
 )
 
 
 def _by_name(tree):
     return {n.name: n for n in tree.traverse()}
+
+
+class TestTidyResolvePolytomies:
+    def test_binary_tree_is_untouched(self):
+        t = ete4.Tree("((A:1,B:1)X:1,C:2)Root;", parser=1)
+        assert tidy_resolve_polytomies(t) == 0
+        assert not any(n.props.get(POLYTOMY_PROP) for n in t.traverse())
+
+    def test_inserted_nodes_are_marked(self):
+        # A 4-way polytomy needs 2 extra nodes to become binary.
+        t = ete4.Tree("(A:1,B:1,C:1,D:1)Root;", parser=1)
+        assert tidy_resolve_polytomies(t) == 2
+        marked = [n for n in t.traverse() if n.props.get(POLYTOMY_PROP)]
+        assert len(marked) == 2
+        assert all(len(n.children) == 2 for n in t.traverse() if not n.is_leaf)
+
+    def test_marked_as_comb_not_random(self):
+        # ete4's resolve_polytomy pairs children off in order rather than
+        # sampling a topology, so these are combs, not random draws.
+        t = ete4.Tree("(A:1,B:1,C:1)Root;", parser=1)
+        tidy_resolve_polytomies(t)
+        marked = [n for n in t.traverse() if n.props.get(POLYTOMY_PROP)]
+        assert [n.props[POLYTOMY_PROP] for n in marked] == [POLYTOMY_COMB]
+
+    def test_resolution_is_deterministic_comb(self):
+        # Documents *why* the value is "comb": repeated runs give the same
+        # left-nested shape, so this is a systematic artefact, not a sample.
+        shapes = set()
+        for _ in range(5):
+            t = ete4.Tree("(A,B,C,D,E)Root;", parser=1)
+            tidy_resolve_polytomies(t)
+            shapes.add(t.write(parser=1, props=[]))
+        assert shapes == {"((((A,B):0,C):0,D):0,E);"}
+
+    def test_pre_existing_nodes_are_not_marked(self):
+        t = ete4.Tree("(A:1,B:1,C:1)Root;", parser=1)
+        tidy_resolve_polytomies(t)
+        named = _by_name(t)
+        for name in ("Root", "A", "B", "C"):
+            assert not named[name].props.get(POLYTOMY_PROP)
+
+    def test_marks_survive_zeroed_branch_lengths(self):
+        # The prop, not dist, is what identifies a resolution — clobbering
+        # branch lengths (as compute_branch_lengths later does) must not
+        # lose the marking.
+        t = ete4.Tree("(A:1,B:1,C:1)Root;", parser=1)
+        tidy_resolve_polytomies(t)
+        for n in t.traverse():
+            n.dist = 5
+        assert len([n for n in t.traverse() if n.props.get(POLYTOMY_PROP)]) == 1
+
+
+class TestTidyMarkResolvedPolytomies:
+    def test_marks_nodes_by_name_as_random(self):
+        t = ete4.Tree("((A:1,B:1)mrcapoly:1,C:2)Root;", parser=1)
+        assert tidy_mark_resolved_polytomies(t) == 1
+        assert _by_name(t)["mrcapoly"].props[POLYTOMY_PROP] == POLYTOMY_RANDOM
+
+    def test_both_kinds_are_truthy_for_consumers(self):
+        # step_output and step_jsnewick only ask "is this artificial?", so
+        # every kind has to survive a plain truth test.
+        assert POLYTOMY_COMB
+        assert POLYTOMY_RANDOM
+        assert POLYTOMY_COMB != POLYTOMY_RANDOM
+
+    def test_leaves_other_nodes_alone(self):
+        t = ete4.Tree("((A:1,B:1)mrcapoly:1,C:2)Root;", parser=1)
+        tidy_mark_resolved_polytomies(t)
+        named = _by_name(t)
+        for name in ("Root", "A", "B", "C"):
+            assert not named[name].props.get(POLYTOMY_PROP)
+
+    def test_no_matching_names_marks_nothing(self):
+        t = ete4.Tree("((A:1,B:1)X:0,C:2)Root;", parser=1)
+        assert tidy_mark_resolved_polytomies(t) == 0
+        assert not any(n.props.get(POLYTOMY_PROP) for n in t.traverse())
+
+    def test_custom_name(self):
+        t = ete4.Tree("((A:1,B:1)poly:1,C:2)Root;", parser=1)
+        assert tidy_mark_resolved_polytomies(t, name="poly") == 1
+        assert _by_name(t)["poly"].props[POLYTOMY_PROP] == POLYTOMY_RANDOM
 
 
 class TestTidyInfillDatesBottomup:

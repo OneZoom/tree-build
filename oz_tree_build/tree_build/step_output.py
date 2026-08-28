@@ -4,6 +4,7 @@ import os.path
 import struct
 
 from ..utilities.ete import node_name_without_ott
+from .step_tidy import POLYTOMY_PROP
 
 
 def output_add_prop_ids(tree):
@@ -84,12 +85,12 @@ def output_mysqlexport(tree, out_dir):
     - ``\\N`` is the marker for missing values (MySQL ``LOAD DATA``
       treats it as NULL).
     - ``real_parent`` walks past randomly-resolved polytomies: any
-      ancestor with ``dist == 0`` is skipped so the column points at the
-      nearest biologically meaningful parent. The raw ``parent`` column
-      still references the immediate parent.
-    - A node that is itself a polytomy resolution (``dist == 0``) records
-      its ``real_parent`` as the *negative* of the resolved parent's id,
-      flagging the relationship as artificial.
+      ancestor carrying the ``polytomy`` prop is skipped so the column
+      points at the nearest biologically meaningful parent. The raw
+      ``parent`` column still references the immediate parent.
+    - A node that is itself a polytomy resolution (has the ``polytomy``
+      prop) records its ``real_parent`` as the *negative* of the resolved
+      parent's id, flagging the relationship as artificial.
     - The leaf ``name`` column has any trailing ``_ottNNN`` suffix
       stripped (the OTT is carried separately in its own column).
     - An internal node's ``date`` prop is exposed via the ``age`` column.
@@ -157,12 +158,12 @@ def output_mysqlexport(tree, out_dir):
         for node in tree.traverse("preorder"):
             # Find our real parent, ignoring randomly resolved polytomies
             real_parent = node.parent
-            while real_parent and real_parent.dist == 0:  # TODO: Is this still how we identify polytomies?
+            while real_parent and real_parent.props.get(POLYTOMY_PROP):
                 real_parent = real_parent.parent
 
             if not real_parent:
                 real_parent_id = 0
-            elif node.dist == 0:
+            elif node.props.get(POLYTOMY_PROP):
                 # real_parent is negative iff we're a polytomy
                 real_parent_id = -real_parent.props["id"]
             else:

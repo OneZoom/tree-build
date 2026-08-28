@@ -22,7 +22,12 @@ from .step_output import (
 from .step_parse import parse_bespoke_trees, parse_ot_orphans
 from .step_popularity import popularity_add_prop, popularity_add_rank
 from .step_taxon import taxon_add_prop
-from .step_tidy import tidy_clear_conflicting_dates_topdown, tidy_infill_dates_bottomup
+from .step_tidy import (
+    tidy_clear_conflicting_dates_topdown,
+    tidy_infill_dates_bottomup,
+    tidy_mark_resolved_polytomies,
+    tidy_resolve_polytomies,
+)
 from .step_treeprop import (
     treeprop_geological,
     treeprop_sliding_window,
@@ -74,10 +79,12 @@ def main():
     base_t, bespoke_ts = parse_bespoke_trees(args.bespoke_dir)
     missing_inclusions = graft_tree(base_t, additional_trees=bespoke_ts, prefer_subtree_name=True)
 
-    logger.info("Random resoution of polytomies for bespoke trees")
+    logger.info("Resolve polytomies in bespoke trees")
     # https://etetoolkit.org/docs/latest/reference/reference_tree.html#ete3.TreeNode.resolve_polytomy
-    # NB: Doesn't shuffle children like the DendroPy equivalent, but given a fixed seed do we care?
-    base_t.resolve_polytomy()
+    # NB: Despite the DendroPy equivalent this replaces, this isn't a random draw: it
+    # doesn't shuffle children, so every polytomy becomes the same comb. Marked as
+    # POLYTOMY_COMB to distinguish it from the OT trees' random resolution below.
+    logger.info(f"Resolved bespoke polytomies with {tidy_resolve_polytomies(base_t)} new nodes")
 
     logger.info("Resolve branch lengths to dates bottom-up. Remove (or not care about) branch lengths")
     tidy_infill_dates_bottomup(base_t)
@@ -86,7 +93,9 @@ def main():
     tidy_clear_conflicting_dates_topdown(base_t)
 
     logger.info("Graft OT subtrees onto our trees. Already polytomy-resolved & date pins from chronosynth applied")
-    opentree_ts = graft_extract_ot_subtrees(date_tree.nwk_read(args.opentree), missing_inclusions)
+    opentree_t = date_tree.nwk_read(args.opentree)
+    logger.info(f"Marked {tidy_mark_resolved_polytomies(opentree_t)} pre-resolved OT polytomy nodes")
+    opentree_ts = graft_extract_ot_subtrees(opentree_t, missing_inclusions)
     opentree_ts.update(parse_ot_orphans(args.orphan_dir, missing_inclusions))
     missing_inclusions = graft_tree(
         base_t, additional_trees=opentree_ts, prefer_subtree_name=False, disable_recursion=True

@@ -31,6 +31,8 @@ from .step_treeprop import (
 
 logger = logging.getLogger(__name__)
 
+ROOT_DATE_MYA = 4000  # Last Universal Common Ancestor estimate
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
@@ -115,6 +117,7 @@ def main():
     tree_fixing.delete_one_child_nodes(base_t)
 
     logger.info("Re-interpoltate missing dates")
+    base_t.root.props.setdefault("date", ROOT_DATE_MYA)
     for n in base_t.traverse():  # First do some tidying to force tree_dating to work
         if n.is_leaf and n.name == "mrcaimp":
             # Bin imputed mrca nodes made by fix_polyphyly left dangling by grafting process

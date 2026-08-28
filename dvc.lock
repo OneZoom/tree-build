@@ -1,7 +1,7 @@
 schema: '2.0'
 stages:
   download_and_filter_wikidata:
-    cmd: download_and_filter_wikidata --url "$(cat 
+    cmd: .venv/bin/download_and_filter_wikidata --url "$(cat 
       data/Wiki/wd_JSON/latest-all-json-bz2-url.txt)" -o 
       data/filtered/OneZoom_latest-all.json
     deps:
@@ -15,8 +15,8 @@ stages:
       md5: e6f69def9d6fa2bb4b90060509c079bb
       size: 1567956473
   extract_wikidata_titles:
-    cmd: extract_wikidata_titles data/filtered/OneZoom_latest-all.json -o 
-      data/filtered/wikidata_titles.txt
+    cmd: .venv/bin/extract_wikidata_titles data/filtered/OneZoom_latest-all.json
+      -o data/filtered/wikidata_titles.txt
     deps:
     - path: data/filtered/OneZoom_latest-all.json
       hash: md5
@@ -41,7 +41,7 @@ stages:
       md5: 541324eaa9f3f1a14bb6ddcf7ea95de6
       size: 2397370114
   download_and_filter_pageviews:
-    cmd: download_and_filter_pageviews --titles-file 
+    cmd: .venv/bin/download_and_filter_pageviews --titles-file 
       data/filtered/wikidata_titles.txt --months 12 -o data/filtered/pageviews
     deps:
     - path: data/filtered/wikidata_titles.txt
@@ -55,7 +55,7 @@ stages:
       size: 128216689
       nfiles: 13
   filter_wikipedia_sql:
-    cmd: filter_wikipedia_sql data/Wiki/wp_SQL/enwiki-page.sql.gz 
+    cmd: .venv/bin/filter_wikipedia_sql data/Wiki/wp_SQL/enwiki-page.sql.gz 
       data/filtered/wikidata_titles.txt -o 
       data/filtered/OneZoom_enwiki-latest-page.sql
     deps:
@@ -87,7 +87,7 @@ stages:
     cmd:
     - rm -rf data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1
     - mkdir -p data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1
-    - add_ott_numbers_to_trees --savein 
+    - .venv/bin/add_ott_numbers_to_trees --savein 
       data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 --output_info 
       data/add_ott_numbers_to_trees.log 
       data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
@@ -153,7 +153,7 @@ stages:
       md5: cb59f793fb021063b7c35e821ee8086a
       size: 31
   filter_eol:
-    cmd: filter_eol data/EOL/provider_ids.csv.gz 
+    cmd: .venv/bin/filter_eol data/EOL/provider_ids.csv.gz 
       data/OpenTree/v16.1/taxonomy.tsv -o data/filtered/OneZoom_provider_ids.csv
     deps:
     - path: data/EOL/provider_ids.csv.gz
@@ -264,7 +264,7 @@ stages:
       size: 1158320679
       nfiles: 7
   discover_latest_wikidata_dump_url:
-    cmd: discover_latest_wikidata_dump_url > 
+    cmd: .venv/bin/discover_latest_wikidata_dump_url > 
       data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
     outs:
     - path: data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
@@ -272,7 +272,7 @@ stages:
       md5: aa1692624401f4a1c759bc9526787fd7
       size: 90
   discover_latest_enwiki_sql_url:
-    cmd: discover_latest_enwiki_sql_url > 
+    cmd: .venv/bin/discover_latest_enwiki_sql_url > 
       data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
     outs:
     - path: data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt

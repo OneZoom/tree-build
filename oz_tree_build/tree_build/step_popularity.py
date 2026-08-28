@@ -25,8 +25,10 @@ def popularity_add_prop(
     caller zero out the raw popularity of named nodes before summation (e.g.
     excluding Dinosauria so its popularity is not credited to birds).
 
-    A warning is logged for any Wikidata Qid that appears on more than one node,
-    since that causes the same popularity to be counted twice.
+    Wikidata Qids appearing on more than one node are counted and summarised in a
+    single warning; ``sum_popularity_over_tree`` splits their raw popularity
+    between the nodes sharing them, so this is a data-quality note rather than a
+    miscalculation. Set debug logging to list the individual nodes.
 
     Must be run before monotomies / unary nodes are removed: those nodes often
     carry useful popularity that needs to percolate to their relatives first.
@@ -37,13 +39,15 @@ def popularity_add_prop(
 
     # now apply the popularity function
     Qids = set()
+    duplicate_qid_nodes = 0
     for node in tree.traverse(strategy="preorder"):
         Q = node.props["taxon"].get("wikidata")
         if Q is not None:
             if Q in Qids:
-                logger.warning(
-                    f"duplicate wikidata Qids used (Q{Q}) - this will cause "
-                    f"popularity double-counting for OTT {node_get_ott(node)}"
+                duplicate_qid_nodes += 1
+                logger.debug(
+                    f"duplicate wikidata Qid (Q{Q}) on OTT {node_get_ott(node)} - "
+                    f"its raw popularity is shared with the other nodes using this Qid"
                 )
             else:
                 Qids.add(Q)
@@ -56,6 +60,13 @@ def popularity_add_prop(
 
         # Round to 2 decimal places
         node.props["popularity"] = round(pop, 2)
+
+    if duplicate_qid_nodes:
+        logger.warning(
+            f"{duplicate_qid_nodes} nodes share a wikidata Qid with an earlier node, usually "
+            f"because OTT holds the same taxon more than once. Their raw popularity has been "
+            f"divided between the nodes sharing each Qid; enable debug logging to list them."
+        )
 
 
 def popularity_add_rank(tree):
@@ -174,6 +185,10 @@ def sum_popularity_over_tree(tree, exclude_taxa=None):
     It is copied onto ``node.props["pop"]`` and then summed across ancestors and
     descendants.
 
+    Where several nodes share a Wikidata Qid they each hold the same raw
+    popularity, so it is divided between them before summing -- see the comment
+    on ``qid_counts`` below.
+
     We might want to exclude some names from the popularity metric (e.g. exclude
     archosaurs, to ensure birds don't gather popularity intended for dinosaurs).
     This is done by passing an array such as
@@ -193,13 +208,32 @@ def sum_popularity_over_tree(tree, exclude_taxa=None):
 
     logger.info("Tree read for phylogenetic popularity calc")
 
+    def has_own_pop(node):
+        return node.name not in exclude_taxa and node.props["taxon"].get("raw_popularity") is not None
+
+    # A Qid on several nodes is nearly always one taxon held twice by OTT (usually
+    # split across source taxonomies), and every copy carries the *same* full
+    # raw_popularity, so summing them unaltered counts that popularity once per
+    # copy. Share it out evenly instead: that keeps the tree's total popularity
+    # right without having to pick which copy is the "real" one -- which we can't
+    # do sensibly anyway, as the copies are frequently in quite distant clades.
+    # Only nodes that actually contribute popularity are counted, so an excluded
+    # or unpopulated duplicate doesn't dilute its twin.
+    qid_counts = collections.Counter(
+        node.props["taxon"]["wikidata"]
+        for node in tree.traverse(strategy="preorder")
+        if has_own_pop(node) and node.props["taxon"].get("wikidata") is not None
+    )
+
     # put popularity into the "pop" attribute
     for node in tree.traverse(strategy="preorder"):
-        if node.name in exclude_taxa or node.props["taxon"].get("raw_popularity") is None:
+        if not has_own_pop(node):
             node.props["pop"] = 0
             node.props["has_pop"] = False
         else:
-            node.props["pop"] = node.props["taxon"]["raw_popularity"]
+            Q = node.props["taxon"].get("wikidata")
+            raw_popularity = node.props["taxon"]["raw_popularity"]
+            node.props["pop"] = raw_popularity if Q is None else raw_popularity / qid_counts[Q]
             node.props["has_pop"] = True
 
     # go up the tree from the tips, summing up the popularity indices beneath and

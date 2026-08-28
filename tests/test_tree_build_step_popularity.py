@@ -1,4 +1,5 @@
 import csv
+import logging
 from math import log
 
 import ete4
@@ -210,6 +211,148 @@ class TestSumPopularityOverTree:
         assert root.props["has_pop"] is False
         # Children's pop still aggregates upwards.
         assert root.props["descendants_popsum"] == 30.0
+
+
+class TestSharedWikidataQids:
+    """
+    OTT frequently holds one taxon twice (split across source taxonomies), and
+    every copy carries the same raw_popularity. It is shared between them rather
+    than counted once per copy.
+    """
+
+    def test_shared_qid_splits_raw_popularity(self, tmp_path):
+        t = ete4.Tree("(A_ott1,B_ott2)Root_ott3;", parser=1)
+        _attach_taxa(
+            tmp_path,
+            t,
+            [
+                {"ott": 1, "wikidata": 42, "raw_popularity": 100.0},
+                {"ott": 2, "wikidata": 42, "raw_popularity": 100.0},
+                {"ott": 3, "raw_popularity": 30.0},
+            ],
+        )
+
+        sum_popularity_over_tree(t)
+        by_name = {n.name: n for n in t.traverse()}
+
+        assert by_name["A_ott1"].props["pop"] == 50.0
+        assert by_name["B_ott2"].props["pop"] == 50.0
+        # The clade's total is what one copy of the taxon is worth, not two.
+        assert by_name["Root_ott3"].props["descendants_popsum"] == 100.0
+
+    def test_distinct_qids_are_untouched(self, tmp_path):
+        t = ete4.Tree("(A_ott1,B_ott2)Root_ott3;", parser=1)
+        _attach_taxa(
+            tmp_path,
+            t,
+            [
+                {"ott": 1, "wikidata": 42, "raw_popularity": 100.0},
+                {"ott": 2, "wikidata": 43, "raw_popularity": 100.0},
+                {"ott": 3, "raw_popularity": 30.0},
+            ],
+        )
+
+        sum_popularity_over_tree(t)
+        by_name = {n.name: n for n in t.traverse()}
+
+        assert by_name["A_ott1"].props["pop"] == 100.0
+        assert by_name["B_ott2"].props["pop"] == 100.0
+
+    def test_node_without_a_qid_is_untouched(self, tmp_path):
+        # No Qid means nothing to share with, so no division.
+        t = ete4.Tree("(A_ott1,B_ott2)Root_ott3;", parser=1)
+        _attach_taxa(
+            tmp_path,
+            t,
+            [
+                {"ott": 1, "raw_popularity": 100.0},
+                {"ott": 2, "raw_popularity": 100.0},
+                {"ott": 3, "raw_popularity": 30.0},
+            ],
+        )
+
+        sum_popularity_over_tree(t)
+        by_name = {n.name: n for n in t.traverse()}
+
+        assert by_name["A_ott1"].props["pop"] == 100.0
+        assert by_name["B_ott2"].props["pop"] == 100.0
+
+    def test_qid_shared_by_three_nodes_splits_three_ways(self, tmp_path):
+        t = ete4.Tree("(A_ott1,B_ott2,C_ott4)Root_ott3;", parser=1)
+        _attach_taxa(
+            tmp_path,
+            t,
+            [
+                {"ott": 1, "wikidata": 42, "raw_popularity": 90.0},
+                {"ott": 2, "wikidata": 42, "raw_popularity": 90.0},
+                {"ott": 4, "wikidata": 42, "raw_popularity": 90.0},
+                {"ott": 3, "raw_popularity": 30.0},
+            ],
+        )
+
+        sum_popularity_over_tree(t)
+        by_name = {n.name: n for n in t.traverse()}
+
+        assert by_name["A_ott1"].props["pop"] == 30.0
+        assert by_name["Root_ott3"].props["descendants_popsum"] == 90.0
+
+    def test_excluded_duplicate_does_not_dilute_its_twin(self, tmp_path):
+        # An excluded node contributes no popularity, so the remaining node
+        # should keep the full score rather than be halved against a zero.
+        t = ete4.Tree("(A_ott1,B_ott2)Root_ott3;", parser=1)
+        _attach_taxa(
+            tmp_path,
+            t,
+            [
+                {"ott": 1, "wikidata": 42, "raw_popularity": 100.0},
+                {"ott": 2, "wikidata": 42, "raw_popularity": 100.0},
+                {"ott": 3, "raw_popularity": 30.0},
+            ],
+        )
+
+        sum_popularity_over_tree(t, exclude_taxa=["B_ott2"])
+        by_name = {n.name: n for n in t.traverse()}
+
+        assert by_name["B_ott2"].props["pop"] == 0
+        assert by_name["A_ott1"].props["pop"] == 100.0
+
+    def test_duplicate_without_raw_popularity_does_not_dilute_its_twin(self, tmp_path):
+        # Likewise for a duplicate that has a Qid but no popularity to give.
+        t = ete4.Tree("(A_ott1,B_ott2)Root_ott3;", parser=1)
+        _attach_taxa(
+            tmp_path,
+            t,
+            [
+                {"ott": 1, "wikidata": 42, "raw_popularity": 100.0},
+                {"ott": 2, "wikidata": 42},
+                {"ott": 3, "raw_popularity": 30.0},
+            ],
+        )
+
+        sum_popularity_over_tree(t)
+        by_name = {n.name: n for n in t.traverse()}
+
+        assert by_name["B_ott2"].props["has_pop"] is False
+        assert by_name["A_ott1"].props["pop"] == 100.0
+
+    def test_duplicates_are_summarised_in_one_warning(self, tmp_path, caplog):
+        t = ete4.Tree("(A_ott1,B_ott2)Root_ott3;", parser=1)
+        _attach_taxa(
+            tmp_path,
+            t,
+            [
+                {"ott": 1, "wikidata": 42, "raw_popularity": 100.0},
+                {"ott": 2, "wikidata": 42, "raw_popularity": 100.0},
+                {"ott": 3, "raw_popularity": 30.0},
+            ],
+        )
+
+        with caplog.at_level(logging.WARNING):
+            popularity_add_prop(t)
+
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1
+        assert "1 nodes share a wikidata Qid" in warnings[0].message
 
 
 class TestPopularityAddProp:

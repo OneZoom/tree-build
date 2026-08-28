@@ -150,6 +150,12 @@ def main():
     tree_dating.date_labelling(base_t)
     tree_dating.impute_missing_dates(base_t, l=0.25)
 
+    logger.info("Regenerate branch lengths from the final dates")
+    # Up to here 'dist' is whatever the input newicks happened to carry, which is
+    # stale (or missing) now dates have been infilled/cleared/imputed. Everything
+    # downstream that uses branch lengths wants them to agree with 'date'.
+    tree_dating.compute_branch_lengths(base_t)
+
     logger.info("Rank popularities, post-node removal")
     popularity_add_rank(base_t)
 

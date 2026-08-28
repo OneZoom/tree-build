@@ -122,17 +122,21 @@ def main():
     )
     tidy_clear_conflicting_dates_topdown(base_t)
 
+    logger.info("Bin imputed mrca nodes made by fix_polyphyly left dangling by grafting process")
+    # NB: Has to happen before delete_one_child_nodes. Detaching a leaf leaves its parent
+    # with one child, and there is no second unary-node pass to tidy those up afterwards.
+    dangling = [n for n in base_t.traverse() if n.is_leaf and n.name == "mrcaimp"]
+    for n in dangling:
+        n.detach()
+    logger.info(f"Detached {len(dangling)} dangling mrcaimp leaves")
+
     logger.info("Remove unary nodes (they are likely uninteresting, and make a mess of the tree rendering)")
-    tree_fixing.delete_one_child_nodes(base_t)
+    # NB: Returns the tree, which is a *new* root if the old one was itself unary
+    base_t = tree_fixing.delete_one_child_nodes(base_t)
 
     logger.info("Re-interpoltate missing dates")
     base_t.root.props.setdefault("date", ROOT_DATE_MYA)
     for n in base_t.traverse():  # First do some tidying to force tree_dating to work
-        if n.is_leaf and n.name == "mrcaimp":
-            # Bin imputed mrca nodes made by fix_polyphyly left dangling by grafting process
-            n.detach()
-            continue
-
         if not n.name:
             # dated-complete-tree will assume all nodes have a name
             n.name = ""

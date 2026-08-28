@@ -72,7 +72,7 @@ def treeprop_geological(tree):
     Given an ete4 tree object, add a "geological" prop to each node,
     representing a 1-based period index.
 
-    Assumes the tree already has an "age" prop representing an absolute age in Mya.
+    Assumes the tree already has a "date" prop representing an absolute age in Mya.
 
     Return name of prop just added.
     """
@@ -80,9 +80,9 @@ def treeprop_geological(tree):
     lookup = [(p["mya_start"], idx) for idx, p in enumerate(GEOLOGICAL_PERIODS)]
 
     for node in tree.traverse("preorder"):
-        n_age = node.props.get("age")
+        n_age = node.props.get("date")
         if n_age is None:
-            logger.warning(f"Node {node.name} has no age property")
+            logger.warning(f"Node {node.name} has no date property")
             node.props["geological"] = 0
         else:
             for mya_start, idx in lookup:  # noqa: B007  # idx is used outside the lookup, not inside
@@ -90,7 +90,7 @@ def treeprop_geological(tree):
                     break
             else:
                 # Fell off end
-                idx = None
+                idx = 0
             node.props["geological"] = idx
 
     prop_format = tree.root.props.setdefault("prop_format", {})

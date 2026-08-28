@@ -105,8 +105,11 @@ def output_mysqlexport(tree, out_dir):
     - The leaf ``name`` column has any trailing ``_ottNNN`` suffix
       stripped (the OTT is carried separately in its own column).
     - An internal node's ``date`` prop is exposed via the ``age`` column.
-    - The root's ``parent`` is ``\\N`` but its ``real_parent`` is the
-      sentinel ``0``.
+    - The root has no parent, but the ``parent`` column is NOT NULL, so it
+      gets the placeholder ``-999`` for the import script to replace. Its
+      ``real_parent`` is the sentinel ``0``.
+    - Every leaf is required to have a parent; a parentless leaf raises
+      ``ValueError``.
     """
 
     with (
@@ -181,9 +184,11 @@ def output_mysqlexport(tree, out_dir):
                 real_parent_id = real_parent.props["id"]
 
             if node.is_leaf:
+                if not node.parent:
+                    raise ValueError(f"Leaf {node} has no parent")
                 leaf_csv.writerow(
                     [
-                        node.parent.props["id"] if node.parent else "\\N",  # "parent"
+                        node.parent.props["id"],  # "parent"
                         # TODO: negative real_parent ids if this is a polytomy
                         real_parent_id,
                         node_name_without_ott(node),
@@ -208,7 +213,8 @@ def output_mysqlexport(tree, out_dir):
             else:
                 node_csv.writerow(
                     [
-                        node.parent.props["id"] if node.parent else "\\N",  # "parent"
+                        # NB: This has to be NOT NULL, but root doesn't have a parent. Bodge temporary value
+                        node.parent.props["id"] if node.parent else "-999",  # "parent"
                         real_parent_id,
                         node.props["node_rgt"],
                         node.props["leaf_lft"],

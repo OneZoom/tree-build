@@ -316,14 +316,23 @@ class TestOutputMysqlExport:
         names = [r[LEAF_HEADER.index("name")] for r in leaves[1:]]
         assert names == ["A", "B"]
 
-    def test_root_parent_field_is_backslash_N(self, tmp_path):
-        # Root has no parent → "parent" column is \N (MySQL NULL marker).
+    def test_root_parent_field_is_placeholder(self, tmp_path):
+        # Root has no parent, but "parent" is NOT NULL in the DB, so it gets a
+        # placeholder for the import script to replace rather than \N.
         t = ete4.Tree("(A,B)R;", parser=1)
         _prep(t)
         output_mysqlexport(t, str(tmp_path))
         nodes = _read_csv(tmp_path, "ordered_nodes.csv")
         root_row = next(r for r in nodes[1:] if r[NODE_HEADER.index("name")] == "R")
-        assert root_row[NODE_HEADER.index("parent")] == "\\N"
+        assert root_row[NODE_HEADER.index("parent")] == "-999"
+
+    def test_parentless_leaf_is_rejected(self, tmp_path):
+        # A single-leaf tree has a leaf at the root. There's no placeholder for
+        # this case, so it's an error rather than a bad "parent" value.
+        t = ete4.Tree("A;", parser=1)
+        _prep(t)
+        with pytest.raises(ValueError, match="no parent"):
+            output_mysqlexport(t, str(tmp_path))
 
     def test_root_real_parent_is_zero(self, tmp_path):
         # Root has no parent, so real_parent is the sentinel 0.

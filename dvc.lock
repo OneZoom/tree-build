@@ -73,15 +73,18 @@ stages:
       md5: f7437ba9e2a89ff658749e434a38b39a
       size: 21507159
   download_opentree:
-    cmd: download_opentree --version v16.1 --output-dir data/OpenTree
+    cmd:
+    - rm -rf data/OpenTree/v16.1/
+    - mkdir -p data/OpenTree/v16.1/
+    - .venv/bin/download_opentree --version v16.1 --output-dir data/OpenTree
     params:
       params.yaml:
         ot_version: v16.1
     outs:
     - path: data/OpenTree/v16.1/
       hash: md5
-      md5: 87ff995e9d5028efc185857f34448746.dir
-      size: 587064765
+      md5: 8c9c0fadda5ac919e5573462208a5c8f.dir
+      size: 564222021
       nfiles: 3
   add_ott_numbers_to_trees:
     cmd:
@@ -94,9 +97,9 @@ stages:
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/
       hash: md5
-      md5: c3c1ebf2453c636e3ffdfcef58722d9c.dir
-      size: 1231291
-      nfiles: 56
+      md5: 4097a3d5af5e05a587882129df7882df.dir
+      size: 1271857
+      nfiles: 45
     params:
       params.yaml:
         ot_version: v16.1
@@ -104,9 +107,9 @@ stages:
     outs:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: c12514e92740949250ecdb4375d6c360.dir
-      size: 1534814
-      nfiles: 55
+      md5: 4d9484418e30d363e0c33ffb2e12e5fd.dir
+      size: 1586233
+      nfiles: 44
   get_open_trees_from_one_zoom:
     cmd:
     - cd data/OZTreeBuild/AllLife && get_open_trees_from_one_zoom 
@@ -280,9 +283,122 @@ stages:
       md5: 1018a5c664d01747fdd7e218190cb4ac
       size: 72
   download_node_ages:
-    cmd: download_node_ages data/node_ages.json
+    cmd: .venv/bin/download_node_ages data/node_ages.json
     outs:
     - path: data/node_ages.json
       hash: md5
-      md5: 2440f9bb2139301bf352797a9802c2d9
-      size: 14044769
+      md5: 02b43f39966ac4c461bed8f1fa3247a9
+      size: 13157027
+  date_tree:
+    cmd:
+    - rm -rf data/dated_tree
+    - mkdir -p data/dated_tree
+    - .venv/bin/date_tree --output_folder=data/dated_tree --date_cache 
+      data/node_ages.json --annotations data/OpenTree/v16.1/annotations.json 
+      --taxonomy data/OpenTree/v16.1/taxonomy.tsv --supertree 
+      data/OpenTree/v16.1/labelled_supertree_ottnames.tre
+    deps:
+    - path: data/node_ages.json
+      hash: md5
+      md5: 02b43f39966ac4c461bed8f1fa3247a9
+      size: 13157027
+    params:
+      params.yaml:
+        ot_version: v16.1
+    outs:
+    - path: data/dated_tree/dated_tree_pre.tre
+      hash: md5
+      md5: 531c294f7e80f3d588369af73047ddfe
+      size: 134355939
+  taxon_map:
+    cmd: .venv/bin/taxon_map --OpenTreeTaxonomy data/OpenTree/v16.1/taxonomy.tsv
+      --wikidataDumpFile data/filtered/OneZoom_latest-all.json 
+      --wikipediaSQLDumpFile data/filtered/OneZoom_enwiki-latest-page.sql 
+      --wikipedia_totals_bz2_pageviews data/filtered/pageviews/ --EOLidentifiers
+      data/filtered/OneZoom_provider_ids.csv --extra_source_file 
+      data/OZTreeBuild/AllLife/BespokeTree/SupplementaryTaxonomy.tsv -o 
+      data/taxon_map.csv
+    deps:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/SupplementaryTaxonomy.tsv
+      hash: md5
+      md5: 8e861649388bf88595b93c0199f2cc3a
+      size: 312
+      isexec: true
+    - path: data/OpenTree/v16.1/taxonomy.tsv
+      hash: md5
+      md5: d7a58eaaf132522b89a506e96ca5098f
+      size: 417054016
+    - path: data/filtered/OneZoom_enwiki-latest-page.sql
+      hash: md5
+      md5: f7437ba9e2a89ff658749e434a38b39a
+      size: 21507159
+    - path: data/filtered/OneZoom_latest-all.json
+      hash: md5
+      md5: e6f69def9d6fa2bb4b90060509c079bb
+      size: 1567956473
+    - path: data/filtered/OneZoom_provider_ids.csv
+      hash: md5
+      md5: f7c9bb8374957c07168bec36d6591347
+      size: 221682224
+    - path: data/filtered/pageviews/
+      hash: md5
+      md5: 701c03fc874aa8a4d5578a6a74267bee.dir
+      size: 128216689
+      nfiles: 13
+    params:
+      params.yaml:
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/taxon_map.csv
+      hash: md5
+      md5: 08e16ef58049999ecb1608be819976d4
+      size: 230041544
+  tree_build:
+    cmd:
+    - rm -rf data/out
+    - mkdir -p data/out
+    - .venv/bin/tree_build --bespoke_dir 
+      data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/ --orphan_dir 
+      data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/ --opentree 
+      data/dated_tree/dated_tree_pre.tre --taxon_map data/taxon_map.csv 
+      --exclude Archosauria_ott335588 Dinosauria_ott90215 --out_dir data/out
+    deps:
+    - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
+      hash: md5
+      md5: 4d9484418e30d363e0c33ffb2e12e5fd.dir
+      size: 1586233
+      nfiles: 44
+    - path: data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/
+      hash: md5
+      md5: ba7be58a908cdd00297088d0227ffc54.dir
+      size: 103205
+      nfiles: 4
+    - path: data/dated_tree/dated_tree_pre.tre
+      hash: md5
+      md5: 531c294f7e80f3d588369af73047ddfe
+      size: 134355939
+    - path: data/taxon_map.csv
+      hash: md5
+      md5: 08e16ef58049999ecb1608be819976d4
+      size: 230041544
+    params:
+      params.yaml:
+        ot_version: v16.1
+        oz_tree: AllLife
+    outs:
+    - path: data/out
+      hash: md5
+      md5: 8681e904a6f6cc834f85b981bcdcb78c.dir
+      size: 774309948
+      nfiles: 7
+  versioned_outputs:
+    cmd:
+    - mkdir -p data/out_versioned
+    - .venv/bin/versioned_outputs --out_dir data/out_versioned data/out/* -vv
+    deps:
+    - path: data/out/
+      hash: md5
+      md5: 8681e904a6f6cc834f85b981bcdcb78c.dir
+      size: 774309948
+      nfiles: 7

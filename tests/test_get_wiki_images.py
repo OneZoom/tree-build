@@ -114,11 +114,13 @@ class TestAPI:
         with caplog.at_level(logging.WARNING):
             self.verify_process_leaf(image, rating, cropper)
         assert caplog.text == ""
-        assert self.check_downloaded_wiki_image(self.qid, cropper, image is None)
+        assert self.check_downloaded_wiki_image(self.apis.mock_page_id, cropper, image is None)
+        # we used to store them by qid, check that we're not:
+        assert not self.check_downloaded_wiki_image(self.qid, cropper, image is None)
         rows = self.image_rows_in_db(ott)
         assert len(rows) == 1
         assert rows[0] == (
-            self.qid,
+            self.apis.mock_page_id,
             rating or default_rating(image),
             "John Doe",
             "Released into the public domain",
@@ -135,9 +137,9 @@ class TestAPI:
             self.verify_process_leaf(image, None, cropper)
         response = self.apis.mocked_requests[self.apis.wikimedia_response(image)["url"]]
         # Check response is lowercase
-        assert response["query"]["pages"]["12345"]["imageinfo"][0]["extmetadata"]["License"]["value"].startswith(
-            "cc-by"
-        )
+        pages = response["query"]["pages"]
+        license_value = pages[str(self.apis.mock_page_id)]["imageinfo"][0]["extmetadata"]["License"]["value"]
+        assert license_value.startswith("cc-by")
         rows = self.image_rows_in_db()
         assert len(rows) == 1
         assert rows[0][1:] == (
@@ -335,14 +337,24 @@ class TestCLI:
         # (since we delete first), and two in bespoke mode
         assert len(rows) == 1 if src == src_flags["wiki"] else 2
         # Check the image details: src_id should be one more than the test row
-        # in the bespoke case, and the qid in the wiki case
+        # in the bespoke case, and the Commons page id of the image in the wiki case
+        if src == src_flags["onezoom_bespoke"]:
+            expected_src_id = src_id + 1
+        elif self.real_apis:
+            expected_src_id = rows[0][2]
+            assert expected_src_id != int(qid)
+        else:
+            expected_src_id = self.apis.mock_page_id
         assert rows[0] == (
             int(self.ott),
             src,
-            src_id + 1 if src == src_flags["onezoom_bespoke"] else int(qid),
+            expected_src_id,
             rating if rating else default_rating(image),
             1,
         )
+        if src == src_flags["wiki"]:
+            img_dir = os.path.join(self.tmp_path, str(src), str(expected_src_id)[-3:])
+            assert os.path.isfile(os.path.join(img_dir, f"{expected_src_id}.jpg"))
         # In the bespoke case, process_image_bits at the end of get_wiki_images should
         # set the overall_best_any bit to 0 for the dummy image (we set it to 1 above)
         if src == src_flags["onezoom_bespoke"]:

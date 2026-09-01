@@ -66,6 +66,10 @@ class RemoteAPIs:
     Use the lion as a test case
     """
 
+    # Commons page id returned by the mocked imageinfo API. Wiki images are saved
+    # under this id, not the taxon QID.
+    mock_page_id = 12345
+
     def add_mocked_request(self, url, querystring=None, *, response):
         if querystring is not None:
             url += "?" + querystring
@@ -161,15 +165,15 @@ class RemoteAPIs:
         response = {
             "query": {
                 "pages": {
-                    "12345": {
-                        "pageid": 12345,
+                    str(self.mock_page_id): {
+                        "pageid": self.mock_page_id,
                         "title": "File:Blah.jpg",
                         "imageinfo": [{"extmetadata": {}}],
                     }
                 }
             }
         }
-        extmetadata = response["query"]["pages"]["12345"]["imageinfo"][0]["extmetadata"]
+        extmetadata = response["query"]["pages"][str(self.mock_page_id)]["imageinfo"][0]["extmetadata"]
         if artist is not None:
             extmetadata["Artist"] = {"value": artist}
         if licence in self.license_urls:

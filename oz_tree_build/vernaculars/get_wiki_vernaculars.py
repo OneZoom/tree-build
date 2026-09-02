@@ -41,6 +41,7 @@ from ..utilities.wikidata_utils import (
     get_wikidata_json_for_qid,
     resolve_leaf,
 )
+from ..utilities.wikimedia_headers import wikimedia_headers
 
 logger = logging.getLogger(Path(__file__).name)
 
@@ -139,7 +140,8 @@ def process_leaf(db, ott_or_taxon, taxa_data=None):
         return
     ott, qid, _name = resolved
 
-    json_item = get_wikidata_json_for_qid(qid)
+    # No auth: leaf mode makes a single Wikidata request, so a token isn't worth fetching.
+    json_item = get_wikidata_json_for_qid(qid, headers=wikimedia_headers(auth=None))
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
     save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
 

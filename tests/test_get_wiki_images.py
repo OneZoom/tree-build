@@ -322,6 +322,8 @@ class TestCLI:
             conf_file=self.conf_file,
             taxa_data_file=None,
             no_azure_crop=True,
+            wikimedia_client_id=None,
+            wikimedia_client_secret=None,
         )
 
         if self.real_apis:

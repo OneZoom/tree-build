@@ -62,6 +62,8 @@ from ..utilities.wikidata_utils import (
     get_wikidata_json_for_qid,
     resolve_leaf,
 )
+from ..utilities.wikimedia_auth import auth_from_cli_credentials
+from ..utilities.wikimedia_headers import wikimedia_headers
 from . import process_image_bits
 from .image_cropping import AzureImageCropper, CenterImageCropper
 
@@ -119,18 +121,20 @@ def get_preferred_or_first_image_from_json_item(json_item):
     return image
 
 
-def get_image_license_info(escaped_image_name):
+def get_image_license_info(escaped_image_name, headers=None):
     """
     Use the Wikimedia API to get the license, artist, and Commons page id for a
     Wikimedia image.
     """
+    if headers is None:
+        headers = USER_AGENT_HEADERS
 
     image_metadata_url = (
         "https://commons.wikimedia.org/w/api.php"
         f"?action=query&titles=File%3a{escaped_image_name}&format=json&prop=imageinfo"
         "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
     )
-    r = make_http_request_with_retries(image_metadata_url, headers=USER_AGENT_HEADERS)
+    r = make_http_request_with_retries(image_metadata_url, headers=headers)
     pages = r.json().get("query", {}).get("pages", {})
     extmetadata = None
     page_id = None
@@ -200,15 +204,17 @@ def get_image_license_info(escaped_image_name):
     return license_info
 
 
-def get_image_url(escaped_image_name):
+def get_image_url(escaped_image_name, headers=None):
     """
     Use the wikimedia API to get the image URL for a given image name.
     """
+    if headers is None:
+        headers = USER_AGENT_HEADERS
 
     # This returns JSON that contains the actual image URLs in various sizes
     image_location_url = f"https://api.wikimedia.org/core/v1/commons/file/{escaped_image_name}"
 
-    r = make_http_request_with_retries(image_location_url, headers=USER_AGENT_HEADERS)
+    r = make_http_request_with_retries(image_location_url, headers=headers)
 
     image_location_info = r.json()
     # Note that 'preferred' here refers to the preferred image *size*
@@ -218,13 +224,14 @@ def get_image_url(escaped_image_name):
     return image_url
 
 
-def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper, src_id=None):
+def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper, src_id=None, auth=None):
     """
     Download a Wikimedia image and save it to the output directory. We keep both the
     uncropped and cropped versions of the image, along with the crop info.
     `src_id` determines the `src_id` to store in the database.
     When blank, uses the Commons page id of the image.
     `cropper` is an AzureImageCropper, or None to fall back to a centered crop.
+    `auth` is a WikimediaAuth instance, or None to make unauthenticated API requests.
     """
 
     wiki_image_url_prefix = "https://commons.wikimedia.org/wiki/File:"
@@ -242,7 +249,8 @@ def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper,
     # Also escape the ampersand and plus signs in the image name
     escaped_image_name = escaped_image_name.replace("&", "%26").replace("+", "%2B")
 
-    license_info = get_image_license_info(escaped_image_name)
+    api_headers = wikimedia_headers(auth)
+    license_info = get_image_license_info(escaped_image_name, headers=api_headers)
     if not license_info:
         logger.warning(f"Couldn't get license or artist for '{escaped_image_name}'. Ignoring it.")
         return False
@@ -295,7 +303,7 @@ def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper,
                 break
         license_info["artist"] = prefix + license_info["artist"]
 
-    image_url = get_image_url(escaped_image_name)
+    image_url = get_image_url(escaped_image_name, headers=api_headers)
 
     # For src=20 we use the qid as the source id. This is convenient, although it does
     # mean that we can't have two src=20 wikidata images for a given taxon.
@@ -396,6 +404,7 @@ def process_leaf(
     rating=None,
     output_dir=None,
     cropper=None,
+    auth=None,
 ):
     """
     If ott_or_taxon is a number it's an ott, otherwise it's a taxon name. `cropper`
@@ -413,7 +422,7 @@ def process_leaf(
     if rating is None:
         rating = bespoke_wiki_image_rating if image_name else default_wiki_image_rating
 
-    json_item = get_wikidata_json_for_qid(qid)
+    json_item = get_wikidata_json_for_qid(qid, headers=wikimedia_headers(auth))
     # If a specific image name is passed in (corresponding to a image name on
     # wikimedia commons), we use that. Otherwise, we need to look it up.
     # Also, if an image is passed in, we categorize it as a bespoke image, not wiki.
@@ -443,10 +452,11 @@ def process_leaf(
             output_dir=output_dir,
             cropper=cropper,
             src_id=src_id,
+            auth=auth,
         )
 
 
-def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper=None):
+def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper, auth):
     """
     `cropper` is an AzureImageCropper, or None to fall back to a centered crop.
     """
@@ -503,6 +513,7 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper=No
                 rating=default_wiki_image_rating,
                 output_dir=output_dir,
                 cropper=cropper,
+                auth=auth,
             ):
                 leaves_that_got_images.add(qid)
                 logger.info(f"Saved image for ott={leaves_data[qid]['ott']} (qid={qid})")
@@ -520,6 +531,7 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper=No
 
 
 def process_args(args):
+    auth = auth_from_cli_credentials(args.wikimedia_client_id, args.wikimedia_client_secret)
     outdir = args.output_dir
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
@@ -545,11 +557,11 @@ def process_args(args):
         if len(args.ott_or_taxa) > 1 and args.image is not None:
             raise ValueError("Cannot specify multiple taxa when using a bespoke image")
         for name in args.ott_or_taxa:
-            process_leaf(db, name, args.image, taxa_data, args.rating, outdir, cropper)
+            process_leaf(db, name, args.image, taxa_data, args.rating, outdir, cropper, auth)
     elif args.subcommand == "clade":
         # Process all the taxa in the passed in clades
         for name in args.ott_or_taxa:
-            process_clade(db, name, args.wd_dump, taxa_data, outdir, cropper)
+            process_clade(db, name, args.wd_dump, taxa_data, outdir, cropper, auth)
 
 
 def add_image_common_args(parser):
@@ -582,6 +594,16 @@ def add_image_common_args(parser):
             f"Defaults to {default_outdir} (relative to the script "
             "location). Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
         ),
+    )
+    parser.add_argument(
+        "--wikimedia-client-id",
+        default=None,
+        help=("OAuth 2 client id for a Wikimedia bot application. " "Must be used with --wikimedia-client-secret."),
+    )
+    parser.add_argument(
+        "--wikimedia-client-secret",
+        default=None,
+        help=("OAuth 2 client secret for a Wikimedia bot application. " "Must be used with --wikimedia-client-id."),
     )
 
 

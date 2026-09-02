@@ -46,26 +46,41 @@ def make_http_request_with_retries(
     url,
     *,
     params=None,
+    data=None,
     stream=False,
     headers,
+    method="GET",
     retry_status_codes=DEFAULT_RETRY_STATUS_CODES,
     timeout=DEFAULT_TIMEOUT,
 ):
     """
-    Make an HTTP GET request to the given URL with the given headers,
+    Make an HTTP request to the given URL with the given headers,
     retrying if we get a rate limit, transient server error, or transport failure.
     """
     retries = 6
     delay = 5
+    method = method.upper()
     for i in range(retries):
         try:
-            r = requests.get(
-                url,
-                params=params,
-                headers=headers,
-                stream=stream,
-                timeout=timeout,
-            )
+            if method == "GET":
+                r = requests.get(
+                    url,
+                    params=params,
+                    headers=headers,
+                    stream=stream,
+                    timeout=timeout,
+                )
+            elif method == "POST":
+                r = requests.post(
+                    url,
+                    params=params,
+                    data=data,
+                    headers=headers,
+                    stream=stream,
+                    timeout=timeout,
+                )
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
         except requests.RequestException as exc:
             logger.warning("HTTP request failed on attempt %s for %s: %s", i + 1, url, exc)
             if i == retries - 1:

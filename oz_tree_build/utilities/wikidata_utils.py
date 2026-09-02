@@ -4,20 +4,19 @@ Shared Wikidata helpers for the wiki image and vernacular harvesting scripts.
 
 import json
 
-from ..user_agent import USER_AGENT_HEADERS
 from .db_helper import placeholder
 from .file_utils import enumerate_lines_from_file
 from .http_utils import make_http_request_with_retries
 
 
-def get_wikidata_json_for_qid(qid):
+def get_wikidata_json_for_qid(qid, headers):
     """
     Use the Wikidata API to get the JSON for a given QID. This is faster than
     using the dump file when we only need a single item. It's worth noting that this
     gets the latest version of the item, which may not be the same as the dump file.
     """
     wikidata_url = f"https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q{qid}&format=json"
-    r = make_http_request_with_retries(wikidata_url, headers=USER_AGENT_HEADERS)
+    r = make_http_request_with_retries(wikidata_url, headers=headers)
     return r.json()["entities"][f"Q{qid}"]
 
 

@@ -55,3 +55,27 @@ class TestRetryAfterSeconds:
         assert response is ok
         mock_sleep.assert_called_once_with(5)
         assert mock_get.call_count == 2
+
+
+class TestMakeHttpRequestPost:
+    @mock.patch("oz_tree_build.utilities.http_utils.requests.post")
+    def test_posts_form_data(self, mock_post):
+        ok = SimpleNamespace(status_code=200, headers={})
+        mock_post.return_value = ok
+
+        response = http_utils.make_http_request_with_retries(
+            "https://example.test/oauth2/access_token",
+            method="POST",
+            data={"grant_type": "client_credentials"},
+            headers=get_wiki_images.USER_AGENT_HEADERS,
+        )
+
+        assert response is ok
+        mock_post.assert_called_once_with(
+            "https://example.test/oauth2/access_token",
+            params=None,
+            data={"grant_type": "client_credentials"},
+            headers=get_wiki_images.USER_AGENT_HEADERS,
+            stream=False,
+            timeout=http_utils.DEFAULT_TIMEOUT,
+        )

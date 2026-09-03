@@ -15,8 +15,9 @@ The script can be used in two ways:
     * get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg" 42000
   If no image is specified, a default one will be picked from the P18 field of the
   wikidata entry (e.g. see https://www.wikidata.org/wiki/Q140#P18), the image will
-  be given a src of `src_flags["wiki"]` (20) and a src_id of the QID (e.g. 140 for lions),
-  and the rating will default to 35000 (of a maximum of 50000).
+  be given a src of `src_flags["wiki"]` (20) and a src_id of the Wikimedia Commons
+  page id of that image (not the taxon QID, since a taxon may have any number of
+  images), and the rating will default to 35000 (of a maximum of 50000).
   Alternatively, if an image name is passed in, it will be treated as a bespoke image,
   given a src of `src_flags["onezoom_bespoke"]` (2) and the next available src_id
   (src_ids will therefore be incremented for each bespoke image processed), and a default
@@ -38,9 +39,12 @@ import os
 import re
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 from PIL import Image
+from pydal import DAL
 
 from .._OZglobals import src_flags
 from ..user_agent import USER_AGENT_HEADERS
@@ -61,11 +65,26 @@ from ..utilities.wikidata_utils import (
     get_wikidata_json_for_qid,
     resolve_leaf,
 )
+from ..utilities.wikimedia_auth import WikimediaAuth, auth_from_cli_credentials
+from ..utilities.wikimedia_headers import wikimedia_headers
 from . import process_image_bits
 from .image_cropping import AzureImageCropper, CenterImageCropper
 
 default_wiki_image_rating = 35000
 bespoke_wiki_image_rating = 40000
+
+# Commons thumbnail step; see https://www.mediawiki.org/wiki/Common_thumbnail_sizes
+COMMONS_THUMB_WIDTH = 960
+
+
+@dataclass
+class ImageInfo:
+    page_id: Optional[int]
+    license: str
+    license_url: Optional[str]
+    artist: str
+    image_url: str
+
 
 logger = logging.getLogger(Path(__file__).name)
 
@@ -118,44 +137,37 @@ def get_preferred_or_first_image_from_json_item(json_item):
     return image
 
 
-def get_image_license_info(escaped_image_name):
+def _image_info_from_page(page: dict, escaped_image_name: str) -> Optional[ImageInfo]:
     """
-    Use the Wikimedia API to get the license and artist for a Wikimedia image.
+    Parse a single `pages` entry from the Commons imageinfo API response into an
+    ImageInfo, or None if the page has no usable image.
     """
+    if page.get("missing") or "imageinfo" not in page:
+        logger.warning(f"Unknown image '{escaped_image_name}'")
+        return None
 
-    image_metadata_url = (
-        "https://commons.wikimedia.org/w/api.php"
-        f"?action=query&titles=File%3a{escaped_image_name}&format=json&prop=imageinfo"
-        "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
-    )
-    r = make_http_request_with_retries(image_metadata_url, headers=USER_AGENT_HEADERS)
-    pages = r.json().get("query", {}).get("pages", {})
-    extmetadata = None
-    for page in pages.values():
-        if page.get("missing") or "imageinfo" not in page:
-            continue
-        extmetadata = page["imageinfo"][0].get("extmetadata")
-        break
+    imageinfo = page["imageinfo"][0]
+    extmetadata = imageinfo.get("extmetadata")
+    page_id = page.get("pageid")
+    image_url = imageinfo.get("thumburl")
     if not extmetadata:
         logger.warning(f"Unknown image '{escaped_image_name}'")
         return None
 
-    license_info = {}
-
     try:
-        license_info["license_url"] = extmetadata["LicenseUrl"]["value"]
+        license_url = extmetadata["LicenseUrl"]["value"]
     except KeyError:
         # Public domain images typically don't have a license URL
-        license_info["license_url"] = None
+        license_url = None
 
     try:
         if "Artist" in extmetadata:
-            license_info["artist"] = extmetadata["Artist"]["value"]
+            artist = extmetadata["Artist"]["value"]
             # Strip the html tags from the artist
-            license_info["artist"] = re.sub(r"<[^>]*>", "", license_info["artist"]).strip()
+            artist = re.sub(r"<[^>]*>", "", artist).strip()
         else:
             logger.warning(f"Artist not found for '{escaped_image_name}': using 'Unknown artist'")
-            license_info["artist"] = "Unknown artist"
+            artist = "Unknown artist"
 
         # Some images have a flickr common license URL but not License field, meaning
         # "No known copyright restrictions"==pd (e.g. Potos_flavus_(22985770100).jpg)
@@ -170,19 +182,19 @@ def get_image_license_info(escaped_image_name):
         #         None,
         #     ),
         # }
-        if license_info["license_url"] == "https://www.flickr.com/commons/usage/":
-            license_info["license"] = "flickr_commons"
-        elif license_info["license_url"] == "http://artlibre.org/licence/lal/en":
+        if license_url == "https://www.flickr.com/commons/usage/":
+            license_name = "flickr_commons"
+        elif license_url == "http://artlibre.org/licence/lal/en":
             # See https://en.wikipedia.org/wiki/Free_Art_License
-            license_info["license"] = "cc-by-sa-4.0"
+            license_name = "cc-by-sa-4.0"
         elif "License" in extmetadata:
-            license_info["license"] = extmetadata["License"]["value"]
+            license_name = extmetadata["License"]["value"]
         else:
             # Some images have a LicenseShortName but not a License field
-            license_info["license"] = extmetadata["LicenseShortName"]["value"]
+            license_name = extmetadata["LicenseShortName"]["value"]
 
         # If the license doesn't match what we deem acceptable, we can't use the image
-        li = license_info["license"].lower()
+        li = license_name.lower()
         if (
             not li.startswith("cc")
             and not li.startswith("pd")
@@ -193,49 +205,179 @@ def get_image_license_info(escaped_image_name):
     except KeyError:
         return None
 
-    return license_info
+    if not image_url:
+        logger.warning(f"No download URL for '{escaped_image_name}'")
+        return None
+
+    return ImageInfo(
+        page_id=page_id,
+        license=license_name,
+        license_url=license_url,
+        artist=artist,
+        image_url=image_url,
+    )
 
 
-def get_image_url(escaped_image_name):
+# Even when auth'd, this seems to be the limit of how many titles we can request at once.
+# The error message alludes to a possible higher limit of 500, but I don't know how to achieve that.
+MAX_IMAGE_INFO_TITLES = 50
+
+
+def get_image_infos(escaped_image_names: list[str], headers=None) -> dict[str, ImageInfo]:
     """
-    Use the wikimedia API to get the image URL for a given image name.
+    Use the Commons imageinfo API to get license, artist, page id, and a download URL
+    for a batch of images in a single request. Returns a dict keyed by the (escaped)
+    image names passed in, mapping to an ImageInfo. Names with no usable image are
+    simply absent from the result, so callers should use e.g. `results.get(name)`.
     """
+    if headers is None:
+        headers = USER_AGENT_HEADERS
 
-    # This returns JSON that contains the actual image URLs in various sizes
-    image_location_url = f"https://api.wikimedia.org/core/v1/commons/file/{escaped_image_name}"
+    if len(escaped_image_names) > MAX_IMAGE_INFO_TITLES:
+        raise ValueError(
+            f"get_image_infos got {len(escaped_image_names)} image names, "
+            f"but the Commons API only allows {MAX_IMAGE_INFO_TITLES} titles per request"
+        )
 
-    r = make_http_request_with_retries(image_location_url, headers=USER_AGENT_HEADERS)
+    results: dict[str, ImageInfo] = {}
+    if not escaped_image_names:
+        return results
 
-    image_location_info = r.json()
-    # Note that 'preferred' here refers to the preferred image *size*
-    # not the preferred image itself
-    image_url = image_location_info["preferred"]["url"]
+    # When the original is smaller than the requested width,
+    # the API just returns the original as the thumbnurl.
+    # e.g. https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&titles=File:Litla-dimun-photo.jpg&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=960
 
-    return image_url
+    titles = "|".join(f"File%3a{name}" for name in escaped_image_names)
+    image_info_url = (
+        "https://commons.wikimedia.org/w/api.php"
+        f"?action=query&titles={titles}&format=json&prop=imageinfo"
+        f"&iiprop=url|extmetadata&iiurlwidth={COMMONS_THUMB_WIDTH}"
+        "&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
+    )
+    r = make_http_request_with_retries(image_info_url, headers=headers)
+    query = r.json().get("query", {})
+
+    # The API normalizes titles (e.g. converting underscores back to spaces), and
+    # `pages` is keyed by the normalized title, not the one we requested. Build a map
+    # from every title the API might report back to the escaped name we requested it
+    # with, so results can be keyed on the original, passed-in names.
+    title_to_name = {f"File:{name}": name for name in escaped_image_names}
+    for normalized in query.get("normalized", []):
+        name = title_to_name.get(normalized["from"])
+        if name is not None:
+            title_to_name[normalized["to"]] = name
+
+    for page in query.get("pages", {}).values():
+        escaped_image_name = title_to_name.get(page.get("title"))
+        if escaped_image_name is None:
+            continue
+        image_info = _image_info_from_page(page, escaped_image_name)
+        if image_info is not None:
+            results[escaped_image_name] = image_info
+
+    return results
 
 
-def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, cropper):
+@dataclass
+class WikiImageSaveRequest:
+    leaf_data: dict
+    image_name: str
+    src: int
+    rating: int
+    src_id: Optional[int] = None
+
+
+def save_wiki_images(
+    images: list[WikiImageSaveRequest],
+    db: DAL,
+    output_dir: str,
+    cropper: Optional[AzureImageCropper | CenterImageCropper],
+    auth: Optional[WikimediaAuth] = None,
+) -> list[bool]:
     """
-    Download a Wikimedia image for a given QID and save it to the output directory. We
-    keep both the uncropped and cropped versions of the image, along with the crop info.
-    `crop` can be an Azure ImageAnalysisClient, a crop location in the image
-    (x, y, width, height), or None to carry out a default (centered) crop.
+    Download a batch of Wikimedia images (`images`, a list of WikiImageSaveRequest)
+    and save them to the output directory. We keep both the uncropped and cropped
+    versions of each image, along with its crop info. Makes a single call to
+    get_image_infos for the whole batch: get_image_infos enforces the Commons API's
+    limit on how many titles can be requested at once, so we don't check it here.
+    Each request's `src_id` determines the `src_id` to store in the database for that
+    image. When blank, uses the Commons page id of the image.
+    `cropper` is an AzureImageCropper, or None to fall back to a centered crop.
+    `auth` is a WikimediaAuth instance, or None to make unauthenticated API requests.
+    Returns a list of bools, one per request in `images`, indicating whether that
+    image was saved.
     """
 
     wiki_image_url_prefix = "https://commons.wikimedia.org/wiki/File:"
     s = placeholder(db)
 
+    if cropper is None:
+        # Default to centering the crop
+        cropper = CenterImageCropper()
+
+    # Wikimedia uses underscores instead of spaces in URLs, and the ampersand and
+    # plus signs need escaping too
+    escaped_names = [request.image_name.replace(" ", "_").replace("&", "%26").replace("+", "%2B") for request in images]
+
+    api_headers = wikimedia_headers(auth)
+    image_infos = get_image_infos(escaped_names, headers=api_headers)
+
+    return [
+        _save_wiki_image(
+            request,
+            escaped_image_name,
+            image_infos.get(escaped_image_name),
+            db,
+            output_dir,
+            cropper,
+            s,
+            wiki_image_url_prefix,
+        )
+        for request, escaped_image_name in zip(images, escaped_names)
+    ]
+
+
+def _save_wiki_image(
+    request: WikiImageSaveRequest,
+    escaped_image_name: str,
+    image_info: Optional[ImageInfo],
+    db: DAL,
+    output_dir: str,
+    cropper: AzureImageCropper | CenterImageCropper,
+    s: str,
+    wiki_image_url_prefix: str,
+) -> bool:
+    """
+    Download and save a single Wikimedia image, given the ImageInfo already looked
+    up for it (via a batched get_image_infos call in save_wiki_images). Returns
+    whether the image was saved.
+    """
+    leaf_data = request.leaf_data
+    image_name = request.image_name
+    src = request.src
+    rating = request.rating
+
     ott = leaf_data["ott"]
+    qid = leaf_data.get("qid")
     if not ott:
-        logger.warning(f"No OTT for Q{src_id}. Can't save {image_name}")
+        qid_label = f"Q{qid}" if qid else "unknown taxon"
+        logger.warning(f"No OTT for {qid_label}. Can't save {image_name}")
         return False
 
-    # Wikimedia uses underscores instead of spaces in URLs
-    escaped_image_name = image_name.replace(" ", "_").replace("&", "%26").replace("+", "%2B")
-    # Also escape the ampersand and plus signs in the image name
-    escaped_image_name = escaped_image_name.replace("&", "%26").replace("+", "%2B")
-    image_dir = os.path.normpath(os.path.join(output_dir, str(src), subdir_name(src_id)))
-    image_path = f"{image_dir}/{src_id}.jpg"
+    if not image_info:
+        logger.warning(f"Couldn't get image info for '{escaped_image_name}'. Ignoring it.")
+        return False
+
+    # When src_id is omitted, identify the image by its Commons page id.
+    image_src_id = request.src_id
+    if image_src_id is None:
+        image_src_id = int(image_info.page_id) if image_info.page_id else None
+    if not image_src_id:
+        logger.warning(f"No src_id for '{escaped_image_name}'. Ignoring it.")
+        return False
+
+    image_dir = os.path.normpath(os.path.join(output_dir, str(src), subdir_name(image_src_id)))
+    image_path = f"{image_dir}/{image_src_id}.jpg"
 
     # If we already have an image for this taxon, and it's the same as the one
     # we're trying to download, skip it
@@ -247,39 +389,34 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
                 logger.debug(f"Image '{image_name}' for {ott} is in the db, and at {image_path}")
                 return True
             else:
-                logger.warning(f"{image_name} for {ott} is in the db, but the " f"file is missing, so re-processing")
+                logger.warning(f"{image_name} for {ott} is in the db, but the file is missing, so re-processing")
 
-    logger.info(f"Processing image for ott={ott} (qid={src_id}): {image_name}")
-
-    license_info = get_image_license_info(escaped_image_name)
-    if not license_info:
-        logger.warning(f"Couldn't get license or artist for '{escaped_image_name}'. Ignoring it.")
-        return False
+    logger.info(f"Processing image for ott={ott} (qid={qid}, page_id={image_src_id}): {image_name}")
 
     is_public_domain = True
     # NB keep all pd strings as ending with the words "public domain"
-    if license_info["license"].startswith("pd"):
+    if image_info.license.startswith("pd"):
         license_string = "Marked as being in the public domain"
-    elif license_info["license"] == "flickr_commons":
+    elif image_info.license == "flickr_commons":
         license_string = "Marked on Flickr commons as being in the public domain"
-    elif license_info["license"] == "cc0":
+    elif image_info.license == "cc0":
         license_string = "Released into the public domain"
     else:
         is_public_domain = False
-        license_string = license_info["license"]
+        license_string = image_info.license
         if license_string.startswith("cc-"):
             license_string = license_string.upper()
-        if license_info.get("license_url"):
-            license_string += f" ({license_info['license_url']})"
+        if image_info.license_url:
+            license_string += f" ({image_info.license_url})"
         # prefix a copyright symbol to the artist
         prefix = "© "
         for skip in ["©", "No machine-readable", "Unknown"]:
-            if license_info["artist"].startswith(skip):
+            if image_info.artist.startswith(skip):
                 prefix = ""
                 break
-        license_info["artist"] = prefix + license_info["artist"]
+        image_info.artist = prefix + image_info.artist
 
-    image_url = get_image_url(escaped_image_name)
+    image_url = image_info.image_url
 
     # For src=20 we use the qid as the source id. This is convenient, although it does
     # mean that we can't have two src=20 wikidata images for a given taxon.
@@ -287,17 +424,13 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
         os.makedirs(image_dir)
 
     # Download the uncropped image
-    uncropped_image_path = f"{image_dir}/{src_id}_uncropped.jpg"
+    uncropped_image_path = f"{image_dir}/{image_src_id}_uncropped.jpg"
     response = make_http_request_with_retries(image_url, stream=True, headers=USER_AGENT_HEADERS)
     response.raise_for_status()
 
     with open(uncropped_image_path, "wb") as f:
         for chunk in response.iter_content(1024):
             f.write(chunk)
-
-    if cropper is None:
-        # Default to centering the crop
-        cropper = CenterImageCropper()
 
     # Get the crop box e.g. using the Azure Vision API
     crop_box = cropper.crop(image_url, uncropped_image_path)
@@ -322,10 +455,10 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
         logger.warning(f"Error saving {image_path}: {e}")
         return False
 
-    logger.info(f"Saved {image_name} for ott={ott} (Q{src_id}) in {image_path}")
+    logger.info(f"Saved {image_name} for ott={ott} (Q{image_src_id}) in {image_path}")
 
     # Save the crop info in a text file next to the image
-    crop_info_path = f"{image_dir}/{src_id}_cropinfo.txt"
+    crop_info_path = f"{image_dir}/{image_src_id}_cropinfo.txt"
     with open(crop_info_path, "w") as f:
         f.write(f"{crop_box.x},{crop_box.y},{crop_box.width},{crop_box.height}")
 
@@ -345,7 +478,7 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
         (
             ott,
             src,
-            src_id,
+            image_src_id,
             wikimedia_url,
             rating,
             None,
@@ -355,7 +488,7 @@ def save_wiki_image(db, leaf_data, image_name, src, src_id, rating, output_dir, 
             1,
             1,
             1,  # These will need to be adjusted based on all images for the taxon
-            license_info["artist"],
+            image_info.artist,
             license_string,
             datetime.datetime.now().isoformat(),
         ),
@@ -380,11 +513,11 @@ def process_leaf(
     rating=None,
     output_dir=None,
     cropper=None,
+    auth=None,
 ):
     """
-    If ott_or_taxon is a number it's an ott, otherwise it's a taxon name. `crop` can be
-    an Azure ImageAnalysisClient, a crop location in the image (x, y, width, height),
-    or None to carry out a default (centered) crop.
+    If ott_or_taxon is a number it's an ott, otherwise it's a taxon name. `cropper`
+    is an AzureImageCropper, or None to fall back to a centered crop.
     """
     resolved = resolve_leaf(db, ott_or_taxon, taxa_data, logger)
     if resolved is None:
@@ -398,7 +531,7 @@ def process_leaf(
     if rating is None:
         rating = bespoke_wiki_image_rating if image_name else default_wiki_image_rating
 
-    json_item = get_wikidata_json_for_qid(qid)
+    json_item = get_wikidata_json_for_qid(qid, headers=wikimedia_headers(auth))
     # If a specific image name is passed in (corresponding to a image name on
     # wikimedia commons), we use that. Otherwise, we need to look it up.
     # Also, if an image is passed in, we categorize it as a bespoke image, not wiki.
@@ -416,16 +549,25 @@ def process_leaf(
         else:
             image = get_preferred_or_first_image_from_json_item(json_item)
         src = src_flags["wiki"]
-        src_id = qid
+        src_id = None
     if image:
-        leaf_data = {"ott": ott, "taxon": name, "img": None}
-        save_wiki_image(db, leaf_data, image["name"], src, src_id, rating, output_dir, cropper)
+        leaf_data = {"ott": ott, "taxon": name, "img": None, "qid": qid}
+        save_wiki_images(
+            images=[
+                WikiImageSaveRequest(
+                    leaf_data=leaf_data, image_name=image["name"], src=src, rating=rating, src_id=src_id
+                )
+            ],
+            db=db,
+            output_dir=output_dir,
+            cropper=cropper,
+            auth=auth,
+        )
 
 
-def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper=None):
+def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper, auth):
     """
-    `crop` can be an ImageAnalysisClient, a crop location in the image
-    (x, y, width, height), or None to carry out a default (centered) crop.
+    `cropper` is an AzureImageCropper, or None to fall back to a centered crop.
     """
     s = placeholder(db)
     bounds = resolve_clade_bounds(db, ott_or_taxon, logger)
@@ -458,13 +600,38 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper=No
             continue
         fixed_rows.append(row)
 
-    leaves_data = {qid: {"ott": ott, "taxon": name, "img": url} for qid, ott, name, url in fixed_rows}
+    leaves_data = {qid: {"ott": ott, "taxon": name, "img": url, "qid": qid} for qid, ott, name, url in fixed_rows}
     total_to_process = len(leaves_data)
     logger.info(f"Found {total_to_process} leaves in the database")
 
     processed_count = 0
     start_time = time.time()
     leaves_that_got_images = set()
+
+    # Buffer up to MAX_IMAGE_INFO_TITLES requests at a time, so save_wiki_images can
+    # fetch all their image infos in a single Commons API call.
+    pending_qids: list = []
+    pending_requests: list[WikiImageSaveRequest] = []
+
+    def flush_pending():
+        if not pending_requests:
+            return
+        results = save_wiki_images(
+            images=pending_requests,
+            db=db,
+            output_dir=output_dir,
+            cropper=cropper,
+            auth=auth,
+        )
+        for qid, saved in zip(pending_qids, results):
+            if saved:
+                leaves_that_got_images.add(qid)
+                logger.info(f"Saved image for ott={leaves_data[qid]['ott']} (qid={qid})")
+        pending_qids.clear()
+        pending_requests.clear()
+        elapsed = time.time() - start_time
+        logger.info(f"Processed {processed_count} of {total_to_process} ({elapsed:.1f}s)")
+
     for qid, image in enumerate_wiki_dump_items(dump_file, get_preferred_or_first_image_from_json_item):
         if qid in leaves_data:
             # If the data file has an image for this taxon, use it
@@ -472,14 +639,21 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper=No
             if not image_name and image:
                 # Fall back to the image from the dump
                 image_name = image["name"]
-            if image_name and save_wiki_image(
-                db, leaves_data[qid], image_name, src_flags["wiki"], qid, default_wiki_image_rating, output_dir, cropper
-            ):
-                leaves_that_got_images.add(qid)
-                logger.info(f"Saved image for ott={leaves_data[qid]['ott']} (qid={qid})")
+            if image_name:
+                pending_qids.append(qid)
+                pending_requests.append(
+                    WikiImageSaveRequest(
+                        leaf_data=leaves_data[qid],
+                        image_name=image_name,
+                        src=src_flags["wiki"],
+                        rating=default_wiki_image_rating,
+                    )
+                )
+                if len(pending_requests) >= MAX_IMAGE_INFO_TITLES:
+                    flush_pending()
             processed_count += 1
-            elapsed = time.time() - start_time
-            logger.info(f"Processed {processed_count} of {total_to_process} ({elapsed:.1f}s)")
+
+    flush_pending()
 
     # Log the leaves for which we couldn't find images
     info = ""
@@ -491,6 +665,7 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper=No
 
 
 def process_args(args):
+    auth = auth_from_cli_credentials(args.wikimedia_client_id, args.wikimedia_client_secret)
     outdir = args.output_dir
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
@@ -516,11 +691,11 @@ def process_args(args):
         if len(args.ott_or_taxa) > 1 and args.image is not None:
             raise ValueError("Cannot specify multiple taxa when using a bespoke image")
         for name in args.ott_or_taxa:
-            process_leaf(db, name, args.image, taxa_data, args.rating, outdir, cropper)
+            process_leaf(db, name, args.image, taxa_data, args.rating, outdir, cropper, auth)
     elif args.subcommand == "clade":
         # Process all the taxa in the passed in clades
         for name in args.ott_or_taxa:
-            process_clade(db, name, args.wd_dump, taxa_data, outdir, cropper)
+            process_clade(db, name, args.wd_dump, taxa_data, outdir, cropper, auth)
 
 
 def add_image_common_args(parser):
@@ -553,6 +728,16 @@ def add_image_common_args(parser):
             f"Defaults to {default_outdir} (relative to the script "
             "location). Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
         ),
+    )
+    parser.add_argument(
+        "--wikimedia-client-id",
+        default=None,
+        help=("OAuth 2 client id for a Wikimedia bot application. " "Must be used with --wikimedia-client-secret."),
+    )
+    parser.add_argument(
+        "--wikimedia-client-secret",
+        default=None,
+        help=("OAuth 2 client secret for a Wikimedia bot application. " "Must be used with --wikimedia-client-id."),
     )
 
 

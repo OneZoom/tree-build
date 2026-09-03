@@ -39,7 +39,9 @@ import os
 import re
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 from PIL import Image
 
@@ -69,6 +71,19 @@ from .image_cropping import AzureImageCropper, CenterImageCropper
 
 default_wiki_image_rating = 35000
 bespoke_wiki_image_rating = 40000
+
+# Commons thumbnail step; see https://www.mediawiki.org/wiki/Common_thumbnail_sizes
+COMMONS_THUMB_WIDTH = 960
+
+
+@dataclass
+class ImageInfo:
+    page_id: Optional[int]
+    license: str
+    license_url: Optional[str]
+    artist: str
+    image_url: str
+
 
 logger = logging.getLogger(Path(__file__).name)
 
@@ -121,49 +136,54 @@ def get_preferred_or_first_image_from_json_item(json_item):
     return image
 
 
-def get_image_license_info(escaped_image_name, headers=None):
+def get_image_info(escaped_image_name: str, headers=None) -> Optional[ImageInfo]:
     """
-    Use the Wikimedia API to get the license, artist, and Commons page id for a
-    Wikimedia image.
+    Use the Commons imageinfo API to get license, artist, page id, and a download URL.
     """
     if headers is None:
         headers = USER_AGENT_HEADERS
 
-    image_metadata_url = (
+    # When the original is smaller than the requested width,
+    # the API just returns the original as the thumbnurl.
+    # e.g. https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&titles=File:Litla-dimun-photo.jpg&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=960
+
+    image_info_url = (
         "https://commons.wikimedia.org/w/api.php"
         f"?action=query&titles=File%3a{escaped_image_name}&format=json&prop=imageinfo"
-        "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
+        f"&iiprop=url|extmetadata&iiurlwidth={COMMONS_THUMB_WIDTH}"
+        "&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
     )
-    r = make_http_request_with_retries(image_metadata_url, headers=headers)
+    r = make_http_request_with_retries(image_info_url, headers=headers)
     pages = r.json().get("query", {}).get("pages", {})
     extmetadata = None
     page_id = None
+    image_url = None
     for page in pages.values():
         if page.get("missing") or "imageinfo" not in page:
             continue
-        extmetadata = page["imageinfo"][0].get("extmetadata")
+        imageinfo = page["imageinfo"][0]
+        extmetadata = imageinfo.get("extmetadata")
         page_id = page.get("pageid")
+        image_url = imageinfo.get("thumburl")
         break
     if not extmetadata:
         logger.warning(f"Unknown image '{escaped_image_name}'")
         return None
 
-    license_info = {"page_id": page_id}
-
     try:
-        license_info["license_url"] = extmetadata["LicenseUrl"]["value"]
+        license_url = extmetadata["LicenseUrl"]["value"]
     except KeyError:
         # Public domain images typically don't have a license URL
-        license_info["license_url"] = None
+        license_url = None
 
     try:
         if "Artist" in extmetadata:
-            license_info["artist"] = extmetadata["Artist"]["value"]
+            artist = extmetadata["Artist"]["value"]
             # Strip the html tags from the artist
-            license_info["artist"] = re.sub(r"<[^>]*>", "", license_info["artist"]).strip()
+            artist = re.sub(r"<[^>]*>", "", artist).strip()
         else:
             logger.warning(f"Artist not found for '{escaped_image_name}': using 'Unknown artist'")
-            license_info["artist"] = "Unknown artist"
+            artist = "Unknown artist"
 
         # Some images have a flickr common license URL but not License field, meaning
         # "No known copyright restrictions"==pd (e.g. Potos_flavus_(22985770100).jpg)
@@ -178,19 +198,19 @@ def get_image_license_info(escaped_image_name, headers=None):
         #         None,
         #     ),
         # }
-        if license_info["license_url"] == "https://www.flickr.com/commons/usage/":
-            license_info["license"] = "flickr_commons"
-        elif license_info["license_url"] == "http://artlibre.org/licence/lal/en":
+        if license_url == "https://www.flickr.com/commons/usage/":
+            license_name = "flickr_commons"
+        elif license_url == "http://artlibre.org/licence/lal/en":
             # See https://en.wikipedia.org/wiki/Free_Art_License
-            license_info["license"] = "cc-by-sa-4.0"
+            license_name = "cc-by-sa-4.0"
         elif "License" in extmetadata:
-            license_info["license"] = extmetadata["License"]["value"]
+            license_name = extmetadata["License"]["value"]
         else:
             # Some images have a LicenseShortName but not a License field
-            license_info["license"] = extmetadata["LicenseShortName"]["value"]
+            license_name = extmetadata["LicenseShortName"]["value"]
 
         # If the license doesn't match what we deem acceptable, we can't use the image
-        li = license_info["license"].lower()
+        li = license_name.lower()
         if (
             not li.startswith("cc")
             and not li.startswith("pd")
@@ -201,27 +221,17 @@ def get_image_license_info(escaped_image_name, headers=None):
     except KeyError:
         return None
 
-    return license_info
+    if not image_url:
+        logger.warning(f"No download URL for '{escaped_image_name}'")
+        return None
 
-
-def get_image_url(escaped_image_name, headers=None):
-    """
-    Use the wikimedia API to get the image URL for a given image name.
-    """
-    if headers is None:
-        headers = USER_AGENT_HEADERS
-
-    # This returns JSON that contains the actual image URLs in various sizes
-    image_location_url = f"https://api.wikimedia.org/core/v1/commons/file/{escaped_image_name}"
-
-    r = make_http_request_with_retries(image_location_url, headers=headers)
-
-    image_location_info = r.json()
-    # Note that 'preferred' here refers to the preferred image *size*
-    # not the preferred image itself
-    image_url = image_location_info["preferred"]["url"]
-
-    return image_url
+    return ImageInfo(
+        page_id=page_id,
+        license=license_name,
+        license_url=license_url,
+        artist=artist,
+        image_url=image_url,
+    )
 
 
 def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper, src_id=None, auth=None):
@@ -250,15 +260,14 @@ def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper,
     escaped_image_name = escaped_image_name.replace("&", "%26").replace("+", "%2B")
 
     api_headers = wikimedia_headers(auth)
-    license_info = get_image_license_info(escaped_image_name, headers=api_headers)
-    if not license_info:
-        logger.warning(f"Couldn't get license or artist for '{escaped_image_name}'. Ignoring it.")
+    image_info = get_image_info(escaped_image_name, headers=api_headers)
+    if not image_info:
+        logger.warning(f"Couldn't get image info for '{escaped_image_name}'. Ignoring it.")
         return False
 
     # When src_id is omitted, identify the image by its Commons page id.
     if src_id is None:
-        page_id = license_info.get("page_id")
-        src_id = int(page_id) if page_id else None
+        src_id = int(image_info.page_id) if image_info.page_id else None
     if not src_id:
         logger.warning(f"No src_id for '{escaped_image_name}'. Ignoring it.")
         return False
@@ -282,28 +291,28 @@ def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper,
 
     is_public_domain = True
     # NB keep all pd strings as ending with the words "public domain"
-    if license_info["license"].startswith("pd"):
+    if image_info.license.startswith("pd"):
         license_string = "Marked as being in the public domain"
-    elif license_info["license"] == "flickr_commons":
+    elif image_info.license == "flickr_commons":
         license_string = "Marked on Flickr commons as being in the public domain"
-    elif license_info["license"] == "cc0":
+    elif image_info.license == "cc0":
         license_string = "Released into the public domain"
     else:
         is_public_domain = False
-        license_string = license_info["license"]
+        license_string = image_info.license
         if license_string.startswith("cc-"):
             license_string = license_string.upper()
-        if license_info.get("license_url"):
-            license_string += f" ({license_info['license_url']})"
+        if image_info.license_url:
+            license_string += f" ({image_info.license_url})"
         # prefix a copyright symbol to the artist
         prefix = "© "
         for skip in ["©", "No machine-readable", "Unknown"]:
-            if license_info["artist"].startswith(skip):
+            if image_info.artist.startswith(skip):
                 prefix = ""
                 break
-        license_info["artist"] = prefix + license_info["artist"]
+        image_info.artist = prefix + image_info.artist
 
-    image_url = get_image_url(escaped_image_name, headers=api_headers)
+    image_url = image_info.image_url
 
     # For src=20 we use the qid as the source id. This is convenient, although it does
     # mean that we can't have two src=20 wikidata images for a given taxon.
@@ -379,7 +388,7 @@ def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper,
             1,
             1,
             1,  # These will need to be adjusted based on all images for the taxon
-            license_info["artist"],
+            image_info.artist,
             license_string,
             datetime.datetime.now().isoformat(),
         ),

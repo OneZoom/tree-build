@@ -2,7 +2,10 @@ from types import SimpleNamespace
 from unittest import mock
 
 from oz_tree_build.images import get_wiki_images
+from oz_tree_build.images.get_wiki_images import COMMONS_THUMB_WIDTH
 from oz_tree_build.utilities.db_helper import delete_all_by_ott
+
+MOCK_IMAGE_DOWNLOAD_URL = "https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg"
 
 # These need to be real images to make the --real-apis mode work
 first_lion_image_name = "Okonjima_Lioness.jpg"
@@ -111,22 +114,13 @@ class RemoteAPIs:
         )
 
         self.add_mocked_request(**self.wikimedia_response(second_lion_image_name))
-        self.add_mocked_request(**self.wikimedia_file_response(second_lion_image_name))
         self.add_mocked_request(**self.wikimedia_response("NoArtist.jpg", artist=None))
-        self.add_mocked_request(**self.wikimedia_file_response("NoArtist.jpg"))
         self.add_mocked_request(**self.wikimedia_response("PublicDomain.jpg", licence="pd-NOOA"))
-        self.add_mocked_request(**self.wikimedia_file_response("PublicDomain.jpg"))
         self.add_mocked_request(**self.wikimedia_response("CC-BY3.jpg", licence="cc-by-3.0"))
-        self.add_mocked_request(**self.wikimedia_file_response("CC-BY3.jpg"))
         self.add_mocked_request(**self.wikimedia_response("Flickr.jpg", licence="flickr_commons"))
-        self.add_mocked_request(**self.wikimedia_file_response("Flickr.jpg"))
         self.add_mocked_request(**self.wikimedia_response("BadLicence.jpg", "GPL"))
         self.add_mocked_request(
-            # This should not be called: if license is bad => don't download
-            **self.wikimedia_file_response("BadLicence.jpg", "xxx")
-        )
-        self.add_mocked_request(
-            url="https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg",
+            url=MOCK_IMAGE_DOWNLOAD_URL,
             response=None,  # NB: This maps to MockResponse.json_data, we have none, but content is replaced later
         )
 
@@ -145,30 +139,27 @@ class RemoteAPIs:
             )
         )
 
-    def wikimedia_file_response(self, image_name, url=None):
-        if url is None:
-            url = "https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg"
-        return {
-            "url": f"https://api.wikimedia.org/core/v1/commons/file/{image_name}",
-            "response": {
-                "preferred": {"url": url}  # means preferred image *size* not preferred image
-            },
-        }
-
     def wikimedia_response(self, image_name, licence="cc0", artist="John Doe"):
         # NB use british spelling of licence to avoid shadowing python builtin
         url = (
             "https://commons.wikimedia.org/w/api.php"
             f"?action=query&titles=File%3a{image_name}&format=json&prop=imageinfo"
-            "&iiprop=extmetadata&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
+            f"&iiprop=url|extmetadata&iiurlwidth={COMMONS_THUMB_WIDTH}"
+            "&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
         )
         response = {
             "query": {
                 "pages": {
                     str(self.mock_page_id): {
                         "pageid": self.mock_page_id,
-                        "title": "File:Blah.jpg",
-                        "imageinfo": [{"extmetadata": {}}],
+                        "title": f"File:{image_name}",
+                        "imageinfo": [
+                            {
+                                "extmetadata": {},
+                                "thumburl": MOCK_IMAGE_DOWNLOAD_URL,
+                                "url": MOCK_IMAGE_DOWNLOAD_URL,
+                            }
+                        ],
                     }
                 }
             }

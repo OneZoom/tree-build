@@ -1,6 +1,7 @@
 import logging
 import os
 from types import SimpleNamespace
+from unittest import mock
 
 import pytest
 from PIL import Image
@@ -10,6 +11,7 @@ from oz_tree_build.images import get_wiki_images
 from oz_tree_build.utilities.db_helper import get_next_src_id_for_src, placeholder
 
 from .wiki_test_helpers import (
+    MockResponse,
     RemoteAPIs,
     default_rating,
     delete_rows,
@@ -30,6 +32,42 @@ class TestFunctions:
         #    "height": 300,
         # }
         pass
+
+    def test_get_image_infos_keyed_on_requested_name_when_normalized(self):
+        """
+        The Commons API normalizes titles (e.g. underscores -> spaces) and keys
+        `pages` on the normalized title. The result should still be keyed on the
+        (escaped) name we requested, not the normalized one.
+        """
+        requested_name = "Foo_Bar.jpg"
+        normalized_title = "File:Something else.jpg"
+        response = {
+            "query": {
+                "normalized": [{"from": f"File:{requested_name}", "to": normalized_title}],
+                "pages": {
+                    "123": {
+                        "pageid": 123,
+                        "title": normalized_title,
+                        "imageinfo": [
+                            {
+                                "extmetadata": {
+                                    "License": {"value": "cc0"},
+                                    "Artist": {"value": "Jane Doe"},
+                                },
+                                "thumburl": "https://example.com/thumb.jpg",
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+
+        with mock.patch("requests.get", return_value=MockResponse(200, response)):
+            results = get_wiki_images.get_image_infos([requested_name])
+
+        assert list(results.keys()) == [requested_name]
+        assert results[requested_name].page_id == 123
+        assert results[requested_name].artist == "Jane Doe"
 
 
 class TestAPI:

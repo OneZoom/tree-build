@@ -136,36 +136,19 @@ def get_preferred_or_first_image_from_json_item(json_item):
     return image
 
 
-def get_image_info(escaped_image_name: str, headers=None) -> Optional[ImageInfo]:
+def _image_info_from_page(page: dict, escaped_image_name: str) -> Optional[ImageInfo]:
     """
-    Use the Commons imageinfo API to get license, artist, page id, and a download URL.
+    Parse a single `pages` entry from the Commons imageinfo API response into an
+    ImageInfo, or None if the page has no usable image.
     """
-    if headers is None:
-        headers = USER_AGENT_HEADERS
+    if page.get("missing") or "imageinfo" not in page:
+        logger.warning(f"Unknown image '{escaped_image_name}'")
+        return None
 
-    # When the original is smaller than the requested width,
-    # the API just returns the original as the thumbnurl.
-    # e.g. https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&titles=File:Litla-dimun-photo.jpg&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=960
-
-    image_info_url = (
-        "https://commons.wikimedia.org/w/api.php"
-        f"?action=query&titles=File%3a{escaped_image_name}&format=json&prop=imageinfo"
-        f"&iiprop=url|extmetadata&iiurlwidth={COMMONS_THUMB_WIDTH}"
-        "&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
-    )
-    r = make_http_request_with_retries(image_info_url, headers=headers)
-    pages = r.json().get("query", {}).get("pages", {})
-    extmetadata = None
-    page_id = None
-    image_url = None
-    for page in pages.values():
-        if page.get("missing") or "imageinfo" not in page:
-            continue
-        imageinfo = page["imageinfo"][0]
-        extmetadata = imageinfo.get("extmetadata")
-        page_id = page.get("pageid")
-        image_url = imageinfo.get("thumburl")
-        break
+    imageinfo = page["imageinfo"][0]
+    extmetadata = imageinfo.get("extmetadata")
+    page_id = page.get("pageid")
+    image_url = imageinfo.get("thumburl")
     if not extmetadata:
         logger.warning(f"Unknown image '{escaped_image_name}'")
         return None
@@ -234,6 +217,55 @@ def get_image_info(escaped_image_name: str, headers=None) -> Optional[ImageInfo]
     )
 
 
+def get_image_infos(escaped_image_names: list[str], headers=None) -> dict[str, ImageInfo]:
+    """
+    Use the Commons imageinfo API to get license, artist, page id, and a download URL
+    for a batch of images in a single request. Returns a dict keyed by the (escaped)
+    image names passed in, mapping to an ImageInfo. Names with no usable image are
+    simply absent from the result, so callers should use e.g. `results.get(name)`.
+    """
+    if headers is None:
+        headers = USER_AGENT_HEADERS
+
+    results: dict[str, ImageInfo] = {}
+    if not escaped_image_names:
+        return results
+
+    # When the original is smaller than the requested width,
+    # the API just returns the original as the thumbnurl.
+    # e.g. https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&titles=File:Litla-dimun-photo.jpg&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=960
+
+    titles = "|".join(f"File%3a{name}" for name in escaped_image_names)
+    image_info_url = (
+        "https://commons.wikimedia.org/w/api.php"
+        f"?action=query&titles={titles}&format=json&prop=imageinfo"
+        f"&iiprop=url|extmetadata&iiurlwidth={COMMONS_THUMB_WIDTH}"
+        "&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
+    )
+    r = make_http_request_with_retries(image_info_url, headers=headers)
+    query = r.json().get("query", {})
+
+    # The API normalizes titles (e.g. converting underscores back to spaces), and
+    # `pages` is keyed by the normalized title, not the one we requested. Build a map
+    # from every title the API might report back to the escaped name we requested it
+    # with, so results can be keyed on the original, passed-in names.
+    title_to_name = {f"File:{name}": name for name in escaped_image_names}
+    for normalized in query.get("normalized", []):
+        name = title_to_name.get(normalized["from"])
+        if name is not None:
+            title_to_name[normalized["to"]] = name
+
+    for page in query.get("pages", {}).values():
+        escaped_image_name = title_to_name.get(page.get("title"))
+        if escaped_image_name is None:
+            continue
+        image_info = _image_info_from_page(page, escaped_image_name)
+        if image_info is not None:
+            results[escaped_image_name] = image_info
+
+    return results
+
+
 def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper, src_id=None, auth=None):
     """
     Download a Wikimedia image and save it to the output directory. We keep both the
@@ -260,7 +292,7 @@ def save_wiki_image(db, leaf_data, image_name, src, rating, output_dir, cropper,
     escaped_image_name = escaped_image_name.replace("&", "%26").replace("+", "%2B")
 
     api_headers = wikimedia_headers(auth)
-    image_info = get_image_info(escaped_image_name, headers=api_headers)
+    image_info = get_image_infos([escaped_image_name], headers=api_headers).get(escaped_image_name)
     if not image_info:
         logger.warning(f"Couldn't get image info for '{escaped_image_name}'. Ignoring it.")
         return False

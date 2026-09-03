@@ -152,7 +152,7 @@ class RemoteAPIs:
                 "pages": {
                     str(self.mock_page_id): {
                         "pageid": self.mock_page_id,
-                        "title": "File:Blah.jpg",
+                        "title": f"File:{image_name}",
                         "imageinfo": [
                             {
                                 "extmetadata": {},

@@ -113,7 +113,10 @@ def filter_wikidata(
             if not (line.startswith('{"type":') and quick_byte_match.search(line)):
                 continue
 
-            json_item = json.loads(line.rstrip().rstrip(","))
+            try:
+                json_item = json.loads(line.rstrip().rstrip(","))
+            except json.JSONDecodeError:
+                continue
 
             try:
                 is_taxon, vernaculars_matches = find_taxon_and_vernaculars(json_item)
@@ -168,7 +171,10 @@ def extract_wikidata_titles(filtered_wikidata_file):
     for _, line in enumerate_lines_from_file(filtered_wikidata_file):
         if not line.startswith('{"type":'):
             continue
-        json_item = json.loads(line.rstrip().rstrip(","))
+        try:
+            json_item = json.loads(line.rstrip().rstrip(","))
+        except json.JSONDecodeError:
+            continue
         title = get_wikipedia_name(json_item)
         if title is not None:
             titles.add(title)

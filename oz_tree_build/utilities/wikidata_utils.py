@@ -49,7 +49,10 @@ def enumerate_wiki_dump_items(wikidata_dump_file, extract_item):
     for _, line in enumerate_lines_from_file(wikidata_dump_file):
         if not (line.startswith('{"type":')):
             continue
-        json_item = json.loads(line.rstrip().rstrip(","))
+        try:
+            json_item = json.loads(line.rstrip().rstrip(","))
+        except json.JSONDecodeError:
+            continue
         qid = int(json_item["id"][1:])
         yield qid, extract_item(json_item)
 

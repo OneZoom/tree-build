@@ -254,8 +254,12 @@ def get_image_infos(escaped_image_names: list[str], headers=None) -> dict[str, I
         f"&iiprop=url|extmetadata&iiurlwidth={COMMONS_THUMB_WIDTH}"
         "&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
     )
-    r = make_http_request_with_retries(image_info_url, headers=headers)
-    query = r.json().get("query", {})
+    try:
+        r = make_http_request_with_retries(image_info_url, headers=headers)
+        query = r.json().get("query", {})
+    except Exception as e:
+        logger.warning(f"Could not get image infos for {len(escaped_image_names)} titles: {e}")
+        return results
 
     # The API normalizes titles (e.g. converting underscores back to spaces), and
     # `pages` is keyed by the normalized title, not the one we requested. Build a map
@@ -424,35 +428,38 @@ def _save_wiki_image(
         os.makedirs(image_dir)
 
     # Download the uncropped image
+    # A .jpg extension here is not always correct, but doesn't bother Pillow
+    # and we've already got downloaded files with this naming, so leaving it as is.
     uncropped_image_path = f"{image_dir}/{image_src_id}_uncropped.jpg"
-    response = make_http_request_with_retries(image_url, stream=True, headers=USER_AGENT_HEADERS)
-    response.raise_for_status()
-
-    with open(uncropped_image_path, "wb") as f:
-        for chunk in response.iter_content(1024):
-            f.write(chunk)
+    try:
+        response = make_http_request_with_retries(image_url, stream=True, headers=USER_AGENT_HEADERS)
+        response.raise_for_status()
+        with open(uncropped_image_path, "wb") as f:
+            for chunk in response.iter_content(1024):
+                f.write(chunk)
+    except Exception as e:
+        logger.warning(f"Could not download {image_name} for ott={ott} from {image_url}: {e}")
+        return False
 
     # Get the crop box e.g. using the Azure Vision API
-    crop_box = cropper.crop(image_url, uncropped_image_path)
-
-    # Crop and resize the image using PIL
-    im = Image.open(uncropped_image_path)
-    # Convert to RGB to avoid issues with transparency when working with a png file
-    if im.mode in ("RGBA", "P", "LA"):
-        im = im.convert("RGB")
-    im = im.resize(
-        (300, 300),
-        box=(
-            crop_box.x,
-            crop_box.y,
-            crop_box.x + crop_box.width,
-            crop_box.y + crop_box.height,
-        ),
-    )
     try:
+        crop_box = cropper.crop(image_url, uncropped_image_path)
+        im = Image.open(uncropped_image_path)
+        # Convert to RGB to avoid issues with transparency when working with a png file
+        if im.mode in ("RGBA", "P", "LA"):
+            im = im.convert("RGB")
+        im = im.resize(
+            (300, 300),
+            box=(
+                crop_box.x,
+                crop_box.y,
+                crop_box.x + crop_box.width,
+                crop_box.y + crop_box.height,
+            ),
+        )
         im.save(image_path)
     except Exception as e:
-        logger.warning(f"Error saving {image_path}: {e}")
+        logger.warning(f"Could not process {image_name} for ott={ott} ({uncropped_image_path}): {e}")
         return False
 
     logger.info(f"Saved {image_name} for ott={ott} (Q{image_src_id}) in {image_path}")

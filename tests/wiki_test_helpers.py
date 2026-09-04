@@ -5,7 +5,7 @@ from oz_tree_build.images import get_wiki_images
 from oz_tree_build.images.get_wiki_images import COMMONS_THUMB_WIDTH
 from oz_tree_build.utilities.db_helper import delete_all_by_ott
 
-MOCK_IMAGE_DOWNLOAD_URL = "https://upload.wikimedia.org/wikipedia/commons/not/a/real/image.jpg"
+MOCK_UPLOAD_DIR = "https://upload.wikimedia.org/wikipedia/commons/not/a/real/"
 
 # These need to be real images to make the --real-apis mode work
 first_lion_image_name = "Okonjima_Lioness.jpg"
@@ -119,16 +119,20 @@ class RemoteAPIs:
         self.add_mocked_request(**self.wikimedia_response("CC-BY3.jpg", licence="cc-by-3.0"))
         self.add_mocked_request(**self.wikimedia_response("Flickr.jpg", licence="flickr_commons"))
         self.add_mocked_request(**self.wikimedia_response("BadLicence.jpg", "GPL"))
-        self.add_mocked_request(
-            url=MOCK_IMAGE_DOWNLOAD_URL,
-            response=None,  # NB: This maps to MockResponse.json_data, we have none, but content is replaced later
-        )
+        self.add_mocked_request(**self.wikimedia_response("NotAnImage.html"))
 
     # Mock the requests.get function
     def mocked_requests_get(self, *args, **kwargs):
-        if args[0] in self.mocked_requests:
-            content = TINY_JPEG if args[0].endswith(".jpg") else None
-            return MockResponse(200, self.mocked_requests[args[0]], content)
+        url = args[0]
+        if url.startswith(MOCK_UPLOAD_DIR):
+            content = None
+            if url.endswith(".jpg"):
+                content = TINY_JPEG
+            elif url.endswith(".html"):
+                content = b"<html>not an image</html>"
+            return MockResponse(200, None, content)
+        if url in self.mocked_requests:
+            return MockResponse(200, self.mocked_requests[url])
         return MockResponse(404)
 
     # Mock the Azure Vision API smart crop response
@@ -147,6 +151,7 @@ class RemoteAPIs:
             f"&iiprop=url|extmetadata&iiurlwidth={COMMONS_THUMB_WIDTH}"
             "&iiextmetadatafilter=License|LicenseShortName|LicenseUrl|Artist"
         )
+        download_url = MOCK_UPLOAD_DIR + image_name
         response = {
             "query": {
                 "pages": {
@@ -156,8 +161,8 @@ class RemoteAPIs:
                         "imageinfo": [
                             {
                                 "extmetadata": {},
-                                "thumburl": MOCK_IMAGE_DOWNLOAD_URL,
-                                "url": MOCK_IMAGE_DOWNLOAD_URL,
+                                "thumburl": download_url,
+                                "url": download_url,
                             }
                         ],
                     }

@@ -256,6 +256,18 @@ class TestAPI:
         assert len(self.image_rows_in_db()) == 0
         self.teardown_lookups()
 
+    def test_unreadable_image_is_skipped(self, db, tmp_path, keep_rows, caplog):
+        self.ott = "-562"
+        cropper = None
+        image = "NotAnImage.html"
+        self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
+        with caplog.at_level(logging.WARNING):
+            self.verify_process_leaf(image, None, cropper)
+        assert "Could not process" in caplog.text
+        assert not self.check_downloaded_wiki_image(self.apis.mock_page_id, cropper, image is None)
+        assert len(self.image_rows_in_db()) == 0
+        self.teardown_lookups()
+
     def test_multiple_ott(self, db, tmp_path, keep_rows, caplog):
         self.ott = "-558"
         cropper = None

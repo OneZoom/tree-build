@@ -26,6 +26,11 @@ dependencies = [
     # https://github.com/grantjenks/python-diskcache/issues/343
     # https://github.com/treeverse/dvc/issues/10692
     "diskcache @ git+https://github.com/OneZoom/python-diskcache.git@b89111da9dea770bcce36caa7ee011f22f6d4be3",
+    "dated_complete_tree",
+    "chronosynth",
+    # Undeclared chronosynth dependencies
+    "peyotl",
+    "opentree",
 ]
 
 [project.optional-dependencies]
@@ -37,8 +42,6 @@ dev = [
 
 [project.scripts]
 add_ott_numbers_to_trees = "oz_tree_build.tree_build.ott_mapping.add_ott_numbers_to_trees:main"
-build_oz_tree = "oz_tree_build.tree_build.build_oz_tree:main"
-get_open_trees_from_one_zoom = "oz_tree_build.tree_build.get_open_trees_from_one_zoom:main"
 generate_filtered_files = "oz_tree_build.utilities.generate_filtered_files:main"
 filter_eol = "oz_tree_build.utilities.filter_eol:main"
 filter_wikidata = "oz_tree_build.utilities.filter_wikidata:main"
@@ -50,11 +53,9 @@ download_and_filter_wikidata = "oz_tree_build.utilities.download_and_filter_wiki
 discover_latest_wikidata_dump_url = "oz_tree_build.utilities.download_and_filter_wikidata:discover_main"
 discover_latest_enwiki_sql_url = "oz_tree_build.utilities.filter_wikipedia_sql:discover_main"
 download_opentree = "oz_tree_build.utilities.download_opentree:main"
-CSV_base_table_creator = "oz_tree_build.taxon_mapping_and_popularity.CSV_base_table_creator:main"
 get_wiki_images = "oz_tree_build.images.get_wiki_images:main"
 get_wiki_vernaculars = "oz_tree_build.vernaculars.get_wiki_vernaculars:main"
 process_image_bits = "oz_tree_build.images.process_image_bits:main"
-make_js_treefiles = "oz_tree_build.utilities.make_js_treefiles:main"
 format_newick = "oz_tree_build.newick.format_newick:main"
 extract_minimal_tree = "oz_tree_build.newick.extract_minimal_tree:main"
 extract_trees = "oz_tree_build.newick.extract_trees:main"
@@ -64,6 +65,11 @@ find_in_file = "oz_tree_build.utilities.find_in_file:main"
 wiki_clade_extractor = "oz_tree_build.wiki_extraction.wiki_clade_extractor:main"
 newick_combiner = "oz_tree_build.wiki_extraction.newick_combiner:main"
 add_dates_and_species_to_tree = "oz_tree_build.wiki_extraction.add_dates_and_species_to_tree:main"
+download_node_ages = "oz_tree_build.download_node_ages.download_node_ages:main"
+date_tree = "oz_tree_build.date_tree.date_tree:main"
+tree_build = "oz_tree_build.tree_build.tree_build:main"
+taxon_map = "oz_tree_build.taxon_mapping_and_popularity.taxon_map:main"
+versioned_outputs = "oz_tree_build.versioned_outputs.versioned_outputs:main"
 
 [tool.setuptools]
 packages = ["oz_tree_build"]

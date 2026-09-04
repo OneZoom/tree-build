@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from ..taxon_mapping_and_popularity.CSV_base_table_creator import iucn_num
+from ..taxon_mapping_and_popularity.taxon_map import iucn_num
 from .file_utils import open_file_based_on_extension
 from .filter_common import read_taxonomy_source_ids
 

@@ -3,11 +3,37 @@ vars:
 
 stages:
   download_opentree:
-    cmd: download_opentree --version ${ot_version} --output-dir data/OpenTree
+    cmd:
+      - rm -rf data/OpenTree/${ot_version}/
+      - mkdir -p data/OpenTree/${ot_version}/
+      - .venv/bin/download_opentree --version ${ot_version} --output-dir data/OpenTree
     params:
       - ot_version
     outs:
       - data/OpenTree/${ot_version}/
+
+  download_node_ages:
+    cmd: .venv/bin/download_node_ages data/node_ages.json
+    outs:
+      - data/node_ages.json
+
+  date_tree:
+    cmd:
+      - rm -rf data/dated_tree
+      - mkdir -p data/dated_tree
+      - >-
+        .venv/bin/date_tree
+        --output_folder=data/dated_tree
+        --date_cache data/node_ages.json
+        --annotations data/OpenTree/${ot_version}/annotations.json
+        --taxonomy data/OpenTree/${ot_version}/taxonomy.tsv
+        --supertree data/OpenTree/${ot_version}/labelled_supertree_ottnames.tre
+    deps:
+      - data/node_ages.json
+    params:
+      - ot_version
+    outs:
+      - data/dated_tree/dated_tree_pre.tre
 
   # ~20 secs
   add_ott_numbers_to_trees:
@@ -15,7 +41,7 @@ stages:
       - rm -rf data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}
       - mkdir -p data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}
       - >-
-        add_ott_numbers_to_trees
+        .venv/bin/add_ott_numbers_to_trees
         --savein data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}
         --output_info data/add_ott_numbers_to_trees.log
         data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
@@ -27,41 +53,41 @@ stages:
     outs:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
 
-  # ~a few secs
-  get_open_trees_from_one_zoom:
+  tree_build:
     cmd:
+      - rm -rf data/out
+      - mkdir -p data/out
       - >-
-        cd data/OZTreeBuild/${oz_tree} &&
-        get_open_trees_from_one_zoom
-        ../../OpenTree/${ot_version}/draftversion.tre
-        OpenTreeParts/OpenTree_all/
-        BespokeTree/include_OT_${ot_version}/*.PHY
+        .venv/bin/tree_build
+        --bespoke_dir data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
+        --orphan_dir data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
+        --opentree data/dated_tree/dated_tree_pre.tre
+        --taxon_map data/taxon_map.csv
+        --exclude ${exclude_from_popularity}
+        --out_dir data/out
     deps:
-      - data/OpenTree/${ot_version}/draftversion.tre
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
       - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/
+      - data/dated_tree/dated_tree_pre.tre
+      - data/taxon_map.csv
     params:
       - oz_tree
       - ot_version
     outs:
-      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
+      - data/out
 
-  build_oz_tree:
+  versioned_outputs:
     cmd:
+      # NB: Don't delete it, we can keep old versions at this point
+      - mkdir -p data/out_versioned
       - >-
-        cd data/OZTreeBuild/${oz_tree} &&
-        build_oz_tree
-        BespokeTree/include_OT_${ot_version}/Base.PHY
-        OpenTreeParts/OpenTree_all/
-        ${oz_tree}_full_tree.phy
+        .venv/bin/versioned_outputs
+        --out_dir data/out_versioned
+        data/out/*
+        -vv
     deps:
-      - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
-      - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
-    params:
-      - oz_tree
-      - ot_version
-    outs:
-      - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
+      - data/out/
+    always_changed: true
 
   download_eol:
     # EOL doesn't version the provider ids file, so capture the last-modified header instead
@@ -79,7 +105,7 @@ stages:
 
   filter_eol:
     cmd: >-
-      filter_eol
+      .venv/bin/filter_eol
       data/EOL/provider_ids.csv.gz
       data/OpenTree/${ot_version}/taxonomy.tsv
       -o data/filtered/OneZoom_provider_ids.csv
@@ -93,14 +119,14 @@ stages:
 
   discover_latest_wikidata_dump_url:
     cmd: >-
-      discover_latest_wikidata_dump_url > data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
+      .venv/bin/discover_latest_wikidata_dump_url > data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
     outs:
       - data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
 
   # >6 hours (streams ~90 GB dump from wikidata server)
   download_and_filter_wikidata:
     cmd: >-
-      download_and_filter_wikidata
+      .venv/bin/download_and_filter_wikidata
       --url "$(cat data/Wiki/wd_JSON/latest-all-json-bz2-url.txt)"
       -o data/filtered/OneZoom_latest-all.json
     deps:
@@ -110,7 +136,7 @@ stages:
 
   extract_wikidata_titles:
     cmd: >-
-      extract_wikidata_titles
+      .venv/bin/extract_wikidata_titles
       data/filtered/OneZoom_latest-all.json
       -o data/filtered/wikidata_titles.txt
     deps:
@@ -120,7 +146,7 @@ stages:
 
   discover_latest_enwiki_sql_url:
     cmd: >-
-      discover_latest_enwiki_sql_url > data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
+      .venv/bin/discover_latest_enwiki_sql_url > data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
     outs:
       - data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
 
@@ -135,7 +161,7 @@ stages:
 
   filter_wikipedia_sql:
     cmd: >-
-      filter_wikipedia_sql
+      .venv/bin/filter_wikipedia_sql
       data/Wiki/wp_SQL/enwiki-page.sql.gz
       data/filtered/wikidata_titles.txt
       -o data/filtered/OneZoom_enwiki-latest-page.sql
@@ -148,7 +174,7 @@ stages:
   # ~several hours (streams 12 ~5GB monthly dumps)
   download_and_filter_pageviews:
     cmd: >-
-      download_and_filter_pageviews
+      .venv/bin/download_and_filter_pageviews
       --titles-file data/filtered/wikidata_titles.txt
       --months 12
       -o data/filtered/pageviews
@@ -158,46 +184,26 @@ stages:
       - data/filtered/pageviews/:
           persist: true
 
-  # ~10 mins
-  CSV_base_table_creator:
-    cmd:
-      - mkdir -p data/output_files
-      - >-
-        CSV_base_table_creator
-        data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
-        data/OpenTree/${ot_version}/taxonomy.tsv
-        data/filtered/OneZoom_provider_ids.csv
-        data/filtered/OneZoom_latest-all.json
-        data/filtered/OneZoom_enwiki-latest-page.sql
-        data/filtered/pageviews/OneZoom_pageviews*
-        -o data/output_files -v
-        --version ${build_version}
-        --exclude ${exclude_from_popularity}
-        --extra_source_file data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
-        2> data/CSV_base_table_creator.log
+  # ~4 mins
+  taxon_map:
+    cmd: >-
+      .venv/bin/taxon_map
+      --OpenTreeTaxonomy data/OpenTree/${ot_version}/taxonomy.tsv
+      --wikidataDumpFile data/filtered/OneZoom_latest-all.json
+      --wikipediaSQLDumpFile data/filtered/OneZoom_enwiki-latest-page.sql
+      --wikipedia_totals_bz2_pageviews data/filtered/pageviews/
+      --EOLidentifiers data/filtered/OneZoom_provider_ids.csv
+      --extra_source_file data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
+      -o data/taxon_map.csv
     deps:
-      - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
       - data/OpenTree/${ot_version}/taxonomy.tsv
-      - data/filtered/OneZoom_provider_ids.csv
       - data/filtered/OneZoom_latest-all.json
       - data/filtered/OneZoom_enwiki-latest-page.sql
       - data/filtered/pageviews/
+      - data/filtered/OneZoom_provider_ids.csv
       - data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
     params:
       - oz_tree
       - ot_version
-      - build_version
-      - exclude_from_popularity
     outs:
-      - data/output_files/
-
-  make_js_treefiles:
-    cmd:
-      - rm -r data/js_output ; mkdir -p data/js_output
-      - >-
-        make_js_treefiles
-        --outdir data/js_output
-        data/output_files/ordered_tree_*.poly
-    deps:
-      - data/output_files/
-    always_changed: true
+      - data/taxon_map.csv

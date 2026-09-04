@@ -72,7 +72,40 @@ def test_default_verbosity_suppresses_info():
     assert "hello info" not in result.stderr
 
 
+def test_verbose_flag_suppresses_debug():
+    result = _run("logging.debug('hello debug')", "-v")
+    assert result.returncode == 0
+    assert "hello debug" not in result.stderr
+
+
+def test_v_still_emits_errors():
+    result = _run("logging.error('boom')", "-v")
+    assert result.returncode == 1
+    assert "boom" in result.stderr
+    assert "Exiting with status 1: 1 error(s) were logged" in result.stderr
+
+
 def test_vv_enables_debug_output():
     result = _run("logging.debug('hello debug')", "-vv")
     assert result.returncode == 0
     assert "hello debug" in result.stderr
+
+
+def test_vv_still_emits_errors():
+    result = _run("logging.error('boom')", "-vv")
+    assert result.returncode == 1
+    assert "boom" in result.stderr
+    assert "Exiting with status 1: 1 error(s) were logged" in result.stderr
+
+
+def test_vvv_enables_debug_output():
+    result = _run("logging.debug('hello debug')", "-vvv")
+    assert result.returncode == 0
+    assert "hello debug" in result.stderr
+
+
+def test_vvv_still_emits_errors():
+    result = _run("logging.error('boom')", "-vvv")
+    assert result.returncode == 1
+    assert "boom" in result.stderr
+    assert "Exiting with status 1: 1 error(s) were logged" in result.stderr

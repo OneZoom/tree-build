@@ -424,6 +424,8 @@ def _save_wiki_image(
         os.makedirs(image_dir)
 
     # Download the uncropped image
+    # A .jpg extension here is not always correct, but doesn't bother Pillow
+    # and we've already got downloaded files with this naming, so leaving it as is.
     uncropped_image_path = f"{image_dir}/{image_src_id}_uncropped.jpg"
     response = make_http_request_with_retries(image_url, stream=True, headers=USER_AGENT_HEADERS)
     response.raise_for_status()
@@ -433,26 +435,24 @@ def _save_wiki_image(
             f.write(chunk)
 
     # Get the crop box e.g. using the Azure Vision API
-    crop_box = cropper.crop(image_url, uncropped_image_path)
-
-    # Crop and resize the image using PIL
-    im = Image.open(uncropped_image_path)
-    # Convert to RGB to avoid issues with transparency when working with a png file
-    if im.mode in ("RGBA", "P", "LA"):
-        im = im.convert("RGB")
-    im = im.resize(
-        (300, 300),
-        box=(
-            crop_box.x,
-            crop_box.y,
-            crop_box.x + crop_box.width,
-            crop_box.y + crop_box.height,
-        ),
-    )
     try:
+        crop_box = cropper.crop(image_url, uncropped_image_path)
+        im = Image.open(uncropped_image_path)
+        # Convert to RGB to avoid issues with transparency when working with a png file
+        if im.mode in ("RGBA", "P", "LA"):
+            im = im.convert("RGB")
+        im = im.resize(
+            (300, 300),
+            box=(
+                crop_box.x,
+                crop_box.y,
+                crop_box.x + crop_box.width,
+                crop_box.y + crop_box.height,
+            ),
+        )
         im.save(image_path)
     except Exception as e:
-        logger.warning(f"Error saving {image_path}: {e}")
+        logger.warning(f"Could not process {image_name} for ott={ott} ({uncropped_image_path}): {e}")
         return False
 
     logger.info(f"Saved {image_name} for ott={ott} (Q{image_src_id}) in {image_path}")

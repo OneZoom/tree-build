@@ -11,6 +11,25 @@ from oz_tree_build.utilities.db_helper import (
 )
 
 
+class TestIsLicencePublicDomain:
+    @pytest.mark.parametrize(
+        ("licence", "expected"),
+        [
+            ("Marked as being in the public domain", True),
+            ("Released into the public domain", True),
+            ("Marked on Flickr commons as being in the public domain", True),
+            ("Marked as being in the public domain\x9c", True),  # legacy EOL trailing U+009C
+            ("Released into the public domain\x9c", True),
+            ("pd (...)", True),
+            ("cc0 (...)", True),
+            ("CC-BY-SA 2.0 (http://creativecommons.org/licenses/by-sa/2.0/)", False),
+            ("public domain", True),
+        ],
+    )
+    def test_is_licence_public_domain(self, licence, expected):
+        assert process_image_bits.is_licence_public_domain(licence) is expected
+
+
 class TestDBHelper:
     def test_connect_to_database(self, conf_file):
         db = connect_to_database(conf_file=conf_file)
@@ -118,7 +137,7 @@ class TestCLI(BaseDB):
 
     @pytest.mark.parametrize("init_value", [0, 1])
     def test_process_image_bits(self, db, conf_file, keep_rows, init_value):
-        args = types.SimpleNamespace(ott=-777, conf_file=conf_file)
+        args = types.SimpleNamespace(subcommand="leaf", ott=-777, conf_file=conf_file)
         # Delete the test rows before starting the test.
         # We don't delete them at the end, because we want to see the results manually.
 
@@ -183,3 +202,58 @@ class TestCLI(BaseDB):
 
         if not keep_rows:
             delete_all_by_ott(db, "images_by_ott", args.ott)
+
+
+class TestResolveAll(BaseDB):
+    def test_resolve_all(self, db, keep_rows):
+        ph = placeholder(db)
+        delete_all_by_ott(db, "images_by_ott", -201)
+        delete_all_by_ott(db, "images_by_ott", -202)
+        sql = self.set_sql.format(ph)
+        db.executesql(
+            sql,
+            [
+                -201,
+                99,
+                -1,
+                "A.jpg",
+                24000,
+                "Unknown",
+                "public domain",
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                datetime.datetime.now().isoformat(),
+            ],
+        )
+        db.executesql(
+            sql,
+            [
+                -202,
+                99,
+                -2,
+                "B.jpg",
+                24000,
+                "Unknown",
+                "cc-by (...)",
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                datetime.datetime.now().isoformat(),
+            ],
+        )
+        changed = process_image_bits.resolve_all(db, show_progress=False)
+        assert changed >= 1
+        rows = db.executesql(self.get_sql.format(ph), (-201,))
+        assert tuple(rows[0]) == (1, 1, 0, 0, 1, 1)
+        assert not process_image_bits.resolve(db, -201)
+        assert not process_image_bits.resolve(db, -202)
+        if not keep_rows:
+            delete_all_by_ott(db, "images_by_ott", -201)
+            delete_all_by_ott(db, "images_by_ott", -202)

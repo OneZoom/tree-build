@@ -1,5 +1,9 @@
 import argparse
 import logging
+from typing import Any, Callable, Optional
+
+from pydal import DAL
+from tqdm import tqdm
 
 from .._OZglobals import src_flags
 from ..utilities.db_helper import (
@@ -10,12 +14,18 @@ from ..utilities.db_helper import (
 
 logger = logging.getLogger(__name__)
 
-
-def is_licence_public_domain(licence):
-    return licence.endswith("public domain") or licence.startswith("pd") or licence.startswith("cc0")
+ImageRow = dict[str, Any]
 
 
-def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
+def is_licence_public_domain(licence: str) -> bool:
+    return "public domain" in licence or licence.startswith("pd") or licence.startswith("cc0")
+
+
+def set_bit_for_first_image_only(
+    images: list[ImageRow],
+    column_name: str,
+    candidate: Callable[[ImageRow], bool] = lambda x: True,
+) -> bool:
     """
     Set the first row that meets the condition to 1, and all others to 0.
     Returns `True` if any changes were made.
@@ -33,7 +43,7 @@ def set_bit_for_first_image_only(images, column_name, candidate=lambda x: True):
     return made_changes
 
 
-def resolve_from_config(ott, config_file):
+def resolve_from_config(ott: int, config_file: Optional[str]) -> bool:
     """
     Process image bits for the given ott, getting a new db_context from a config file.
     Returns `True` if any changes were made.
@@ -45,7 +55,7 @@ def resolve_from_config(ott, config_file):
     return resolve(db, ott)
 
 
-def resolve(db, ott):
+def resolve(db: DAL, ott: int) -> bool:
     """
     Resolve image bits for the given ott, making sure that only one image is
     marked as the best for each source, and that only one image is marked as
@@ -135,15 +145,38 @@ def resolve(db, ott):
     return made_changes
 
 
-def process_args(args):
-    return resolve_from_config(args.ott, args.conf_file)
+def resolve_all(db: DAL, show_progress: bool = True) -> int:
+    """
+    Resolve image bits for every OTT that has rows in images_by_ott.
+    Returns the number of OTTs that were updated.
+    """
+    otts = [row[0] for row in db.executesql("SELECT DISTINCT ott FROM images_by_ott ORDER BY ott")]
+    changed = 0
+    iterator = tqdm(otts, desc="Processing OTTs") if show_progress else otts
+    for ott in iterator:
+        if resolve(db, ott):
+            changed += 1
+    logger.info(f"Updated {changed}/{len(otts)} OTTs")
+    return changed
 
 
-def main():
+def process_args(args: argparse.Namespace) -> bool:
+    config = read_config(args.conf_file)
+    database = config.get("db", "uri")
+    db = connect_to_database(database)
+    if args.subcommand == "leaf":
+        return resolve(db, args.ott)
+    if args.subcommand == "all":
+        return resolve_all(db) > 0
+    return False
+
+
+def main() -> None:
     logging.debug("")  # Makes logging work
     logger.setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
     parser.add_argument(
         "--conf-file",
@@ -151,9 +184,13 @@ def main():
         help=("The configuration file to use. " "If not given, defaults to ../../../OZtree/private/appconfig.ini"),
     )
 
-    parser.add_argument("ott", type=str, help="The leaf ott to process")
+    parser_leaf = subparsers.add_parser("leaf", help="Process a single leaf OTT")
+    parser_leaf.add_argument("ott", type=int, help="The leaf ott to process")
 
-    process_args(parser.parse_args())
+    subparsers.add_parser("all", help="Process all OTTs that have images")
+
+    args = parser.parse_args()
+    process_args(args)
 
 
 if __name__ == "__main__":

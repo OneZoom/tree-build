@@ -462,7 +462,7 @@ def _save_wiki_image(
         logger.warning(f"Could not process {image_name} for ott={ott} ({uncropped_image_path}): {e}")
         return False
 
-    logger.info(f"Saved {image_name} for ott={ott} (Q{image_src_id}) in {image_path}")
+    logger.info(f"Saved {image_name} for ott={ott} (Q{qid}) in {image_path}")
 
     # Save the crop info in a text file next to the image
     crop_info_path = f"{image_dir}/{image_src_id}_cropinfo.txt"

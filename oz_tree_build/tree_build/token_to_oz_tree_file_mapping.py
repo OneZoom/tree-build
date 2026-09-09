@@ -30,66 +30,14 @@ token_to_file_map = {
     "GNATHOSTOMATA": {"file": "BonyFishOpenTree.PHY", "edge_length": 65, "taxon": None},
     # for fewer species but with dates, try deepfin2, with Concestor 20 @ ~ 430Ma
     # tree.substitute('GNATHOSTOMATA@', 'BespokeTree/include_files/Deepfin2.phy', 37.6)
+    # Species-level chondrichthyan tree, crown at 375.511333. 460 - 375.511333 = 84.488667 keeps
+    # Gnathostomata at 460Mya, agreeing with the Euteleostomi side of BonyFishOpenTree.PHY.
+    # It is self-contained, so the old Renz2013 / Inoue2010 / Aschliman2012 / Naylor2012* split
+    # (and their HOLOCEPHALI@, BATOIDEA@, SELACHII@, ... tokens) are no longer needed.
     "CHONDRICHTHYES": {
-        "file": "Chondrichthyes_Renz2013.phy",
-        "edge_length": 40,
+        "file": "Chondrichthyes_Stein2018.PHY",
+        "edge_length": 84.488667,
         "taxon": None,
-    },
-    "HOLOCEPHALI": {
-        "file": "Holocephali_Inoue2010.PHY",
-        "edge_length": 250,
-        "taxon": None,
-    },
-    "BATOIDEA": {
-        "file": "Batoids_Aschliman2012.PHY",
-        "edge_length": 100,
-        "taxon": None,
-    },
-    # sharks are problematic in OToL v3 & 4, hence lots of files included here
-    "SELACHII": {
-        "file": "Naylor2012Selachimorpha.PHY",
-        "edge_length": 75,
-        "taxon": None,
-    },
-    "DALATIIDAE": {
-        "file": "Naylor2012Dalatiidae.PHY",
-        "edge_length": 116.1,
-        "taxon": None,
-    },
-    "SOMNIOSIDAEOXYNOTIDAE": {
-        "file": "Naylor2012Somniosidae_Oxynotidae.PHY",
-        "edge_length": 110.51,
-        "taxon": None,
-    },
-    "ETMOPTERIDAE": {
-        "file": "Naylor2012Etmopteridae.phy",
-        "edge_length": 110.51,
-        "taxon": None,
-    },
-    "SQUATINIDAE": {
-        "file": "Naylor2012Squatinidae.phy",
-        "edge_length": 147.59,
-        "taxon": None,
-    },
-    "PRISTIOPHORIDAE": {
-        "file": "Naylor2012Pristiophoridae.phy",
-        "edge_length": 147.59,
-        "taxon": None,
-    },
-    "SCYLIORHINIDAE3": {
-        "file": "Naylor2012Scyliorhinidae3.PHY",
-        "edge_length": 170,
-        "taxon": None,
-    },
-    "SCYLIORHINIDAE2": {
-        "file": "Naylor2012Scyliorhinidae2.PHY",
-        "edge_length": 134.467193,
-        "taxon": None,
-    },
-    "CARCHARHINICAE_MINUS": {
-        "file": "Naylor2012Carcharhinicae_minus.PHY",
-        "edge_length": 134.467193,
-        "taxon": "Most_Carcharhinicae_",
     },
     #  Choanoflagellates: http://www.pnas.org/content/105/43/16641.short
     ##  NB: to use the original deepfin tree, substitute these text strings back in instead ##

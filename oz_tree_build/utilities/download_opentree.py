@@ -14,7 +14,7 @@ are placed in ``<output-dir>/<version>/`` with version-agnostic names:
 
 import argparse
 import os
-import re
+import os.path
 import shutil
 import tarfile
 import tempfile
@@ -42,36 +42,19 @@ def find_synthesis_entry(synthesis_json, version):
     raise SystemExit(f"Version '{version}' not found in synthesis.json. " f"Available versions: {', '.join(available)}")
 
 
-def strip_mrca_prefixes(content: str) -> str:
-    # Clean up synthetically named mrca (most recent common ancestor) node labels, no use to us
-    content = re.sub(r"\)mrcaott\d+ott\d+", ")", content)
-    # Also clean up unwanted spaces
-    content = re.sub(r"[ _]+", "_", content)
-    return content
-
-
-def download_tree(version, output_dir):
+def download_file(version, output_dir, download_file="/labelled_supertree/labelled_supertree_ottnames.tre"):
     """Download the labelled supertree and produce the processed draftversion."""
     assert version.startswith("v")
     version_without_v = version[1:]
-    tree_url = (
-        f"https://files.opentreeoflife.org/synthesis/opentree{version_without_v}"
-        f"/output/labelled_supertree/labelled_supertree_simplified_ottnames.tre"
-    )
-    print(f"Downloading tree from {tree_url} ...")
-    response = requests.get(tree_url, verify=OT_SSL_VERIFY)
+    url = f"https://files.opentreeoflife.org/synthesis/opentree{version_without_v}/output/{download_file}"
+    out_path = os.path.join(output_dir, os.path.basename(url))
+
+    print(f"Downloading {url} -> {out_path} ...")
+    response = requests.get(url, verify=OT_SSL_VERIFY)
     response.raise_for_status()
 
-    raw_path = os.path.join(output_dir, "labelled_supertree_simplified_ottnames.tre")
-    with open(raw_path, "w") as f:
+    with open(out_path, "w") as f:
         f.write(response.text)
-    print(f"  Saved raw tree to {raw_path}")
-
-    draft_path = os.path.join(output_dir, "draftversion.tre")
-    print("  Stripping mrca prefixes ...")
-    with open(draft_path, "w") as f:
-        f.write(strip_mrca_prefixes(response.text))
-    print(f"  Saved processed tree to {draft_path}")
 
 
 def download_taxonomy(ott_version_raw, output_dir):
@@ -130,7 +113,8 @@ def main():
     output_dir = os.path.join(args.output_dir, version)
     os.makedirs(output_dir, exist_ok=True)
 
-    download_tree(version, output_dir)
+    download_file(version, output_dir, "/labelled_supertree/labelled_supertree_ottnames.tre")
+    download_file(version, output_dir, "/annotated_supertree/annotations.json")
     download_taxonomy(entry["OTT_version"], output_dir)
     print(f"Done. All files written to {output_dir}/")
 

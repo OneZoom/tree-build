@@ -13,7 +13,7 @@ The first step to using this repo is to create a Python virtual environment and 
     source .venv/bin/activate
 
     # Install it
-    pip install -e '.[dev]'
+    pip install -r requirements.txt
 
     # Set up git hooks including linting and DVC
     pre-commit install --hook-type pre-push --hook-type post-checkout --hook-type pre-commit

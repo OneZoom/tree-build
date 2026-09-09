@@ -26,6 +26,7 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install '.[dev]'
+          python3 -m pip install -r requirements.txt
       - name: Checkout merge ref
         if: github.event_name == 'pull_request_target'
         uses: actions/checkout@v7
@@ -44,6 +45,6 @@ jobs:
           [ -n "${{ secrets.DVC_READONLY_SECRET_ACCESS_KEY }}" ] || { echo "DVC_READONLY_SECRET_ACCESS_KEY secret is not set"; exit 1; }
           dvc remote modify onezoom-r2 access_key_id ${{ secrets.DVC_READONLY_ACCESS_KEY_ID }}
           dvc remote modify onezoom-r2 secret_access_key ${{ secrets.DVC_READONLY_SECRET_ACCESS_KEY }}
-          dvc freeze make_js_treefiles
+          dvc freeze versioned_outputs
           dvc repro --allow-missing --dry | tee /dev/stderr | grep -q "Data and pipelines are up to date."
           if dvc data status --not-in-remote | grep -q "Not in remote"; then exit 1; fi

@@ -34,6 +34,10 @@ dev = [
     "ruff>=0.5.1",
     "pre-commit>=4.5.1",
 ]
+# For image_cropping.SaliencyImageCropper
+saliency = [
+    "rembg[cpu]==2.0.69",
+]
 
 [project.scripts]
 add_ott_numbers_to_trees = "oz_tree_build.tree_build.ott_mapping.add_ott_numbers_to_trees:main"

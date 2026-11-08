@@ -3,8 +3,8 @@ This utility retrieves images from Wikidata for a given set of taxa or tips in a
 clade. Either install the entire oz_tree_build package using
 `python -m pip install oz_tree_build` or call the script directly as
 `python -m oz_tree_build.images.get_wiki_images ...`. Images are
-cropped to a 300x300 square using the Microsoft Azure Vision API, or
-centered if no cropper is available.
+cropped to a 300x300 square by a cropper from image_cropping (`--cropper`, by
+default the Microsoft Azure Vision API), or centered if no cropper is available.
 
 The script can be used in two ways:
 - To process a single taxon, use the 'leaf' subcommand. This will get the image
@@ -68,7 +68,7 @@ from ..utilities.wikidata_utils import (
 from ..utilities.wikimedia_auth import WikimediaAuth, auth_from_cli_credentials
 from ..utilities.wikimedia_headers import wikimedia_headers
 from . import process_image_bits
-from .image_cropping import AzureImageCropper, CenterImageCropper
+from .image_cropping import CROPPERS, BaseCropper, CenterImageCropper, Usage, make_cropper
 
 default_wiki_image_rating = 35000
 bespoke_wiki_image_rating = 40000
@@ -87,6 +87,8 @@ class ImageInfo:
 
 
 logger = logging.getLogger(Path(__file__).name)
+# What cropping has cost so far in this process (see image_cropping.Usage).
+crop_usage = Usage()
 
 default_outdir = os.path.join(
     os.pardir,
@@ -295,7 +297,7 @@ def save_wiki_images(
     images: list[WikiImageSaveRequest],
     db: DAL,
     output_dir: str,
-    cropper: Optional[AzureImageCropper | CenterImageCropper],
+    cropper: Optional[BaseCropper],
     auth: Optional[WikimediaAuth] = None,
 ) -> list[bool]:
     """
@@ -306,7 +308,7 @@ def save_wiki_images(
     limit on how many titles can be requested at once, so we don't check it here.
     Each request's `src_id` determines the `src_id` to store in the database for that
     image. When blank, uses the Commons page id of the image.
-    `cropper` is an AzureImageCropper, or None to fall back to a centered crop.
+    `cropper` is a BaseCropper, or None to fall back to a centered crop.
     `auth` is a WikimediaAuth instance, or None to make unauthenticated API requests.
     Returns a list of bools, one per request in `images`, indicating whether that
     image was saved.
@@ -347,7 +349,7 @@ def _save_wiki_image(
     image_info: Optional[ImageInfo],
     db: DAL,
     output_dir: str,
-    cropper: AzureImageCropper | CenterImageCropper,
+    cropper: BaseCropper,
     s: str,
     wiki_image_url_prefix: str,
 ) -> bool:
@@ -443,7 +445,10 @@ def _save_wiki_image(
 
     # Get the crop box e.g. using the Azure Vision API
     try:
-        crop_box = cropper.crop(image_url, uncropped_image_path)
+        crop = cropper.crop_with_details(image_url, uncropped_image_path, name=leaf_data["taxon"])
+        crop_box = crop.box
+        global crop_usage
+        crop_usage += crop.usage
         im = Image.open(uncropped_image_path)
         # Convert to RGB to avoid issues with transparency when working with a png file
         if im.mode in ("RGBA", "P", "LA"):
@@ -524,7 +529,7 @@ def process_leaf(
 ):
     """
     If ott_or_taxon is a number it's an ott, otherwise it's a taxon name. `cropper`
-    is an AzureImageCropper, or None to fall back to a centered crop.
+    is a BaseCropper, or None to fall back to a centered crop.
     """
     resolved = resolve_leaf(db, ott_or_taxon, taxa_data, logger)
     if resolved is None:
@@ -574,7 +579,7 @@ def process_leaf(
 
 def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper, auth):
     """
-    `cropper` is an AzureImageCropper, or None to fall back to a centered crop.
+    `cropper` is a BaseCropper, or None to fall back to a centered crop.
     """
     s = placeholder(db)
     bounds = resolve_clade_bounds(db, ott_or_taxon, logger)
@@ -686,7 +691,7 @@ def process_args(args):
 
     db = connect_to_database(database)
 
-    cropper = None if args.no_azure_crop else AzureImageCropper(config)
+    cropper = make_cropper("centre" if args.no_azure_crop else getattr(args, "cropper", "azure"), config)
 
     taxa_data = {}
     if args.taxa_data_file:
@@ -703,6 +708,10 @@ def process_args(args):
         # Process all the taxa in the passed in clades
         for name in args.ott_or_taxa:
             process_clade(db, name, args.wd_dump, taxa_data, outdir, cropper, auth)
+    if crop_usage.requests:
+        list_price = " (at list price)" if crop_usage.cost_is_list_price else ""
+        cost = "unknown" if crop_usage.cost_usd is None else f"${crop_usage.cost_usd:.4f}{list_price}"
+        logger.info(f"Cropping made {crop_usage.requests} API requests, costing {cost}")
 
 
 def add_image_common_args(parser):
@@ -719,12 +728,19 @@ def add_image_common_args(parser):
         help=(f"The configuration file to use. Defaults to {default_appconfig}"),
     )
     parser.add_argument(
+        "--cropper",
+        choices=sorted(CROPPERS),
+        default="azure",
+        help=(
+            "How to crop images (default: azure, the Azure Vision API). The OpenRouter-based ones "
+            "(gpt-5-nano, jev-box, jev-two-phase) need a key in the config file's [openrouter] "
+            "section; see data/crop_experiment/README.md for how they compare."
+        ),
+    )
+    parser.add_argument(
         "--no-azure-crop",
         action="store_true",
-        help=(
-            "Do not use the Azure Vision API to crop images: instead, use a centered crop. "
-            "Useful for testing or if you don't have an Azure Vision API key."
-        ),
+        help="Use a centered crop (the same as --cropper centre). Useful for testing.",
     )
     parser.add_argument(
         "-o",

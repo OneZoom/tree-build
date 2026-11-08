@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crop labeller</title>
+<style>
+  :root {
+    --bg: #111; --panel: #1b1b1b; --line: #2c2c2c; --text: #ddd; --dim: #888;
+    --done: #3fb950; --todo: #555; --cur: #2f6feb; --preview: #ffd33d; --saved: #3fb950;
+    --pred: #f778ba; --good: #3fb950; --mid: #d29922; --bad: #f85149; --head: #ff9f1c; --org: #39c5f0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 13px/1.4 -apple-system, system-ui, sans-serif; overflow: hidden; }
+  #app { display: flex; height: 100%; }
+  #sidebar { width: 270px; flex: none; display: flex; flex-direction: column;
+    background: var(--panel); border-right: 1px solid var(--line); }
+  #controls { display: flex; gap: 6px; padding: 10px 12px 0; }
+  #controls select { flex: 1; min-width: 0; background: #242424; color: var(--text);
+    border: 1px solid #3a3a3a; border-radius: 4px; padding: 3px 4px; font: inherit; }
+  #sortSel { display: none; }
+  body.browse #sortSel { display: block; }
+  #progress { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  #count { white-space: pre-line; }
+  #bar { height: 4px; background: var(--line); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  #bar > div { height: 100%; background: var(--done); width: 0; }
+  body.browse #bar { display: none; }
+  #list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+  #list li { display: flex; gap: 8px; align-items: center; padding: 2px 12px; cursor: pointer;
+    font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #list li:hover { background: #242424; }
+  #list li.cur { background: var(--cur); color: #fff; }
+  #list .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--todo); flex: none; }
+  #list li.done .dot { background: var(--done); }
+  #list .n { color: var(--dim); width: 28px; text-align: right; }
+  #list li.cur .n, #list li.cur .b { color: #cfe0ff; }
+  #list .b { color: var(--dim); margin-left: auto; font-size: 11px; }
+  #list .iou { display: none; width: 34px; text-align: right; }
+  body.browse #list .iou { display: inline; }
+  body.browse #list .dot { display: none; }
+  .good { color: var(--good); } .mid { color: var(--mid); } .bad { color: var(--bad); }
+  #list li.cur .iou { color: #fff; }
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #header { display: flex; gap: 16px; align-items: baseline; padding: 10px 16px;
+    border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+  #header a { color: var(--dim); }
+  #taxon { font-style: italic; }
+  #curIou { font-weight: 600; }
+  #keys, #legend { margin-left: auto; color: var(--dim); }
+  #legend { display: none; }
+  body.browse #keys { display: none; }
+  body.browse #legend { display: inline; }
+  .swatch { display: inline-block; width: 18px; height: 0; vertical-align: middle; margin: 0 4px 0 10px; }
+  kbd { background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 3px; padding: 0 4px;
+    font: 11px ui-monospace, monospace; color: var(--text); }
+  #stage { flex: 1; display: flex; align-items: center; justify-content: center;
+    min-height: 0; padding: 16px; }
+  #wrap { position: relative; overflow: hidden; cursor: crosshair; user-select: none; }
+  body.browse #wrap { cursor: default; }
+  #wrap img { display: block; -webkit-user-drag: none; }
+  #wrap.loading img { visibility: hidden; }
+  .box { position: absolute; pointer-events: none; display: none; }
+  #preview { border: 2px solid var(--preview); box-shadow: 0 0 0 9999px rgba(0,0,0,.55); }
+  #saved { border: 2px dashed var(--saved); }
+  #pred { border: 2px solid var(--pred); box-shadow: 0 0 0 9999px rgba(0,0,0,.45); }
+  .extra { border: 2px dotted; }
+  .extra span { position: absolute; top: -1px; left: -1px; font: 11px/1 -apple-system, system-ui, sans-serif;
+    padding: 2px 4px; color: #111; }
+  #headBox { border-color: var(--head); } #headBox span { background: var(--head); }
+  #orgBox { border-color: var(--org); } #orgBox span { background: var(--org); top: auto; bottom: -1px; }
+  body.hide-extras .extra, body:not(.has-extras) .extra-legend { display: none !important; }
+  body:not(.browse) #wrap:not(.hovering) #saved { box-shadow: 0 0 0 9999px rgba(0,0,0,.55); }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: #da3633; color: #fff; padding: 8px 14px; border-radius: 6px; display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div id="controls">
+      <select id="runSel" title="Label images, or browse an experiment run's crops">
+        <optgroup label="Label"><option value="label:all">Labelling (all)</option><option value="label:extant">Labelling (extant)</option><option value="label:extinct">Labelling (extinct)</option></optgroup>
+        <optgroup label="Runs" id="runGroup"></optgroup>
+      </select>
+      <select id="sortSel" title="List order">
+        <option value="sample">Sample order</option>
+        <option value="worst">Worst IoU first</option>
+        <option value="best">Best IoU first</option>
+      </select>
+    </div>
+    <div id="progress"><span id="count"></span><div id="bar"><div></div></div></div>
+    <ul id="list"></ul>
+  </aside>
+  <main id="main">
+    <div id="header">
+      <strong id="title"></strong>
+      <span id="taxon"></span>
+      <span id="meta"></span>
+      <span id="curIou"></span>
+      <a id="commons" target="_blank" rel="noopener">commons</a>
+      <span id="keys">
+        click: max square &nbsp; drag: custom (hold <kbd>Space</kbd> to move) &nbsp;
+        <kbd>←</kbd>/<kbd>→</kbd> prev/next &nbsp; <kbd>N</kbd> next unlabelled &nbsp;
+        <kbd>C</kbd> centre crop &nbsp; <kbd>⌫</kbd> clear &nbsp; <kbd>Esc</kbd> cancel drag
+      </span>
+      <span id="legend">
+        <span class="swatch" style="border-top: 2px dashed var(--saved)"></span>your label
+        <span class="swatch" style="border-top: 2px solid var(--pred)"></span>run's crop
+        <span class="extra-legend"><span class="swatch" style="border-top: 2px dotted var(--head)"></span>head
+        <span class="swatch" style="border-top: 2px dotted var(--org)"></span>organism
+        (<kbd>B</kbd> hide)</span>
+        &nbsp; <kbd>←</kbd>/<kbd>→</kbd> prev/next
+      </span>
+    </div>
+    <div id="stage">
+      <div id="wrap" class="loading">
+        <img id="img" alt="">
+        <div id="pred" class="box"></div>
+        <div id="orgBox" class="box extra"><span>organism</span></div>
+        <div id="headBox" class="box extra"><span>head</span></div>
+        <div id="saved" class="box"></div>
+        <div id="preview" class="box"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="toast"></div>
+<script>
+"use strict";
+const DRAG_THRESHOLD_PX = 4;
+const MIN_SIDE = 8;
+const PRELOAD_AHEAD = 6;
+const HIT_THRESHOLD = 0.8;
+
+const $ = (id) => document.getElementById(id);
+const els = { list: $("list"), img: $("img"), wrap: $("wrap"), stage: $("stage"),
+  preview: $("preview"), saved: $("saved"), pred: $("pred"), headBox: $("headBox"), orgBox: $("orgBox"), count: $("count"),
+  bar: $("bar").firstElementChild, title: $("title"), taxon: $("taxon"), meta: $("meta"),
+  curIou: $("curIou"), commons: $("commons"), toast: $("toast"),
+  runSel: $("runSel"), sortSel: $("sortSel") };
+
+let allImages = [];
+let images = [];        // the images in view (all, or one set while labelling)
+let labelSet = "all";   // which set "Labelling (...)" shows
+let order = [];         // image indices in list order
+let cur = 0;            // index into images
+let scale = 1;
+let loadedId = null;
+let drag = null;        // {ax, ay, sx, sy, moved, translate}
+let lastClient = null;  // last mouse position, to refresh the preview after navigating
+let run = null;         // {name, predictions: {key: box}} while browsing a run (all sets)
+const runCache = new Map();
+const preloaded = new Map();
+
+const imgUrl = (im) => `/img/${im.key}`;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const browsing = () => run !== null;
+
+function iou(a, b) {
+  if (!a || !b) return 0;
+  const ix = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+  const iy = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+  const inter = ix * iy;
+  const union = a.width * a.height + b.width * b.height - inter;
+  return union > 0 ? inter / union : 0;
+}
+
+// Images a subset run didn't cover have no score (rather than counting as 0).
+const imageIou = (im) => {
+  if (!run || !im.label) return null;
+  const pred = run.predictions[im.key];
+  return pred || !run.subset ? iou(pred, im.label) : null;
+};
+const runsByName = new Map();
+
+// A run's projected cost for the whole tree from its run.json, e.g. "$23 / 300k images", or "" if it has none.
+function projectedCost(r) {
+  const summary = (r && r.usage) || {};
+  const key = Object.keys(summary).find((k) => k.startsWith("projected_cost_for_"));
+  if (!key || summary[key] == null) return "";
+  const n = parseInt(key.slice("projected_cost_for_".length), 10);
+  return `$${Math.round(summary[key])} / ${n >= 1000 ? `${n / 1000}k` : n} images`;
+}
+const iouClass = (v) => (v >= HIT_THRESHOLD ? "good" : v >= 0.5 ? "mid" : "bad");
+
+async function init() {
+  const [imgs, runs] = await Promise.all([
+    fetch("/api/images").then((r) => r.json()),
+    fetch("/api/runs").then((r) => r.json()),
+  ]);
+  allImages = imgs;
+  const runGroup = $("runGroup");
+  for (const r of runs) {
+    runsByName.set(r.name, r);
+    const opt = document.createElement("option");
+    opt.value = r.name;
+    const size = r.subset ? `, ${r.subset} images` : "";
+    opt.textContent = r.mean_iou == null ? r.name : `${r.name} (${r.mean_iou.toFixed(3)}${size})`;
+    runGroup.appendChild(opt);
+  }
+  for (const im of allImages) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="dot"></span><span class="n"></span><span>${im.id}</span>` +
+      `<span class="b">${im.bucket}</span><span class="iou"></span>`;
+    li.addEventListener("click", () => show(images.indexOf(im)));
+    im.li = li;
+    im.nEl = li.children[1];
+    im.iouEl = li.lastElementChild;
+  }
+
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.get("sort")) els.sortSel.value = hash.get("sort");
+  if (hash.get("run") && runs.some((r) => r.name === hash.get("run"))) {
+    els.runSel.value = hash.get("run");
+    await setView(hash.get("run"), { toTop: els.sortSel.value !== "sample" });
+  } else {
+    const set = hash.get("label");
+    els.runSel.value = `label:${["extant", "extinct"].includes(set) ? set : "all"}`;
+    await setView(els.runSel.value);
+  }
+}
+
+function renderList() {
+  const frag = document.createDocumentFragment();
+  order.forEach((i, pos) => {
+    images[i].nEl.textContent = pos + 1;
+    frag.appendChild(images[i].li);
+  });
+  els.list.replaceChildren(frag);
+  images.forEach(refreshListItem);
+}
+
+function refreshListItem(im) {
+  im.li.classList.toggle("done", !!im.label);
+  const v = imageIou(im);
+  im.iouEl.textContent = v == null ? "" : v.toFixed(2);
+  im.iouEl.className = v == null ? "iou" : `iou ${iouClass(v)}`;
+}
+
+function refreshProgress() {
+  if (browsing()) {
+    const stats = (ims) => {
+      const scores = ims.map(imageIou).filter((v) => v != null);
+      const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+      const hits = scores.filter((v) => v >= HIT_THRESHOLD).length;
+      return `${mean.toFixed(3)} · ${((100 * hits) / scores.length).toFixed(1)}%`;
+    };
+    const sets = [...new Set(images.map((im) => im.set))];
+    const lines = [`mean IoU · % ≥ ${HIT_THRESHOLD}: ${stats(images)}${run.subset ? ` (${run.subset} images)` : ""}`];
+    for (const s of sets) lines.push(`${s}: ${stats(images.filter((im) => im.set === s))}`);
+    const cost = projectedCost(runsByName.get(run.name));
+    if (cost) lines.push(`projected cost ${cost}`);
+    els.count.textContent = lines.join("\n");
+    return;
+  }
+  const done = images.filter((im) => im.label).length;
+  els.count.textContent = done === images.length ? `${done} / ${images.length} labelled · all done` : `${done} / ${images.length} labelled`;
+  els.bar.style.width = `${(100 * done) / images.length}%`;
+}
+
+// The dropdown's value: "label:<all|extant|extinct>", or a run's name.
+async function setView(value, { toTop = false } = {}) {
+  const current = images[cur];
+  if (value.startsWith("label:")) {
+    run = null;
+    labelSet = value.slice("label:".length);
+  } else {
+    const name = value;
+    if (!runCache.has(name)) {
+      const res = await fetch(`/api/runs/${encodeURIComponent(name)}`);
+      if (!res.ok) { toast(`Failed to load run ${name}`); els.runSel.value = "label:all"; return setView("label:all"); }
+      runCache.set(name, await res.json());
+    }
+    const data = runCache.get(name);
+    run = { name, predictions: data.predictions, details: data.details || {}, subset: runsByName.get(name)?.subset };
+  }
+  if (current) current.li.classList.remove("cur");
+  images = allImages.filter((im) => browsing() || labelSet === "all" || im.set === labelSet);
+  cur = images.indexOf(current);
+  if (cur === -1) {
+    const firstTodo = images.findIndex((im) => !im.label);
+    cur = firstTodo === -1 ? 0 : firstTodo;
+  }
+  document.body.classList.toggle("browse", browsing());
+  document.body.classList.toggle("has-extras", !!run && Object.keys(run.details).length > 0);
+  drag = null;
+  drawBox(els.preview, null);
+  applyOrder({ toTop });
+}
+
+function applyOrder({ toTop = false } = {}) {
+  const mode = browsing() ? els.sortSel.value : "sample";
+  order = images.map((_, i) => i);
+  if (mode !== "sample") {
+    const sign = mode === "worst" ? 1 : -1;
+    order.sort((a, b) => sign * ((imageIou(images[a]) ?? 2) - (imageIou(images[b]) ?? 2)) || a - b);
+  }
+  renderList();
+  updateHash();
+  show(toTop ? order[0] : cur);
+}
+
+function updateHash() {
+  const params = new URLSearchParams();
+  if (run) {
+    params.set("run", run.name);
+    if (els.sortSel.value !== "sample") params.set("sort", els.sortSel.value);
+  } else if (labelSet !== "all") {
+    params.set("label", labelSet);
+  }
+  history.replaceState(null, "", params.toString() ? `#${params}` : location.pathname);
+}
+
+function fitScale(im) {
+  const r = els.stage.getBoundingClientRect();
+  return Math.min((r.width - 32) / im.width, (r.height - 32) / im.height);
+}
+
+function show(i) {
+  if (i < 0 || i >= images.length) return;
+  images[cur].li.classList.remove("cur");
+  cur = i;
+  drag = null;
+  const im = images[cur];
+  im.li.classList.add("cur");
+  im.li.scrollIntoView({ block: "nearest" });
+
+  scale = fitScale(im);
+  els.img.style.width = `${im.width * scale}px`;
+  els.img.style.height = `${im.height * scale}px`;
+  if (loadedId !== im.key) {
+    loadedId = null;
+    els.wrap.classList.add("loading");
+    els.img.onload = () => {
+      if (images[cur].key !== im.key) return;
+      loadedId = im.key;
+      els.wrap.classList.remove("loading");
+      refreshPreviewFromLastMouse();
+    };
+    els.img.src = imgUrl(im);
+    if (els.img.complete && els.img.naturalWidth) els.img.onload();
+  }
+
+  els.title.textContent = `#${order.indexOf(cur) + 1}  ${im.id}`;
+  els.taxon.textContent = im.name;
+  els.meta.textContent = `${im.bucket} · ${im.width}×${im.height}`;
+  els.commons.href = `https://commons.wikimedia.org/?curid=${im.id}`;
+  els.commons.style.display = im.set === "extant" ? "" : "none";
+  const v = imageIou(im);
+  els.curIou.textContent = v == null ? "" : `IoU ${v.toFixed(3)}`;
+  els.curIou.className = v == null ? "" : iouClass(v);
+  drawBox(els.saved, im.label);
+  drawBox(els.pred, run ? run.predictions[im.key] : null);
+  const extras = (run && run.details[im.key] && run.details[im.key].boxes) || {};
+  drawBox(els.headBox, fractionBox(extras.head, im));
+  drawBox(els.orgBox, fractionBox(extras.organism, im));
+  drawBox(els.preview, null);
+  refreshProgress();
+  refreshPreviewFromLastMouse();
+  preloadAround();
+}
+
+function step(delta) {
+  const pos = order.indexOf(cur) + delta;
+  if (pos >= 0 && pos < order.length) show(order[pos]);
+}
+
+function preloadAround() {
+  const pos = order.indexOf(cur);
+  const want = [];
+  if (pos > 0) want.push(images[order[pos - 1]]);
+  for (let k = 1, found = 0; k < order.length && found < PRELOAD_AHEAD; k++) {
+    const im = images[order[(pos + k) % order.length]];
+    if (browsing() || !im.label) { want.push(im); found++; }
+  }
+  // Only hold the images around the current one (decoded originals are large); the HTTP cache keeps the rest.
+  const keys = new Set(want.map((im) => im.key));
+  for (const key of preloaded.keys()) if (!keys.has(key)) preloaded.delete(key);
+  for (const im of want) {
+    if (preloaded.has(im.key)) continue;
+    const p = new Image();
+    p.src = imgUrl(im);
+    p.decode().catch(() => {});
+    preloaded.set(im.key, p);
+  }
+}
+
+// A judge's box given as {left, right, top, bottom} fractions of the image, in image pixels.
+function fractionBox(f, im) {
+  if (!f) return null;
+  return { x: f.left * im.width, y: f.top * im.height, width: (f.right - f.left) * im.width, height: (f.bottom - f.top) * im.height };
+}
+
+function drawBox(el, box) {
+  if (!box) { el.style.display = "none"; return; }
+  el.style.display = "block";
+  el.style.left = `${box.x * scale}px`;
+  el.style.top = `${box.y * scale}px`;
+  el.style.width = `${box.width * scale}px`;
+  el.style.height = `${box.height * scale}px`;
+}
+
+// Mouse position in image pixel coordinates, clamped to the image.
+function toImage(clientX, clientY) {
+  const r = els.img.getBoundingClientRect();
+  const im = images[cur];
+  const rawX = (clientX - r.left) / scale, rawY = (clientY - r.top) / scale;
+  return {
+    x: clamp(rawX, 0, im.width),
+    y: clamp(rawY, 0, im.height),
+    rawX, rawY,
+    inside: clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom,
+  };
+}
+
+function maxBoxAt(p) {
+  const im = images[cur];
+  const side = Math.min(im.width, im.height);
+  return {
+    x: clamp(p.x - side / 2, 0, im.width - side),
+    y: clamp(p.y - side / 2, 0, im.height - side),
+    width: side, height: side,
+  };
+}
+
+function centreBox() {
+  const im = images[cur];
+  return maxBoxAt({ x: im.width / 2, y: im.height / 2 });
+}
+
+function dragBox(p) {
+  const im = images[cur];
+  const dx = p.x - drag.ax, dy = p.y - drag.ay;
+  const sx = dx < 0 ? -1 : 1, sy = dy < 0 ? -1 : 1;
+  const room = Math.min(sx > 0 ? im.width - drag.ax : drag.ax, sy > 0 ? im.height - drag.ay : drag.ay);
+  const side = Math.min(Math.max(Math.abs(dx), Math.abs(dy)), room);
+  drag.sx = sx;
+  drag.sy = sy;
+  return {
+    x: sx > 0 ? drag.ax : drag.ax - side,
+    y: sy > 0 ? drag.ay : drag.ay - side,
+    width: side, height: side,
+  };
+}
+
+// While space is held mid-drag, the box keeps its size and follows the mouse.
+function translatedBox(p) {
+  const im = images[cur];
+  const t = drag.translate;
+  return {
+    ...t.box,
+    x: clamp(t.box.x + p.rawX - t.startX, 0, im.width - t.box.width),
+    y: clamp(t.box.y + p.rawY - t.startY, 0, im.height - t.box.height),
+  };
+}
+
+function currentBox(p) {
+  if (drag && drag.translate) return translatedBox(p);
+  return drag && drag.moved ? dragBox(p) : maxBoxAt(p);
+}
+
+function startTranslate() {
+  if (!drag || drag.translate || !lastClient) return;
+  const p = toImage(lastClient.x, lastClient.y);
+  const box = currentBox(p);
+  drag.moved = true;
+  drag.translate = { startX: p.rawX, startY: p.rawY, box };
+}
+
+// Re-anchor on the translated box's pinned corner so scaling resumes from there.
+function endTranslate() {
+  if (!drag || !drag.translate) return;
+  const box = translatedBox(toImage(lastClient.x, lastClient.y));
+  const sx = drag.sx ?? 1, sy = drag.sy ?? 1;
+  drag.ax = sx > 0 ? box.x : box.x + box.width;
+  drag.ay = sy > 0 ? box.y : box.y + box.height;
+  drag.translate = null;
+  refreshPreviewFromLastMouse();
+}
+
+function refreshPreviewFromLastMouse() {
+  if (browsing() || !lastClient || loadedId !== images[cur].key) return;
+  const p = toImage(lastClient.x, lastClient.y);
+  const visible = p.inside || !!drag;
+  els.wrap.classList.toggle("hovering", visible);
+  drawBox(els.preview, visible ? currentBox(p) : null);
+}
+
+function integerBox(box) {
+  const im = images[cur];
+  const side = Math.min(Math.round(box.width), im.width, im.height);
+  return {
+    x: clamp(Math.round(box.x), 0, im.width - side),
+    y: clamp(Math.round(box.y), 0, im.height - side),
+    width: side, height: side,
+  };
+}
+
+function commit(box) {
+  const im = images[cur];
+  const label = integerBox(box);
+  if (label.width < MIN_SIDE) return;
+  const previous = im.label;
+  im.label = label;
+  refreshListItem(im);
+  save(im, label, previous);
+  nextUnlabelled();
+}
+
+async function save(im, label, previous) {
+  try {
+    const res = await fetch(`/api/label/${im.key}`, { method: "PUT", body: JSON.stringify(label) });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  } catch (e) {
+    rollback(im, previous, `Failed to save ${im.id}: ${e.message}`);
+  }
+}
+
+async function clearLabel() {
+  const im = images[cur];
+  if (!im.label) return;
+  const previous = im.label;
+  im.label = null;
+  refreshListItem(im);
+  show(cur);
+  try {
+    const res = await fetch(`/api/label/${im.key}`, { method: "DELETE" });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  } catch (e) {
+    rollback(im, previous, `Failed to clear ${im.id}: ${e.message}`);
+  }
+}
+
+function rollback(im, previous, message) {
+  im.label = previous;
+  refreshListItem(im);
+  refreshProgress();
+  if (images[cur] === im) drawBox(els.saved, im.label);
+  toast(message);
+}
+
+function nextUnlabelled() {
+  const pos = order.indexOf(cur);
+  for (let k = 1; k <= order.length; k++) {
+    const i = order[(pos + k) % order.length];
+    if (!images[i].label) return show(i);
+  }
+  step(1);
+}
+
+let toastTimer;
+function toast(msg) {
+  els.toast.textContent = msg;
+  els.toast.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (els.toast.style.display = "none"), 4000);
+}
+
+els.runSel.addEventListener("change", () => { els.runSel.blur(); setView(els.runSel.value); });
+els.sortSel.addEventListener("change", () => { els.sortSel.blur(); applyOrder({ toTop: true }); });
+
+els.wrap.addEventListener("mousedown", (e) => {
+  if (browsing() || e.button !== 0 || loadedId !== images[cur].key) return;
+  e.preventDefault();
+  const p = toImage(e.clientX, e.clientY);
+  drag = { ax: p.x, ay: p.y, startX: e.clientX, startY: e.clientY, moved: false };
+});
+
+window.addEventListener("mousemove", (e) => {
+  lastClient = { x: e.clientX, y: e.clientY };
+  if (drag && !drag.moved &&
+      Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > DRAG_THRESHOLD_PX) {
+    drag.moved = true;
+  }
+  refreshPreviewFromLastMouse();
+});
+
+window.addEventListener("mouseup", (e) => {
+  if (e.button !== 0 || !drag) return;
+  const box = currentBox(toImage(e.clientX, e.clientY));
+  const wasDrag = drag.moved;
+  drag = null;
+  if (wasDrag || toImage(e.clientX, e.clientY).inside) commit(box);
+  else refreshPreviewFromLastMouse();
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === "SELECT") return;
+  const labelling = !browsing();
+  switch (e.key) {
+    case "ArrowLeft": step(-1); break;
+    case "ArrowRight": step(1); break;
+    case "n": case "N": if (labelling) nextUnlabelled(); break;
+    case "c": case "C": if (labelling && loadedId === images[cur].key) commit(centreBox()); break;
+    case "Backspace": case "Delete": if (labelling) clearLabel(); break;
+    case "Escape": drag = null; refreshPreviewFromLastMouse(); break;
+    case " ": if (labelling && !e.repeat) startTranslate(); break;
+    case "b": case "B": if (!labelling) document.body.classList.toggle("hide-extras"); break;
+    default: return;
+  }
+  e.preventDefault();
+});
+
+window.addEventListener("keyup", (e) => {
+  if (e.key === " ") endTranslate();
+});
+
+window.addEventListener("blur", endTranslate);
+
+window.addEventListener("resize", () => show(cur));
+
+init().catch((e) => toast(`Failed to load: ${e.message}`));
+</script>
+</body>
+</html>

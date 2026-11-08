@@ -1,0 +1,17 @@
+{
+  "name": "centre",
+  "cropper": "centre",
+  "subset": null,
+  "sets": [
+    "extant",
+    "extinct"
+  ],
+  "n_images": 800,
+  "started": "2026-11-08T20:03:37+00:00",
+  "seconds": 0.22,
+  "seconds_per_image": 0.0003,
+  "git_commit": "d8f44d0275d1fb65fb26dcbdd085e42a7ff843f2-dirty",
+  "failures": {},
+  "not_square": [],
+  "out_of_bounds": []
+}

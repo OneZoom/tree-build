@@ -5,11 +5,33 @@ Useful functions for getting database stuff when used as a standalone script
 import configparser
 import logging
 import os
+from pathlib import Path
 from typing import Optional, Tuple
 
 from pydal import DAL
 
 logger = logging.getLogger(__name__)
+
+TREE_BUILD_CONFIG = Path(__file__).resolve().parents[2] / "config.ini"
+
+
+def configured_path(value, setting, option):
+    """Use an explicit path, or look it up in the tree-build config.ini."""
+    if value is not None:
+        if not str(value).strip():
+            raise ValueError(f"{option} must not be empty.")
+        return str(Path(value).expanduser())
+
+    config = configparser.ConfigParser(interpolation=None)
+    if not TREE_BUILD_CONFIG.is_file():
+        raise ValueError(f"Provide {option} or create {TREE_BUILD_CONFIG} with [onezoom] {setting}.")
+    with TREE_BUILD_CONFIG.open(encoding="utf-8") as file:
+        config.read_file(file)
+    path = config.get("onezoom", setting, fallback="").strip()
+    if not path:
+        raise ValueError(f"Set [onezoom] {setting} in {TREE_BUILD_CONFIG}, or provide {option}.")
+    path = Path(path).expanduser()
+    return str(path if path.is_absolute() else TREE_BUILD_CONFIG.parent / path)
 
 
 def is_sqlite(db):
@@ -91,13 +113,12 @@ def get_next_src_id_for_src(db, src):
 
 def read_config(conf_file):
     """
-    Read the appconfig.ini file at conf_file.
+    Read the explicit appconfig.ini or the path configured in tree-build.
     """
-
-    if not conf_file:
-        raise ValueError("A path to an appconfig.ini file is required.")
+    conf_file = configured_path(conf_file, "appconfig", "--conf-file")
     if not os.path.exists(conf_file):
         raise ValueError(f"Appconfig file {conf_file} cannot be found.")
     config = configparser.ConfigParser()
-    config.read(conf_file)
+    with open(conf_file, encoding="utf-8") as file:
+        config.read_file(file)
     return config

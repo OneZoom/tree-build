@@ -4,8 +4,8 @@ clade. Either install the entire oz_tree_build package using
 `python -m pip install oz_tree_build` or call the script directly as
 `python -m oz_tree_build.images.get_wiki_images ...`. Images are
 cropped to a 300x300 square using the Microsoft Azure Vision API, or
-centered if no cropper is available. `--conf-file` (an appconfig.ini) and
-`--output-dir` (where to write the image files) are required.
+centered if no cropper is available. `--conf-file` and `--output-dir` can
+also be configured in tree-build's config.ini.
 
 The script can be used in two ways:
 - To process a single taxon, use the 'leaf' subcommand. This will get the image
@@ -51,6 +51,7 @@ from .._OZglobals import src_flags
 from ..user_agent import USER_AGENT_HEADERS
 from ..utilities.cli_utils import add_common_args, setup_logging
 from ..utilities.db_helper import (
+    configured_path,
     connect_to_database,
     get_next_src_id_for_src,
     placeholder,
@@ -666,13 +667,12 @@ def process_args(args):
     auth = auth_from_cli_credentials(args.wikimedia_client_id, args.wikimedia_client_secret)
     if args.subcommand == "clade":
         validate_wikidata_dump(args.wd_dump)
-    outdir = args.output_dir
+    outdir = configured_path(args.output_dir, "image_output_dir", "--output-dir")
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
 
-    if not os.path.exists(outdir):
-        logger.error(f"Output directory '{outdir}' does not exist")
-        return
+    if not os.path.isdir(outdir):
+        raise ValueError(f"Output directory '{outdir}' does not exist or is not a directory")
 
     db = connect_to_database(database)
 
@@ -705,8 +705,7 @@ def add_image_common_args(parser):
     parser.add_argument(
         "-c",
         "--conf-file",
-        required=True,
-        help="Path to the appconfig.ini file to use",
+        help="Path to appconfig.ini (defaults to [onezoom] appconfig in tree-build's config.ini)",
     )
     parser.add_argument(
         "--no-azure-crop",
@@ -719,9 +718,9 @@ def add_image_common_args(parser):
     parser.add_argument(
         "-o",
         "--output-dir",
-        required=True,
         help=(
             "The location to save the image files (e.g. '/path/to/OZtree/static/FinalOutputs/img'). "
+            "Defaults to [onezoom] image_output_dir in tree-build's config.ini. "
             "Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
         ),
     )

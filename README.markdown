@@ -23,8 +23,7 @@ After the first time, you just need to run the `source .venv/bin/activate` each 
 To be able to run the pipeline, you'll also need to install `wget`.
 
 For clade harvesting with `get_wiki_images` or `get_wiki_vernaculars`, supply
-the Wikidata JSON dump using `--wd-dump`, followed by the required appconfig
-and, for images, output directory options:
+the Wikidata JSON dump using `--wd-dump`:
 
 ```bash
 get_wiki_vernaculars clade "Panthera" --wd-dump /path/to/OneZoom_latest-all.json --conf-file /path/to/appconfig.ini
@@ -35,6 +34,33 @@ existing clade commands. Leaf commands use the Wikidata API and need no dump.
 For vernaculars, `get_wiki_vernaculars taxon` accepts individual leaves or
 internal nodes; its `leaf` subcommand remains an alias. Clade harvesting
 includes the root and descendant nodes with OTTs as well as leaves.
+
+## Configuring an existing OneZoom installation
+
+For database-backed update commands, create `config.ini` in the root of your
+tree-build checkout (this file is ignored by git):
+
+```ini
+[onezoom]
+appconfig = ~/www.onezoom.org/applications/OZtree/private/appconfig.ini
+image_output_dir = ~/www.onezoom.org/applications/OZtree/static/FinalOutputs/img
+```
+
+Set these paths for your installation. `~` refers to the running user's home;
+relative paths are relative to the tree-build directory. The `appconfig` file
+contains the database credentials and, if used, Azure cropping credentials.
+The image output directory must already exist and be writable. The image directory
+is only needed for `get_wiki_images`.
+
+Use the editable installation described above so commands find the checkout's
+`config.ini`, even when run from another working directory. Alternatively, pass
+`--conf-file` to specify the appconfig and `--output-dir` to specify the image
+directory; each option overrides the corresponding configuration value.
+For `get_wiki_images` and `get_wiki_vernaculars`, place options after the
+subcommand (`leaf` or `clade` for images; `taxon` or `clade` for vernaculars).
+For `process_image_bits`, place `--conf-file` before the subcommand. These
+update commands write to the configured database; image harvesting also writes
+files to the configured image directory.
 
 ## Testing
 

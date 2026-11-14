@@ -11,8 +11,6 @@ from pydal import DAL
 
 logger = logging.getLogger(__name__)
 
-default_appconfig = "../../../OZtree/private/appconfig.ini"
-
 
 def is_sqlite(db):
     return db._adapter.driver_name.startswith("sqlite")
@@ -87,16 +85,13 @@ def get_next_src_id_for_src(db, src):
     return max_src_id[0][0] + 1 if max_src_id[0][0] else 1
 
 
-def read_config(conf_file=None):
+def read_config(conf_file):
     """
-    Read the passed-in configuration file, defaulting to the standard appconfig.ini
+    Read the appconfig.ini file at conf_file.
     """
 
-    if conf_file is None:
-        conf_file = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            default_appconfig,
-        )
+    if not conf_file:
+        raise ValueError("A path to an appconfig.ini file is required.")
     if not os.path.exists(conf_file):
         raise ValueError(f"Appconfig file {conf_file} cannot be found.")
     config = configparser.ConfigParser()

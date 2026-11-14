@@ -36,7 +36,7 @@ dvc dag
 After running the pipeline, copy the JS output from `data/js_output/` to the OZtree repo:
 
 ```bash
-cp data/js_output/* ../OZtree/static/FinalOutputs/data/
+cp data/js_output/* /path/to/OZtree/static/FinalOutputs/data/
 ```
 
 Then see the section titled "Upload data to the server and check it" below.

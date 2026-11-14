@@ -4,7 +4,8 @@ clade. Either install the entire oz_tree_build package using
 `python -m pip install oz_tree_build` or call the script directly as
 `python -m oz_tree_build.images.get_wiki_images ...`. Images are
 cropped to a 300x300 square using the Microsoft Azure Vision API, or
-centered if no cropper is available.
+centered if no cropper is available. `--conf-file` (an appconfig.ini) and
+`--output-dir` (where to write the image files) are required.
 
 The script can be used in two ways:
 - To process a single taxon, use the 'leaf' subcommand. This will get the image
@@ -51,7 +52,6 @@ from ..user_agent import USER_AGENT_HEADERS
 from ..utilities.cli_utils import add_common_args, setup_logging
 from ..utilities.db_helper import (
     connect_to_database,
-    default_appconfig,
     get_next_src_id_for_src,
     placeholder,
     read_config,
@@ -87,16 +87,6 @@ class ImageInfo:
 
 
 logger = logging.getLogger(Path(__file__).name)
-
-default_outdir = os.path.join(
-    os.pardir,
-    os.pardir,
-    os.pardir,
-    "OZtree",
-    "static",
-    "FinalOutputs",
-    "img",
-)
 
 
 # Copied from OZTree/OZprivate/ServerScripts/Utilities/getEOL_crops.py
@@ -677,9 +667,6 @@ def process_args(args):
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
 
-    # Default to the static folder in the OZtree repo
-    if outdir is None:
-        outdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), default_outdir)
     if not os.path.exists(outdir):
         logger.error(f"Output directory '{outdir}' does not exist")
         return
@@ -715,8 +702,8 @@ def add_image_common_args(parser):
     parser.add_argument(
         "-c",
         "--conf-file",
-        default=None,
-        help=(f"The configuration file to use. Defaults to {default_appconfig}"),
+        required=True,
+        help="Path to the appconfig.ini file to use",
     )
     parser.add_argument(
         "--no-azure-crop",
@@ -729,11 +716,10 @@ def add_image_common_args(parser):
     parser.add_argument(
         "-o",
         "--output-dir",
-        default=None,
+        required=True,
         help=(
-            "The location to save the image files (e.g. 'FinalOutputs/img'). "
-            f"Defaults to {default_outdir} (relative to the script "
-            "location). Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
+            "The location to save the image files (e.g. '/path/to/OZtree/static/FinalOutputs/img'). "
+            "Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
         ),
     )
     parser.add_argument(

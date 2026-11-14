@@ -26,16 +26,12 @@ To be able to run the pipeline, you'll also need to install `wget`.
 
 Assuming you have installed the 'dev' dependencies, you should be able to run
 
-    python -m pytest --conf-file tests/appconfig.ini
+    python -m pytest
 
-Here we have used a basic conf file to create a fake OneZoom database. However, if you wish to test using the
-real OneZoom database, you can specify a different path to an appconfig.ini file, or omit the `--conf-file`
-option entirely, in which case the test suite will look for `../OZtree/private/appconfig.ini`, which assumes
-hat this repository is a sibling to a non-live
-[OZtree](https://github.com/OneZoom/OZtree) installation, and that the database used by this OZtree
-installation is active.
+This uses `tests/appconfig.ini`, which creates a fake OneZoom database. To test against a real
+OneZoom database, pass that installation's appconfig.ini:
 
-    python -m pytest  # Uses the "real" OneZoom database - take care!
+    python -m pytest --conf-file /path/to/appconfig.ini
 
 This uses mocked APIs. You can also run with the real APIs using the `--real-apis` swithc, in whcih case
 you will need a valid Azure Image cropping key in your appconfig.ini.

@@ -196,17 +196,9 @@ def main():
     parser.add_argument(
         "--outdir",
         "-o",
-        default=os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "OZtree",
-            "static",
-            "FinalOutputs",
-            "data",
-        ),
-        help="output filepath of cut_position_map",
+        required=True,
+        default=argparse.SUPPRESS,
+        help="Directory to write the JS files into",
     )
     parser.add_argument(
         "in_files",

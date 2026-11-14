@@ -170,7 +170,6 @@ class TestAPI:
         cropper = None
         image = "CC-BY3.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
-        # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
         with caplog.at_level(logging.WARNING):
             self.verify_process_leaf(image, None, cropper)
         response = self.apis.mocked_requests[self.apis.wikimedia_response(image)["url"]]
@@ -230,7 +229,6 @@ class TestAPI:
         rating = 40123
         image = "NoArtist.jpg"
         self.setup_lookups(db, self.apis.mock_qid, tmp_path, keep_rows)
-        # self.tmp_dir = "../OZtree/static/FinalOutputs/img/"
         with caplog.at_level(logging.WARNING):
             self.verify_process_leaf(image, rating, cropper)
         assert "Artist not found" in caplog.text

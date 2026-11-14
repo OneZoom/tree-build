@@ -1,6 +1,6 @@
 import argparse
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from pydal import DAL
 from tqdm import tqdm
@@ -43,7 +43,7 @@ def set_bit_for_first_image_only(
     return made_changes
 
 
-def resolve_from_config(ott: int, config_file: Optional[str]) -> bool:
+def resolve_from_config(ott: int, config_file: str) -> bool:
     """
     Process image bits for the given ott, getting a new db_context from a config file.
     Returns `True` if any changes were made.
@@ -180,8 +180,8 @@ def main() -> None:
 
     parser.add_argument(
         "--conf-file",
-        default=None,
-        help=("The configuration file to use. " "If not given, defaults to ../../../OZtree/private/appconfig.ini"),
+        required=True,
+        help="Path to the appconfig.ini file to use",
     )
 
     parser_leaf = subparsers.add_parser("leaf", help="Process a single leaf OTT")

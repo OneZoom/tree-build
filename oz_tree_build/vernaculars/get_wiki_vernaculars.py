@@ -3,6 +3,7 @@ This utility retrieves vernacular names from Wikidata for a given set of taxa or
 tips in a clade. Either install the entire oz_tree_build package using
 `python -m pip install oz_tree_build` or call the script directly as
 `python -m oz_tree_build.vernaculars.get_wiki_vernaculars ...`.
+`--conf-file` (an appconfig.ini) is required.
 
 The script can be used in two ways:
 - To process a single taxon, use the 'leaf' subcommand. This will get the
@@ -31,7 +32,6 @@ from .._OZglobals import src_flags
 from ..utilities.cli_utils import add_common_args, setup_logging
 from ..utilities.db_helper import (
     connect_to_database,
-    default_appconfig,
     placeholder,
     read_config,
     resolve_clade_bounds,
@@ -207,8 +207,8 @@ def add_vernacular_common_args(parser):
     parser.add_argument(
         "-c",
         "--conf-file",
-        default=None,
-        help=(f"The configuration file to use. Defaults to {default_appconfig}"),
+        required=True,
+        help="Path to the appconfig.ini file to use",
     )
 
 

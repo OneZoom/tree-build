@@ -1,6 +1,11 @@
+from pathlib import Path
+
 import pytest
 
 from oz_tree_build.utilities.db_helper import connect_to_database
+
+# Fake OneZoom database used unless a run passes --conf-file.
+_TESTS_APPCONFIG = str(Path(__file__).resolve().parent / "appconfig.ini")
 
 
 def pytest_addoption(parser):
@@ -8,7 +13,7 @@ def pytest_addoption(parser):
         "--conf-file",
         action="store",
         help="A path to the appconfig.ini file containing the database location and pw",
-        default=None,
+        default=_TESTS_APPCONFIG,
     )
     parser.addoption(
         "--keep-rows",

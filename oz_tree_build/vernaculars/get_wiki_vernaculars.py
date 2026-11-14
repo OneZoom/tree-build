@@ -31,7 +31,6 @@ from .._OZglobals import src_flags
 from ..utilities.cli_utils import add_common_args, setup_logging
 from ..utilities.db_helper import (
     connect_to_database,
-    default_appconfig,
     placeholder,
     read_config,
     resolve_clade_bounds,
@@ -208,7 +207,7 @@ def add_vernacular_common_args(parser):
         "-c",
         "--conf-file",
         default=None,
-        help=(f"The configuration file to use. Defaults to {default_appconfig}"),
+        help="OneZoom appconfig.ini; defaults to [onezoom] appconfig in the machine-local config.",
     )
 
 

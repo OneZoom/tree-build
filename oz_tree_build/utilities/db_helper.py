@@ -9,9 +9,9 @@ from typing import Optional, Tuple
 
 from pydal import DAL
 
-logger = logging.getLogger(__name__)
+from .local_config import resolve_path
 
-default_appconfig = "../../../OZtree/private/appconfig.ini"
+logger = logging.getLogger(__name__)
 
 
 def is_sqlite(db):
@@ -89,16 +89,12 @@ def get_next_src_id_for_src(db, src):
 
 def read_config(conf_file=None):
     """
-    Read the passed-in configuration file, defaulting to the standard appconfig.ini
+    Read an explicit appconfig.ini or the machine-local configured path.
     """
-
-    if conf_file is None:
-        conf_file = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            default_appconfig,
-        )
+    conf_file = resolve_path(conf_file, "appconfig", "--conf-file")
     if not os.path.exists(conf_file):
         raise ValueError(f"Appconfig file {conf_file} cannot be found.")
     config = configparser.ConfigParser()
-    config.read(conf_file)
+    with open(conf_file, encoding="utf-8") as config_file:
+        config.read_file(config_file)
     return config

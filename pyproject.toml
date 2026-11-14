@@ -66,8 +66,11 @@ newick_combiner = "oz_tree_build.wiki_extraction.newick_combiner:main"
 add_dates_and_species_to_tree = "oz_tree_build.wiki_extraction.add_dates_and_species_to_tree:main"
 
 [tool.setuptools]
-packages = ["oz_tree_build"]
 include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["oz_tree_build*"]
+namespaces = true
 
 [tool.pytest]
 testpaths = ["tests"]

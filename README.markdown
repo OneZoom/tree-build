@@ -22,23 +22,65 @@ After the first time, you just need to run the `source .venv/bin/activate` each 
 
 To be able to run the pipeline, you'll also need to install `wget`.
 
+## Configuring an existing OneZoom installation
+
+Tree-build can be installed anywhere, independently of OZtree. For database-backed
+update commands, create a `config.ini` in the tree-build directory, for example
+`~/tree-build/config.ini`. This file is ignored by git:
+
+```ini
+[onezoom]
+appconfig = ~/www.onezoom.org/applications/OZtree/private/appconfig.ini
+image_output_dir = ~/www.onezoom.org/applications/OZtree/static/FinalOutputs/img
+```
+
+These are examples: set the paths for your installation. Paths beginning with `~`
+refer to the running user's home; relative paths in this file are relative to the
+file's directory. The appconfig is the existing OneZoom INI file containing `[db]`
+`uri` and, when using Azure cropping, `[azure_vision]` credentials. Keep credentials
+in that file, not in tree-build's configuration or the repository. The image output
+directory must already exist and be writable.
+
+Run the commands from that directory to use its `config.ini`, for example:
+
+```bash
+get_wiki_vernaculars leaf "Panthera leo"
+get_wiki_images leaf "Panthera leo" --no-azure-crop
+process_image_bits all
+```
+
+These commands immediately modify the configured database; image harvesting also
+writes images, including uncropped images and crop information, to the configured
+directory. They are not an offline import workflow. Use an appropriately restricted
+account and check the target before running them on production.
+
+To run from another directory, set `TREE_BUILD_CONFIG` to the absolute path of the
+file, for example `export TREE_BUILD_CONFIG="$HOME/tree-build/config.ini"`.
+If set, this takes precedence over the current directory's `config.ini`.
+
+`--conf-file` overrides `appconfig` for these commands, and `--output-dir` overrides
+`image_output_dir` for image harvesting. The explicit options also work without a
+local configuration file. For `get_wiki_images` and `get_wiki_vernaculars`, supply
+these options after the `leaf` or `clade` subcommand; for `process_image_bits`,
+supply `--conf-file` before its subcommand. If a required path is not configured,
+the command fails rather than guessing an OZtree location. Scheduled jobs must
+set the working directory or `TREE_BUILD_CONFIG` and use the intended `HOME`,
+or pass explicit paths.
+
+Tree building and JS generation do not require this configuration or a running
+OZtree database. `make_js_treefiles` requires an explicit `--outdir`.
+
 ## Testing
 
 Assuming you have installed the 'dev' dependencies, you should be able to run
 
-    python -m pytest --conf-file tests/appconfig.ini
+    python -m pytest
 
-Here we have used a basic conf file to create a fake OneZoom database. However, if you wish to test using the
-real OneZoom database, you can specify a different path to an appconfig.ini file, or omit the `--conf-file`
-option entirely, in which case the test suite will look for `../OZtree/private/appconfig.ini`, which assumes
-hat this repository is a sibling to a non-live
-[OZtree](https://github.com/OneZoom/OZtree) installation, and that the database used by this OZtree
-installation is active.
-
-    python -m pytest  # Uses the "real" OneZoom database - take care!
-
-This uses mocked APIs. You can also run with the real APIs using the `--real-apis` swithc, in whcih case
-you will need a valid Azure Image cropping key in your appconfig.ini.
+By default the tests use an isolated temporary SQLite database and mocked APIs,
+regardless of machine-local configuration. To test against another database, pass
+`--conf-file /path/to/appconfig.ini` explicitly. Such tests modify that database;
+use a non-production database. To use real APIs, add `--real-apis` and provide an
+appconfig with a valid Azure image cropping key.
 
 ## Building the latest tree from OpenTree
 
@@ -88,11 +130,25 @@ Note that download_and_filter_wikidata and download_and_filter_pageviews take se
 
 ## Uploading tree to server
 
-1. If you are running the tree building scripts on a different computer to the one running the web server, you will need to push the `completetree_XXXXXX.js`, `completetree_XXXXXX.js.gz`, `cut_position_map_XXXXXX.js`, `cut_position_map_XXXXXX.js.gz`, `dates_XXXXXX.js`, `dates_XXXXXX.js.gz` files onto your server, e.g. by pushing to your local Github repo then pulling the latest github changes to the server.
+1. A separate build machine can download the inputs and run the DVC pipeline without access
+   to the production database. Transfer `data/output_files/` to the server for import.
+   The pipeline writes versioned `completetree` and `cut_position_map` JS and gzip files
+   to `data/js_output/`. Copy the appropriate files into an OZtree checkout's
+   `static/FinalOutputs/data/`, commit them to an OZtree branch, and deploy that
+   revision to the web server. Ensure the viewer and database use the same tree version.
+   The current DVC JS stage does not generate `dates` files; check the target
+   installation's requirements separately.
 
-2. (15 mins) load the CSV tables into the DB. Use the script generated in `data/output_files/import_XXXXXX.sql` to truncate and repopulate ordered_leaves/nodes/etc.
+2. The generated `data/output_files/import_XXXXXX.sql` references the accompanying
+   `.csv.mySQL` files by the paths used during the build (normally relative to the
+   tree-build repository root). After transfer, run the MySQL client from a directory
+   where those paths resolve, or carefully adjust the paths in the SQL. `LOAD DATA
+   LOCAL INFILE` reads them on the machine running the client. The script **truncates
+   and repopulates** the ordered tables: back up the target, verify the SQL and
+   test the import on a staging database before a planned production deployment.
 
-   ```
+   ```bash
+   # Example: from a directory containing the transferred data/output_files/
    echo "SET GLOBAL local_infile=ON;" | mysql -p OneZoom_dev
    mysql --local-infile --host localhost --user onezoom --password --database OneZoom_dev < data/output_files/import_XXXXXX.sql
    ```

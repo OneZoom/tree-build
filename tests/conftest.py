@@ -23,8 +23,18 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope="session")
-def conf_file(request):
-    return request.config.getoption("--conf-file")
+def conf_file(request, tmp_path_factory):
+    explicit_config = request.config.getoption("--conf-file")
+    if explicit_config is not None:
+        return explicit_config
+    directory = tmp_path_factory.mktemp("test_database")
+    conf = directory / "appconfig.ini"
+    conf.write_text(
+        f"[db]\nuri = sqlite://{directory / 'storage.sqlite'}\n"
+        "[azure_vision]\nendpoint = https://my-bespoke-url.azure.com/\nkey = 0000000000000000\n",
+        encoding="utf-8",
+    )
+    return str(conf)
 
 
 @pytest.fixture(scope="session")

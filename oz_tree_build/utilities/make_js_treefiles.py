@@ -196,17 +196,8 @@ def main():
     parser.add_argument(
         "--outdir",
         "-o",
-        default=os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "OZtree",
-            "static",
-            "FinalOutputs",
-            "data",
-        ),
-        help="output filepath of cut_position_map",
+        required=True,
+        help="Output directory for generated files",
     )
     parser.add_argument(
         "in_files",

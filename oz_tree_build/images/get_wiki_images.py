@@ -51,13 +51,13 @@ from ..user_agent import USER_AGENT_HEADERS
 from ..utilities.cli_utils import add_common_args, setup_logging
 from ..utilities.db_helper import (
     connect_to_database,
-    default_appconfig,
     get_next_src_id_for_src,
     placeholder,
     read_config,
     resolve_clade_bounds,
 )
 from ..utilities.http_utils import make_http_request_with_retries
+from ..utilities.local_config import resolve_path
 from ..utilities.wikidata_utils import (
     enumerate_wiki_dump_items,
     get_prop_from_taxa_data,
@@ -87,16 +87,6 @@ class ImageInfo:
 
 
 logger = logging.getLogger(Path(__file__).name)
-
-default_outdir = os.path.join(
-    os.pardir,
-    os.pardir,
-    os.pardir,
-    "OZtree",
-    "static",
-    "FinalOutputs",
-    "img",
-)
 
 
 # Copied from OZTree/OZprivate/ServerScripts/Utilities/getEOL_crops.py
@@ -673,16 +663,12 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper, a
 
 def process_args(args):
     auth = auth_from_cli_credentials(args.wikimedia_client_id, args.wikimedia_client_secret)
-    outdir = args.output_dir
+    outdir = resolve_path(args.output_dir, "image_output_dir", "--output-dir")
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
 
-    # Default to the static folder in the OZtree repo
-    if outdir is None:
-        outdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), default_outdir)
-    if not os.path.exists(outdir):
-        logger.error(f"Output directory '{outdir}' does not exist")
-        return
+    if not os.path.isdir(outdir):
+        raise ValueError(f"Output directory '{outdir}' does not exist or is not a directory")
 
     db = connect_to_database(database)
 
@@ -716,7 +702,7 @@ def add_image_common_args(parser):
         "-c",
         "--conf-file",
         default=None,
-        help=(f"The configuration file to use. Defaults to {default_appconfig}"),
+        help="OneZoom appconfig.ini; defaults to [onezoom] appconfig in the machine-local config.",
     )
     parser.add_argument(
         "--no-azure-crop",
@@ -732,8 +718,8 @@ def add_image_common_args(parser):
         default=None,
         help=(
             "The location to save the image files (e.g. 'FinalOutputs/img'). "
-            f"Defaults to {default_outdir} (relative to the script "
-            "location). Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
+            "Defaults to [onezoom] image_output_dir in the machine-local config. "
+            "Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
         ),
     )
     parser.add_argument(

@@ -181,7 +181,7 @@ def main() -> None:
     parser.add_argument(
         "--conf-file",
         default=None,
-        help=("The configuration file to use. " "If not given, defaults to ../../../OZtree/private/appconfig.ini"),
+        help="OneZoom appconfig.ini; defaults to [onezoom] appconfig in the machine-local config.",
     )
 
     parser_leaf = subparsers.add_parser("leaf", help="Process a single leaf OTT")

@@ -4,13 +4,13 @@ clade. Either install the entire oz_tree_build package using
 `python -m pip install oz_tree_build` or call the script directly as
 `python -m oz_tree_build.images.get_wiki_images ...`. Images are
 cropped to a 300x300 square using the Microsoft Azure Vision API, or
-centered if no cropper is available. `--conf-file` (an appconfig.ini) and
-`--output-dir` (where to write the image files) are required.
+centered if no cropper is available. Configure [onezoom] appconfig and
+image_output_dir in tree-build's config.ini, or pass --conf-file and --output-dir.
 
 The script can be used in two ways:
 - To process a single taxon, use the 'leaf' subcommand. This will get the image
   for the given taxon, specified by OTT (e.g. 563151) or scientific name
-  ('name') in the ordered_leaves or ordered_nodes tables e.g.
+  ('name') in the ordered_leaves table e.g.
     * get_wiki_images.py leaf 563151
     * get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg"
     * get_wiki_images.py leaf "Panthera leo" "File:Panthera leo.jpg" 42000
@@ -25,9 +25,10 @@ The script can be used in two ways:
   rating of 40000.
 
 - To process a full clade, use the 'clade' subcommand. This will get the images
-  for all the taxa in the clade. A wikidata JSON dump file is required
-  to find appropriate images for all the taxa: ideally this should be a filtered one
-  such as OneZoom_latest-all.json. For example, to get images for all Panthera:
+  for leaves in the clade. A Wikidata JSON dump is required, supplied via
+  --wd-dump or [onezoom] wd_json_dump in tree-build's config.ini. Ideally it
+  should be filtered, such as OneZoom_latest-all.json. For example:
+    * get_wiki_images clade "Panthera"  # using the configured dump
     * get_wiki_images.py clade 563151 --wd-dump OneZoom_latest-all.json   # or
     * get_wiki_images.py clade "Panthera" --wd-dump OneZoom_latest-all.json
 """
@@ -51,6 +52,7 @@ from .._OZglobals import src_flags
 from ..user_agent import USER_AGENT_HEADERS
 from ..utilities.cli_utils import add_common_args, setup_logging
 from ..utilities.db_helper import (
+    configured_path,
     connect_to_database,
     get_next_src_id_for_src,
     placeholder,
@@ -64,7 +66,7 @@ from ..utilities.wikidata_utils import (
     get_qid_from_taxa_data,
     get_wikidata_json_for_qid,
     resolve_leaf,
-    validate_wikidata_dump,
+    resolve_wikidata_dump,
 )
 from ..utilities.wikimedia_auth import WikimediaAuth, auth_from_cli_credentials
 from ..utilities.wikimedia_headers import wikimedia_headers
@@ -664,15 +666,13 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper, a
 
 def process_args(args):
     auth = auth_from_cli_credentials(args.wikimedia_client_id, args.wikimedia_client_secret)
-    if args.subcommand == "clade":
-        validate_wikidata_dump(args.wd_dump)
-    outdir = args.output_dir
+    wd_dump = resolve_wikidata_dump(args.wd_dump) if args.subcommand == "clade" else None
+    outdir = configured_path(args.output_dir, "image_output_dir", "--output-dir")
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
 
-    if not os.path.exists(outdir):
-        logger.error(f"Output directory '{outdir}' does not exist")
-        return
+    if not os.path.isdir(outdir):
+        raise ValueError(f"Output directory '{outdir}' does not exist or is not a directory")
 
     db = connect_to_database(database)
 
@@ -692,7 +692,7 @@ def process_args(args):
     elif args.subcommand == "clade":
         # Process all the taxa in the passed in clades
         for name in args.ott_or_taxa:
-            process_clade(db, name, args.wd_dump, taxa_data, outdir, cropper, auth)
+            process_clade(db, name, wd_dump, taxa_data, outdir, cropper, auth)
 
 
 def add_image_common_args(parser):
@@ -705,8 +705,7 @@ def add_image_common_args(parser):
     parser.add_argument(
         "-c",
         "--conf-file",
-        required=True,
-        help="Path to the appconfig.ini file to use",
+        help="Path to appconfig.ini (defaults to [onezoom] appconfig in tree-build's config.ini)",
     )
     parser.add_argument(
         "--no-azure-crop",
@@ -719,9 +718,9 @@ def add_image_common_args(parser):
     parser.add_argument(
         "-o",
         "--output-dir",
-        required=True,
         help=(
             "The location to save the image files (e.g. '/path/to/OZtree/static/FinalOutputs/img'). "
+            "Defaults to [onezoom] image_output_dir in tree-build's config.ini. "
             "Files are saved to output_dir/{src_flag}/{3-digits}/fn.jpg"
         ),
     )
@@ -764,9 +763,8 @@ def main():
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(
         "--wd-dump",
-        required=True,
         type=str,
-        help="The wikidata JSON dump file from which to get image URLs",
+        help="Wikidata JSON dump (defaults to [onezoom] wd_json_dump in tree-build's config.ini)",
     )
     parser_clade.add_argument(
         "ott_or_taxa",

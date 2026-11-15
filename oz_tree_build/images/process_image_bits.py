@@ -180,8 +180,7 @@ def main() -> None:
 
     parser.add_argument(
         "--conf-file",
-        required=True,
-        help="Path to the appconfig.ini file to use",
+        help="Path to appconfig.ini (defaults to [onezoom] appconfig in tree-build's config.ini)",
     )
 
     parser_leaf = subparsers.add_parser("leaf", help="Process a single leaf OTT")

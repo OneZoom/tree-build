@@ -3,7 +3,7 @@ This utility retrieves vernacular names from Wikidata for a given set of taxa or
 tips in a clade. Either install the entire oz_tree_build package using
 `python -m pip install oz_tree_build` or call the script directly as
 `python -m oz_tree_build.vernaculars.get_wiki_vernaculars ...`.
-`--conf-file` (an appconfig.ini) is required.
+Configure [onezoom] appconfig in tree-build's config.ini, or pass --conf-file.
 
 The script can be used in two ways:
 - To process a single taxon, use the 'taxon' subcommand. This will get the
@@ -11,16 +11,17 @@ The script can be used in two ways:
   name ('name') in the ordered_leaves or ordered_nodes tables e.g.
     * get_wiki_vernaculars.py taxon 563151
     * get_wiki_vernaculars.py taxon "Panthera leo"
-    * get_wiki_vernaculars taxon 1028828 --conf-file /path/to/appconfig.ini
-      (Strigidae, an internal node)
+    * get_wiki_vernaculars taxon 1028828  (Strigidae, an internal node)
   This uses the Wikidata API and does not require a Wikidata dump.
   The previous 'leaf' subcommand remains available as an alias.
 
 - To process a full clade, use the 'clade' subcommand. This will get the
   vernaculars for leaves and internal nodes in the clade that have OTTs.
-  A wikidata JSON dump file is
-  required: ideally this should be a filtered one such as OneZoom_latest-all.json.
+  A Wikidata JSON dump is required, supplied via --wd-dump or wd_json_dump in
+  tree-build's config.ini. Ideally it should be filtered, such as
+  OneZoom_latest-all.json.
   For example, to get vernaculars for all Panthera:
+    * get_wiki_vernaculars clade "Panthera"  # using the configured dump
     * get_wiki_vernaculars.py clade 563151 --wd-dump OneZoom_latest-all.json   # or
     * get_wiki_vernaculars.py clade "Panthera" --wd-dump OneZoom_latest-all.json
 """
@@ -44,7 +45,7 @@ from ..utilities.wikidata_utils import (
     enumerate_wiki_dump_items,
     get_qid_from_taxa_data,
     get_wikidata_json_for_qid,
-    validate_wikidata_dump,
+    resolve_wikidata_dump,
 )
 from ..utilities.wikimedia_headers import wikimedia_headers
 
@@ -218,8 +219,7 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data):
 
 
 def process_args(args):
-    if args.subcommand == "clade":
-        validate_wikidata_dump(args.wd_dump)
+    wd_dump = resolve_wikidata_dump(args.wd_dump) if args.subcommand == "clade" else None
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
     db = connect_to_database(database)
@@ -234,7 +234,7 @@ def process_args(args):
             process_taxon(db, name, taxa_data)
     elif args.subcommand == "clade":
         for name in args.ott_or_taxa:
-            process_clade(db, name, args.wd_dump, taxa_data)
+            process_clade(db, name, wd_dump, taxa_data)
 
 
 def add_vernacular_common_args(parser):
@@ -247,8 +247,7 @@ def add_vernacular_common_args(parser):
     parser.add_argument(
         "-c",
         "--conf-file",
-        required=True,
-        help="Path to the appconfig.ini file to use",
+        help="Path to appconfig.ini (defaults to [onezoom] appconfig in tree-build's config.ini)",
     )
 
 
@@ -264,9 +263,8 @@ def main():
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(
         "--wd-dump",
-        required=True,
         type=str,
-        help="The wikidata JSON dump file from which to get vernaculars",
+        help="Wikidata JSON dump (defaults to [onezoom] wd_json_dump in tree-build's config.ini)",
     )
     parser_clade.add_argument(
         "ott_or_taxa",

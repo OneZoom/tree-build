@@ -16,8 +16,8 @@ The script can be used in two ways:
   vernaculars for all the taxa in the clade. A wikidata JSON dump file is
   required: ideally this should be a filtered one such as OneZoom_latest-all.json.
   For example, to get vernaculars for all Panthera:
-    * get_wiki_vernaculars.py clade OneZoom_latest-all.json 563151   # or
-    * get_wiki_vernaculars.py clade OneZoom_latest-all.json "Panthera"
+    * get_wiki_vernaculars.py clade 563151 --wd-dump OneZoom_latest-all.json   # or
+    * get_wiki_vernaculars.py clade "Panthera" --wd-dump OneZoom_latest-all.json
 """
 
 import argparse
@@ -40,6 +40,7 @@ from ..utilities.wikidata_utils import (
     enumerate_wiki_dump_items,
     get_wikidata_json_for_qid,
     resolve_leaf,
+    validate_wikidata_dump,
 )
 from ..utilities.wikimedia_headers import wikimedia_headers
 
@@ -180,6 +181,8 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data):
 
 
 def process_args(args):
+    if args.subcommand == "clade":
+        validate_wikidata_dump(args.wd_dump)
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
     db = connect_to_database(database)
@@ -223,7 +226,8 @@ def main():
 
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(
-        "wd_dump",
+        "--wd-dump",
+        required=True,
         type=str,
         help="The wikidata JSON dump file from which to get vernaculars",
     )

@@ -28,8 +28,8 @@ The script can be used in two ways:
   for all the taxa in the clade. A wikidata JSON dump file is required
   to find appropriate images for all the taxa: ideally this should be a filtered one
   such as OneZoom_latest-all.json. For example, to get images for all Panthera:
-    * get_wiki_images.py clade OneZoom_latest-all.json 563151   # or
-    * get_wiki_images.py clade OneZoom_latest-all.json "Panthera"
+    * get_wiki_images.py clade 563151 --wd-dump OneZoom_latest-all.json   # or
+    * get_wiki_images.py clade "Panthera" --wd-dump OneZoom_latest-all.json
 """
 
 import argparse
@@ -64,6 +64,7 @@ from ..utilities.wikidata_utils import (
     get_qid_from_taxa_data,
     get_wikidata_json_for_qid,
     resolve_leaf,
+    validate_wikidata_dump,
 )
 from ..utilities.wikimedia_auth import WikimediaAuth, auth_from_cli_credentials
 from ..utilities.wikimedia_headers import wikimedia_headers
@@ -663,6 +664,8 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper, a
 
 def process_args(args):
     auth = auth_from_cli_credentials(args.wikimedia_client_id, args.wikimedia_client_secret)
+    if args.subcommand == "clade":
+        validate_wikidata_dump(args.wd_dump)
     outdir = args.output_dir
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
@@ -760,7 +763,8 @@ def main():
 
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(
-        "wd_dump",
+        "--wd-dump",
+        required=True,
         type=str,
         help="The wikidata JSON dump file from which to get image URLs",
     )

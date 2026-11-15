@@ -22,6 +22,17 @@ After the first time, you just need to run the `source .venv/bin/activate` each 
 
 To be able to run the pipeline, you'll also need to install `wget`.
 
+For clade harvesting with `get_wiki_images` or `get_wiki_vernaculars`, supply
+the Wikidata JSON dump using `--wd-dump`, followed by the required appconfig
+and, for images, output directory options:
+
+```bash
+get_wiki_vernaculars clade "Panthera" --wd-dump /path/to/OneZoom_latest-all.json --conf-file /path/to/appconfig.ini
+```
+
+The dump is now an option rather than the first positional argument, so update
+existing clade commands. Leaf commands use the Wikidata API and need no dump.
+
 ## Testing
 
 Assuming you have installed the 'dev' dependencies, you should be able to run

@@ -5,12 +5,13 @@ Shared Wikidata helpers for the wiki image and vernacular harvesting scripts.
 import json
 from pathlib import Path
 
-from .db_helper import placeholder
+from .db_helper import configured_path, placeholder
 from .file_utils import enumerate_lines_from_file
 from .http_utils import make_http_request_with_retries
 
 
-def validate_wikidata_dump(path):
+def resolve_wikidata_dump(path):
+    path = configured_path(path, "wd_json_dump", "--wd-dump")
     if not Path(path).is_file():
         raise ValueError(f"Wikidata JSON dump '{path}' does not exist or is not a file.")
     return path

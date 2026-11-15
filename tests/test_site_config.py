@@ -76,5 +76,43 @@ def test_bad_image_directory_does_not_connect(site_config, monkeypatch):
                 wikimedia_client_secret=None,
                 output_dir=str(root / "missing"),
                 conf_file=None,
+                subcommand="leaf",
             )
         )
+
+
+@pytest.mark.parametrize("module", [get_wiki_images, get_wiki_vernaculars])
+def test_clade_dump_config_and_override(site_config, tmp_path, monkeypatch, module):
+    _, _, root = site_config
+    configured_dump = root / "dump.json"
+    configured_dump.write_text("[]")
+    override_dump = tmp_path / "override.json"
+    override_dump.write_text("[]")
+    with (root / "config.ini").open("a") as file:
+        file.write("wd_json_dump = dump.json\n")
+    calls = []
+    monkeypatch.setattr(module, "connect_to_database", lambda uri: None)
+    monkeypatch.setattr(module, "process_clade", lambda db, name, dump, *args: calls.append((name, dump)))
+    if module is get_wiki_images:
+        monkeypatch.setattr(module, "AzureImageCropper", lambda config: None)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.argv", ["harvest", "clade", "123", "456"])
+    module.main()
+    monkeypatch.setattr("sys.argv", ["harvest", "clade", "123", "--wd-dump", str(override_dump)])
+    module.main()
+    assert calls == [
+        ("123", str(configured_dump)),
+        ("456", str(configured_dump)),
+        ("123", str(override_dump)),
+    ]
+
+
+@pytest.mark.parametrize("module", [get_wiki_images, get_wiki_vernaculars])
+def test_clade_dump_required_before_database_connection(site_config, tmp_path, monkeypatch, module):
+    monkeypatch.setattr(module, "connect_to_database", lambda *args: pytest.fail("connected to database"))
+    monkeypatch.setattr("sys.argv", ["harvest", "clade", "123"])
+    with pytest.raises(ValueError, match=r"wd_json_dump.*--wd-dump"):
+        module.main()
+    monkeypatch.setattr("sys.argv", ["harvest", "clade", "123", "--wd-dump", str(tmp_path / "missing.json")])
+    with pytest.raises(ValueError, match="does not exist or is not a file"):
+        module.main()

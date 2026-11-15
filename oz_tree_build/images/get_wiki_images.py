@@ -65,7 +65,7 @@ from ..utilities.wikidata_utils import (
     get_qid_from_taxa_data,
     get_wikidata_json_for_qid,
     resolve_leaf,
-    validate_wikidata_dump,
+    resolve_wikidata_dump,
 )
 from ..utilities.wikimedia_auth import WikimediaAuth, auth_from_cli_credentials
 from ..utilities.wikimedia_headers import wikimedia_headers
@@ -665,8 +665,7 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data, output_dir, cropper, a
 
 def process_args(args):
     auth = auth_from_cli_credentials(args.wikimedia_client_id, args.wikimedia_client_secret)
-    if args.subcommand == "clade":
-        validate_wikidata_dump(args.wd_dump)
+    wd_dump = resolve_wikidata_dump(args.wd_dump) if args.subcommand == "clade" else None
     outdir = configured_path(args.output_dir, "image_output_dir", "--output-dir")
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
@@ -692,7 +691,7 @@ def process_args(args):
     elif args.subcommand == "clade":
         # Process all the taxa in the passed in clades
         for name in args.ott_or_taxa:
-            process_clade(db, name, args.wd_dump, taxa_data, outdir, cropper, auth)
+            process_clade(db, name, wd_dump, taxa_data, outdir, cropper, auth)
 
 
 def add_image_common_args(parser):
@@ -763,9 +762,8 @@ def main():
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(
         "--wd-dump",
-        required=True,
         type=str,
-        help="The wikidata JSON dump file from which to get image URLs",
+        help="Wikidata JSON dump (defaults to [onezoom] wd_json_dump in tree-build's config.ini)",
     )
     parser_clade.add_argument(
         "ott_or_taxa",

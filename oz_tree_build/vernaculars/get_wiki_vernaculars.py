@@ -18,8 +18,9 @@ The script can be used in two ways:
 
 - To process a full clade, use the 'clade' subcommand. This will get the
   vernaculars for leaves and internal nodes in the clade that have OTTs.
-  A wikidata JSON dump file is
-  required: ideally this should be a filtered one such as OneZoom_latest-all.json.
+  A Wikidata JSON dump is required, supplied via --wd-dump or wd_json_dump in
+  tree-build's config.ini. Ideally it should be filtered, such as
+  OneZoom_latest-all.json.
   For example, to get vernaculars for all Panthera:
     * get_wiki_vernaculars.py clade 563151 --wd-dump OneZoom_latest-all.json   # or
     * get_wiki_vernaculars.py clade "Panthera" --wd-dump OneZoom_latest-all.json
@@ -44,7 +45,7 @@ from ..utilities.wikidata_utils import (
     enumerate_wiki_dump_items,
     get_qid_from_taxa_data,
     get_wikidata_json_for_qid,
-    validate_wikidata_dump,
+    resolve_wikidata_dump,
 )
 from ..utilities.wikimedia_headers import wikimedia_headers
 
@@ -218,8 +219,7 @@ def process_clade(db, ott_or_taxon, dump_file, taxa_data):
 
 
 def process_args(args):
-    if args.subcommand == "clade":
-        validate_wikidata_dump(args.wd_dump)
+    wd_dump = resolve_wikidata_dump(args.wd_dump) if args.subcommand == "clade" else None
     config = read_config(args.conf_file)
     database = config.get("db", "uri")
     db = connect_to_database(database)
@@ -234,7 +234,7 @@ def process_args(args):
             process_taxon(db, name, taxa_data)
     elif args.subcommand == "clade":
         for name in args.ott_or_taxa:
-            process_clade(db, name, args.wd_dump, taxa_data)
+            process_clade(db, name, wd_dump, taxa_data)
 
 
 def add_vernacular_common_args(parser):
@@ -263,9 +263,8 @@ def main():
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(
         "--wd-dump",
-        required=True,
         type=str,
-        help="The wikidata JSON dump file from which to get vernaculars",
+        help="Wikidata JSON dump (defaults to [onezoom] wd_json_dump in tree-build's config.ini)",
     )
     parser_clade.add_argument(
         "ott_or_taxa",

@@ -11,6 +11,9 @@ The script can be used in two ways:
   name ('name') in the ordered_leaves or ordered_nodes tables e.g.
     * get_wiki_vernaculars.py taxon 563151
     * get_wiki_vernaculars.py taxon "Panthera leo"
+    * get_wiki_vernaculars taxon 1028828 --conf-file /path/to/appconfig.ini
+      (Strigidae, an internal node)
+  This uses the Wikidata API and does not require a Wikidata dump.
   The previous 'leaf' subcommand remains available as an alias.
 
 - To process a full clade, use the 'clade' subcommand. This will get the

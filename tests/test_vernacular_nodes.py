@@ -72,6 +72,38 @@ def test_single_node_by_ott_or_name(tree_db, monkeypatch, query):
     assert tree_db.executesql("SELECT ott,vernacular,src_id FROM vernacular_by_ott") == [(20, "cats", 200)]
 
 
+def test_single_node_cli_without_dump(tmp_path, monkeypatch):
+    database_path = tmp_path / "test.sqlite"
+    config_path = tmp_path / "appconfig.ini"
+    config_path.write_text(f"[db]\nuri = sqlite://{database_path}\n")
+    db = connect_to_database(f"sqlite://{database_path}")
+    db.executesql("INSERT INTO ordered_nodes (ott, wikidata, name) VALUES (1028828, 200, 'Strigidae')")
+    db.commit()
+    db.close()
+    seen = []
+    monkeypatch.setattr(
+        vernaculars,
+        "get_wikidata_json_for_qid",
+        lambda qid, headers: (
+            seen.append(qid)
+            or {
+                "claims": {
+                    "P1843": [
+                        {"rank": "normal", "mainsnak": {"datavalue": {"value": {"language": "en", "text": "owls"}}}}
+                    ]
+                }
+            }
+        ),
+    )
+    monkeypatch.setattr("sys.argv", ["get_wiki_vernaculars", "taxon", "1028828", "--conf-file", str(config_path)])
+    vernaculars.main()
+    assert seen == [200]
+    with sqlite3.connect(database_path) as db:
+        assert db.execute("SELECT ott, vernacular, src_id FROM vernacular_by_ott").fetchall() == [
+            (1028828, "owls", 200)
+        ]
+
+
 def test_single_taxon_ambiguous_and_missing_qid(tree_db, monkeypatch, caplog):
     tree_db.executesql("INSERT INTO ordered_leaves VALUES (5, 20, 201, 'Other')")
     monkeypatch.setattr(vernaculars, "get_wikidata_json_for_qid", lambda *args, **kwargs: pytest.fail("API called"))

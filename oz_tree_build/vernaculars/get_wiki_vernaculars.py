@@ -6,14 +6,19 @@ tips in a clade. Either install the entire oz_tree_build package using
 `--conf-file` (an appconfig.ini) is required.
 
 The script can be used in two ways:
-- To process a single taxon, use the 'leaf' subcommand. This will get the
+- To process a single taxon, use the 'taxon' subcommand. This will get the
   vernaculars for the given taxon, specified by OTT (e.g. 563151) or scientific
   name ('name') in the ordered_leaves or ordered_nodes tables e.g.
-    * get_wiki_vernaculars.py leaf 563151
-    * get_wiki_vernaculars.py leaf "Panthera leo"
+    * get_wiki_vernaculars.py taxon 563151
+    * get_wiki_vernaculars.py taxon "Panthera leo"
+    * get_wiki_vernaculars taxon 1028828 --conf-file /path/to/appconfig.ini
+      (Strigidae, an internal node)
+  This uses the Wikidata API and does not require a Wikidata dump.
+  The previous 'leaf' subcommand remains available as an alias.
 
 - To process a full clade, use the 'clade' subcommand. This will get the
-  vernaculars for all the taxa in the clade. A wikidata JSON dump file is
+  vernaculars for leaves and internal nodes in the clade that have OTTs.
+  A wikidata JSON dump file is
   required: ideally this should be a filtered one such as OneZoom_latest-all.json.
   For example, to get vernaculars for all Panthera:
     * get_wiki_vernaculars.py clade 563151 --wd-dump OneZoom_latest-all.json   # or
@@ -34,12 +39,11 @@ from ..utilities.db_helper import (
     connect_to_database,
     placeholder,
     read_config,
-    resolve_clade_bounds,
 )
 from ..utilities.wikidata_utils import (
     enumerate_wiki_dump_items,
+    get_qid_from_taxa_data,
     get_wikidata_json_for_qid,
-    resolve_leaf,
     validate_wikidata_dump,
 )
 from ..utilities.wikimedia_headers import wikimedia_headers
@@ -132,50 +136,83 @@ def save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):
     db.commit()
 
 
-def process_leaf(db, ott_or_taxon, taxa_data=None):
-    """
-    If ott_or_taxon is a number it's an ott, otherwise it's a taxon name.
-    """
-    resolved = resolve_leaf(db, ott_or_taxon, taxa_data, logger)
-    if resolved is None:
+def process_taxon(db, ott_or_taxon, taxa_data=None):
+    """Harvest vernaculars for one leaf or internal node."""
+    column = "ott" if ott_or_taxon.lstrip("-").isnumeric() else "name"
+    s = placeholder(db)
+    rows = db.executesql(
+        f"SELECT ott,wikidata,name FROM ordered_leaves WHERE {column}={s} "
+        f"UNION ALL SELECT ott,wikidata,name FROM ordered_nodes WHERE {column}={s}",
+        (ott_or_taxon, ott_or_taxon),
+    )
+    if not rows:
+        logger.error(f"'{ott_or_taxon}' not found in ordered_leaves or ordered_nodes")
         return
-    ott, qid, _name = resolved
+    if len(rows) > 1:
+        logger.error(f"Multiple results for '{ott_or_taxon}' in ordered_leaves and ordered_nodes")
+        return
+    ott, qid, name = rows[0]
+    if ott is None:
+        logger.error(f"'{ott_or_taxon}' has no OTT")
+        return
+    if not qid:
+        qid = get_qid_from_taxa_data(taxa_data, name)
+    if not qid:
+        logger.error(f"No Wikidata QID for '{ott_or_taxon}'")
+        return
 
-    # No auth: leaf mode makes a single Wikidata request, so a token isn't worth fetching.
     json_item = get_wikidata_json_for_qid(qid, headers=wikimedia_headers(auth=None))
     vernaculars_by_language = get_vernaculars_by_language_from_json_item(json_item)
     save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language)
 
 
+process_leaf = process_taxon
+
+
 def process_clade(db, ott_or_taxon, dump_file, taxa_data):
     s = placeholder(db)
-    bounds = resolve_clade_bounds(db, ott_or_taxon, logger)
-    if bounds is None:
+    column = "ott" if ott_or_taxon.lstrip("-").isnumeric() else "name"
+    bounds = db.executesql(
+        f"SELECT id,node_rgt,leaf_lft,leaf_rgt FROM ordered_nodes WHERE {column}={s}",
+        (ott_or_taxon,),
+    )
+    if not bounds:
+        raise ValueError(f"'{ott_or_taxon}' not found in ordered_nodes table")
+    if len(bounds) > 1:
+        logger.error(f"Multiple results for '{ott_or_taxon}' in ordered_nodes")
         return
-    (leaf_lft, leaf_rgt, _ott) = bounds
+    node_lft, node_rgt, leaf_lft, leaf_rgt = bounds[0]
 
-    # Get leaves in the clade with no wiki vernaculars, ignoring verns from other sources
-    sql = f"""
-    SELECT wikidata, ordered_leaves.ott FROM ordered_leaves
-    LEFT OUTER JOIN (SELECT ott,src,vernacular FROM vernacular_by_ott WHERE src={s})
-    as wiki_vernacular_by_ott ON ordered_leaves.ott=wiki_vernacular_by_ott.ott
-    WHERE vernacular IS NULL AND ordered_leaves.id >= {s} AND ordered_leaves.id <= {s};
-    """
-    leaves_without_vn = dict(db.executesql(sql, (src_flags["wiki"], leaf_lft, leaf_rgt)))
-    total_to_process = len(leaves_without_vn)
+    taxa_by_qid = {}
+    for table, left, right in (
+        ("ordered_leaves", leaf_lft, leaf_rgt),
+        ("ordered_nodes", node_lft, node_rgt),
+    ):
+        sql = f"""
+        SELECT taxon.wikidata, taxon.ott FROM {table} AS taxon
+        WHERE taxon.id >= {s} AND taxon.id <= {s}
+          AND taxon.ott IS NOT NULL AND taxon.wikidata IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM vernacular_by_ott AS vn WHERE vn.ott=taxon.ott AND vn.src={s}
+          )
+        """
+        for qid, ott in db.executesql(sql, (left, right, src_flags["wiki"])):
+            taxa_by_qid.setdefault(qid, set()).add(ott)
+    total_to_process = sum(len(otts) for otts in taxa_by_qid.values())
     logger.info(f"Found {total_to_process} taxa without a vernacular in the database")
 
     saved_count = 0
     start_time = time.time()
     for qid, vernaculars in enumerate_wiki_dump_items(dump_file, get_vernaculars_by_language_from_json_item):
-        if vernaculars and qid in leaves_without_vn:
-            save_wiki_vernaculars_for_qid(db, leaves_without_vn[qid], qid, vernaculars)
-            saved_count += 1
-            elapsed = time.time() - start_time
-            logger.info(
-                f"Saved vernaculars for ott={leaves_without_vn[qid]} (qid={qid}): "
-                f"{saved_count} of {total_to_process} ({elapsed:.1f}s)"
-            )
+        if vernaculars and qid in taxa_by_qid:
+            for ott in taxa_by_qid.pop(qid):
+                save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars)
+                saved_count += 1
+                elapsed = time.time() - start_time
+                logger.info(
+                    f"Saved vernaculars for ott={ott} (qid={qid}): "
+                    f"{saved_count} of {total_to_process} ({elapsed:.1f}s)"
+                )
 
     logger.info(f"Finished: saved vernaculars for {saved_count} of {total_to_process} taxa")
 
@@ -192,9 +229,9 @@ def process_args(args):
         with open(args.taxa_data_file) as f:
             taxa_data = json.load(f)
 
-    if args.subcommand == "leaf":
+    if args.subcommand in ("taxon", "leaf"):
         for name in args.ott_or_taxa:
-            process_leaf(db, name, taxa_data)
+            process_taxon(db, name, taxa_data)
     elif args.subcommand == "clade":
         for name in args.ott_or_taxa:
             process_clade(db, name, args.wd_dump, taxa_data)
@@ -220,9 +257,9 @@ def main():
 
     subparsers = parser.add_subparsers(help="help for subcommand", dest="subcommand")
 
-    parser_leaf = subparsers.add_parser("leaf", help="Process a single ott")
-    parser_leaf.add_argument("ott_or_taxa", nargs="+", type=str, help="The leaf otts or taxa to process")
-    add_vernacular_common_args(parser_leaf)
+    parser_taxon = subparsers.add_parser("taxon", aliases=["leaf"], help="Process individual taxa")
+    parser_taxon.add_argument("ott_or_taxa", nargs="+", type=str, help="The OTTs or names to process")
+    add_vernacular_common_args(parser_taxon)
 
     parser_clade = subparsers.add_parser("clade", help="Process a full clade")
     parser_clade.add_argument(

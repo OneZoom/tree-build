@@ -118,7 +118,7 @@ class TestAPI:
         self.setup_lookups(db, self.apis.mock_qid, keep_rows, ott=ordered_leaf_ott)
         with caplog.at_level(logging.WARNING):
             self.verify_process_leaf()
-        assert "not found in ordered_leaves table" in caplog.text
+        assert "not found in ordered_leaves or ordered_nodes" in caplog.text
         assert len(self.vernaculars_in_db()) == 0
         self.teardown_lookups(ott=ordered_leaf_ott)
 

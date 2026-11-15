@@ -32,6 +32,9 @@ get_wiki_vernaculars clade "Panthera" --wd-dump /path/to/OneZoom_latest-all.json
 
 The dump is now an option rather than the first positional argument, so update
 existing clade commands. Leaf commands use the Wikidata API and need no dump.
+For vernaculars, `get_wiki_vernaculars taxon` accepts individual leaves or
+internal nodes; its `leaf` subcommand remains an alias. Clade harvesting
+includes the root and descendant nodes with OTTs as well as leaves.
 
 ## Testing
 
@@ -39,8 +42,9 @@ Assuming you have installed the 'dev' dependencies, you should be able to run
 
     python -m pytest
 
-This uses `tests/appconfig.ini`, which creates a fake OneZoom database. To test against a real
-OneZoom database, pass that installation's appconfig.ini:
+This uses `tests/appconfig.ini` to create or reuse a SQLite database containing
+fake OneZoom tables. To test against a real OneZoom database, pass that
+installation's appconfig.ini:
 
     python -m pytest --conf-file /path/to/appconfig.ini
 

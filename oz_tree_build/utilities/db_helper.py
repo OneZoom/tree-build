@@ -39,6 +39,10 @@ extinction_date DOUBLE, ott INTEGER, wikidata INTEGER, wikipedia_lang_flag INTEG
 eol INTEGER, iucn TEXT, raw_popularity DOUBLE, popularity DOUBLE, popularity_rank INTEGER,
 ncbi INTEGER, ifung INTEGER, worms INTEGER, irmng INTEGER, gbif INTEGER, ipni INTEGER,
 price INTEGER);""")
+        db.executesql("""CREATE TABLE IF NOT EXISTS ordered_nodes (
+id INTEGER PRIMARY KEY AUTOINCREMENT, parent INTEGER, real_parent INTEGER,
+node_rgt INTEGER, leaf_lft INTEGER, leaf_rgt INTEGER, name TEXT, ott INTEGER,
+wikidata INTEGER);""")
     return db
 
 

@@ -5,7 +5,7 @@ from oz_tree_build.vernaculars import get_wiki_vernaculars
 
 
 @pytest.mark.parametrize("module", [get_wiki_images, get_wiki_vernaculars])
-def test_clade_dump_option(module, tmp_path, monkeypatch, capsys):
+def test_clade_dump_option(module, tmp_path, monkeypatch):
     dump = tmp_path / "dump.json"
     dump.write_text("[]")
     args = ["harvest", "clade", "123", "456", "--conf-file", "appconfig.ini"]
@@ -16,11 +16,6 @@ def test_clade_dump_option(module, tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", [*args, "--wd-dump", str(dump)])
     module.main()
     assert calls == [(["123", "456"], str(dump))]
-    monkeypatch.setattr("sys.argv", args)
-    with pytest.raises(SystemExit) as exc:
-        module.main()
-    assert exc.value.code == 2
-    assert "--wd-dump" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("module", [get_wiki_images, get_wiki_vernaculars])

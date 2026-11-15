@@ -53,11 +53,12 @@ def test_image_command_uses_config(site_config, monkeypatch):
     assert calls == ["sqlite://example.sqlite", str(images)]
 
 
-def test_database_commands_use_config(site_config, monkeypatch):
+@pytest.mark.parametrize("command", ["taxon", "leaf"])
+def test_database_commands_use_config(site_config, monkeypatch, command):
     calls = []
     monkeypatch.setattr(get_wiki_vernaculars, "connect_to_database", lambda uri: calls.append(uri))
-    monkeypatch.setattr(get_wiki_vernaculars, "process_leaf", lambda *args: calls.append(args[1]))
-    monkeypatch.setattr("sys.argv", ["get_wiki_vernaculars", "leaf", "123"])
+    monkeypatch.setattr(get_wiki_vernaculars, "process_taxon", lambda *args: calls.append(args[1]))
+    monkeypatch.setattr("sys.argv", ["get_wiki_vernaculars", command, "123"])
     get_wiki_vernaculars.main()
     monkeypatch.setattr(process_image_bits, "connect_to_database", lambda uri: calls.append(uri))
     monkeypatch.setattr(process_image_bits, "resolve", lambda db, ott: calls.append(ott))

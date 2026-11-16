@@ -4,13 +4,13 @@ files are downloaded and filtered automatically by pipeline stages:
 - **`download_wikipedia_sql`** downloads the en.wikipedia SQL dump
   (`enwiki-page.sql.gz`, ~2 GB) from
   <https://dumps.wikimedia.org/enwiki/>. To re-download the latest
-  version, run `dvc repro --force discover_enwiki_sql_url download_wikipedia_sql`.
+  version, run `dvc repro --force discover_latest_enwiki_sql_url download_wikipedia_sql`.
 
 - **`download_and_filter_wikidata`** streams the full Wikidata JSON dump
   (`latest-all.json.bz2`, ~90 GB) from
   <https://dumps.wikimedia.org/wikidatawiki/entities/>, filters it on the fly,
   and writes only the small filtered output. To re-download with a fresh dump,
-  run `dvc repro --force discover_wikidata_url download_and_filter_wikidata`.
+  run `dvc repro --force discover_latest_wikidata_dump_url download_and_filter_wikidata`.
 
 - **`download_and_filter_pageviews`** streams monthly `-user` dumps from
   <https://dumps.wikimedia.org/other/pageview_complete/monthly/>, filters them

@@ -24,7 +24,7 @@ dvc repro --pull --allow-missing
 To run only up to a specific stage (e.g. just the JS generation):
 
 ```bash
-dvc repro make_js
+dvc repro make_js_treefiles
 ```
 
 To visualize the pipeline graph:

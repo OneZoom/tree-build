@@ -36,6 +36,10 @@ For vernaculars, `get_wiki_vernaculars taxon` accepts individual leaves or
 internal nodes; its `leaf` subcommand remains an alias. Clade harvesting
 includes the root and descendant nodes with OTTs as well as leaves.
 
+Newly filtered Wikidata dumps retain labels in all languages and P225
+scientific names. Older filtered dumps must be regenerated to include these
+fields; the additional data will increase the filtered dump size.
+
 ## Testing
 
 Assuming you have installed the 'dev' dependencies, you should be able to run

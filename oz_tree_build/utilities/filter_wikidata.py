@@ -23,7 +23,7 @@ from .temp_helpers import (
 WIKIDATA_MASK = {
     "type": KEEP,
     "id": KEEP,
-    "labels": {"en": {"value": KEEP}},
+    "labels": {ANY: {"value": KEEP}},
     "claims": {
         "P31": [
             {
@@ -56,6 +56,7 @@ WIKIDATA_MASK = {
                 "rank": KEEP,
             }
         ],
+        "P225": [{"mainsnak": {"datavalue": {"value": KEEP}}}],
         "P1843": [
             {
                 "mainsnak": {"datavalue": {"value": KEEP}},

@@ -23,6 +23,12 @@ The script can be used in two ways:
   For example, to get vernaculars for all Panthera:
     * get_wiki_vernaculars.py clade 563151 --wd-dump OneZoom_latest-all.json   # or
     * get_wiki_vernaculars.py clade "Panthera" --wd-dump OneZoom_latest-all.json
+
+Names come from P1843 statements and Wikidata labels. Preferred P1843 values
+take priority, followed by a P1843 value matching the label, then the label,
+then other P1843 values. Deprecated statements are ignored. Labels matching
+P225 scientific names and labels in the special 'mul' language are excluded;
+other labels may still be scientific names or transliterations.
 """
 
 import argparse
@@ -53,42 +59,52 @@ logger = logging.getLogger(Path(__file__).name)
 
 def get_vernaculars_by_language_from_json_item(json_item):
     """
-    Get the vernacular names from a Wikidata JSON item for all languages.
+    Get P1843 names and eligible labels, preferring one name per language.
     """
 
-    vernaculars_by_language = {}
-    known_canonical_vernaculars = set()
+    def canonical(name):
+        return "".join(filter(str.isalnum, name)).casefold()
 
-    # P1843 is the property for vernacular names
-    try:
-        for claim in json_item["claims"]["P1843"]:
-            language = claim["mainsnak"]["datavalue"]["value"]["language"]
+    claims = json_item.get("claims", {})
+    scientific_names = {
+        canonical(value)
+        for claim in claims.get("P225", [])
+        if isinstance(value := claim.get("mainsnak", {}).get("datavalue", {}).get("value"), str)
+    }
+    labels = {}
+    for language, label in json_item.get("labels", {}).items():
+        name = label.get("value")
+        if isinstance(name, str) and canonical(name) and language.casefold() != "mul":
+            if canonical(name) not in scientific_names:
+                labels[language.casefold()] = name
 
-            vernacular_info = {
-                "name": claim["mainsnak"]["datavalue"]["value"]["text"],
-                "preferred": 1 if claim["rank"] == "preferred" else 0,
-            }
+    candidates = {}
+    for claim in claims.get("P1843", []):
+        if claim.get("rank") not in ("normal", "preferred"):
+            continue
+        value = claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+        language, name = value.get("language"), value.get("text")
+        if not isinstance(language, str) or not isinstance(name, str) or not language or not canonical(name):
+            continue
+        language = language.casefold()
+        label = labels.get(language)
+        priority = 0 if claim["rank"] == "preferred" else 1 if label and canonical(label) == canonical(name) else 3
+        candidates.setdefault(language, []).append((priority, name))
 
-            # Often multiple vernaculars exist that only differ in case or punctuation.
-            # We only want to keep one of each for a given language.
-            canonical_vernacular = language + "," + "".join(filter(str.isalnum, vernacular_info["name"])).lower()
-            if canonical_vernacular in known_canonical_vernaculars:
-                continue
-            known_canonical_vernaculars.add(canonical_vernacular)
+    for language, name in labels.items():
+        candidates.setdefault(language, []).append((2, name))
 
-            vernaculars_by_language.setdefault(language, []).append(vernacular_info)
-    except (KeyError, IndexError):
-        return vernaculars_by_language
-
-    # For each language:
-    # - We keep all the vernaculars
-    # - If none are marked as preferred, use the first non-preferred as preferred
-    # - If multiple are marked as preferred, the first one will be kept as preferred
-    for vernaculars in vernaculars_by_language.values():
-        vernaculars.sort(reverse=True, key=lambda v: v["preferred"])
-        for i, v in enumerate(vernaculars):
-            v["preferred"] = 1 if i == 0 else 0
-    return vernaculars_by_language
+    result = {}
+    for language, names in candidates.items():
+        names.sort(key=lambda item: (item[0], canonical(item[1]), item[1]))
+        seen = set()
+        result[language] = []
+        for _, name in names:
+            key = canonical(name)
+            if key not in seen:
+                result[language].append({"name": name, "preferred": int(not seen)})
+                seen.add(key)
+    return result
 
 
 def save_wiki_vernaculars_for_qid(db, ott, qid, vernaculars_by_language):

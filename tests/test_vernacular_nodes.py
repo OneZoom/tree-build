@@ -160,6 +160,25 @@ def test_clade_saves_shared_qid_for_each_ott(tree_db, monkeypatch):
     assert sorted(calls) == [10, 11]
 
 
+def test_label_harvesting_in_taxon_and_clade(tree_db, tmp_path, monkeypatch):
+    item = {
+        "type": "item",
+        "id": "Q200",
+        "labels": {"en": {"value": "owls"}, "fr": {"value": "hiboux"}},
+        "claims": {},
+    }
+    monkeypatch.setattr(vernaculars, "get_wikidata_json_for_qid", lambda qid, headers: item)
+    vernaculars.process_taxon(tree_db, "20")
+    sql = "SELECT ott, lang_full, vernacular, preferred FROM vernacular_by_ott ORDER BY lang_full"
+    expected = [(20, "en", "owls", 1), (20, "fr", "hiboux", 1)]
+    assert tree_db.executesql(sql) == expected
+    tree_db.executesql("DELETE FROM vernacular_by_ott")
+    dump = tmp_path / "dump.json"
+    dump.write_text(json.dumps(item))
+    vernaculars.process_clade(tree_db, "20", str(dump), {})
+    assert tree_db.executesql(sql) == expected
+
+
 def test_single_node_uses_taxa_data_for_missing_qid(tree_db, monkeypatch):
     tree_db.executesql("INSERT INTO ordered_nodes VALUES (6, 6, 6, 6, 60, NULL, 'Fallback')")
     seen = []

@@ -35,6 +35,13 @@ existing clade commands. Leaf commands use the Wikidata API and need no dump.
 For vernaculars, `get_wiki_vernaculars taxon` accepts individual leaves or
 internal nodes; its `leaf` subcommand remains an alias. Clade harvesting
 includes the root and descendant nodes with OTTs as well as leaves.
+Vernaculars use both P1843 statements and eligible Wikidata labels. Labels
+matching P225 scientific names and multilingual (`mul`) labels are excluded,
+but other labels may still not be vernacular. Regenerate older filtered Wikidata
+dumps to include labels in all languages and P225 for clade harvesting.
+Language codes are matched case-insensitively but not across variants (for
+example `sr` and `sr-cyrl`). Clade harvesting continues to skip taxa already
+having Wikidata-sourced vernaculars, so it does not refresh their labels.
 
 Newly filtered Wikidata dumps retain labels in all languages and P225
 scientific names. Older filtered dumps must be regenerated to include these
